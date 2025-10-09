@@ -12,7 +12,7 @@ args_Investor = {
                     "is_auto_queue": False 
 }
 
-db_args = {
+postgresqldb_args = {
     'database': os.getenv("posql_db"),
     'user': os.getenv("posql_u"),
     'password': os.getenv("posql_p"),
