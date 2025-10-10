@@ -12,13 +12,21 @@ args_Investor = {
                     "is_auto_queue": False 
 }
 
-postgresqldb_args = {
-    'database': os.getenv("posql_db"),
-    'user': os.getenv("posql_u"),
-    'password': os.getenv("posql_p"),
-    'host': os.getenv("posql_h"),
-    'port': "5432"
-}
+# postgresqldb_args = {
+#     'database': os.getenv("posql_db"),
+#     'user': os.getenv("posql_u"),
+#     'password': os.getenv("posql_p"),
+#     'host': os.getenv("posql_h"),
+#     'port': "5432"
+# }
+
+postgresqldb_args = dict(
+    host=os.getenv("posql_host"),
+    port=int(os.getenv("posql_port")),
+    dbname=os.getenv("posql_db"),
+    user=os.getenv("posql_user"),
+    password=os.getenv("posql_password"),
+)
 
 # sqlSvr_args = {
 #     'server': 'stockGoldenCross',

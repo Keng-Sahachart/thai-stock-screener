@@ -7,6 +7,25 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
+from PyN_Library import testFnc as tf
+
+conn_str = (
+    f"DRIVER={{PostgreSQL Unicode}};"
+    f"SERVER={cfg.postgresqldb_args['host']};"
+    f"PORT={cfg.postgresqldb_args['port']};"
+    f"DATABASE={cfg.postgresqldb_args['database']};"
+    f"UID={cfg.postgresqldb_args['user']};"
+    f"PWD={cfg.postgresqldb_args['password']};"
+)
+# conn_str = (
+# "DRIVER={PostgreSQL Unicode};"
+# "SERVER=192.168.1.124;"
+# "PORT=5432;"
+# "DATABASE=stockEquity;"
+# "UID=postgres;"
+# "PWD=P@ssw0rd;"
+# )
+
 
 def getStocklistFromTwelveData():
     r = requests.get("https://api.twelvedata.com/stocks?exchange=XBKK")
@@ -26,7 +45,7 @@ def getStocklistFromTwelveData():
     #       "cusip": "request_access_via_add_ons"
     #     }
 
-    conn = pyodbc.connect(cfg.postgresqldb_args)
+    conn = pyodbc.connect(conn_str)
     cursor = conn.cursor()
     cursor.execute("DELETE FROM stocklist_twelvedata")
     for stock in stocks:
@@ -51,20 +70,22 @@ def getStocklistFromTwelveData():
     print(f"Inserted {len(stocks)} records into stocklist_twelvedata")
 
 def createTableIfNotExists():
-    conn = pyodbc.connect(cfg.postgresqldb_args)
+
+
+
+    conn = pyodbc.connect(conn_str)
     cursor = conn.cursor()
     cursor.execute("""
-        IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='stocklist_twelvedata' AND xtype='U')
-        CREATE TABLE stocklist_twelvedata (
-            id INT IDENTITY(1,1) PRIMARY KEY,
-            symbol VARCHAR(20),
-            name VARCHAR(255),
-            exchange VARCHAR(50),
-            currency VARCHAR(10),
-            mic_code VARCHAR(20),
-            country VARCHAR(50),
-            type_ VARCHAR(50)
-        )
+    CREATE TABLE IF NOT EXISTS stocklist_twelvedata (
+        id SERIAL PRIMARY KEY,
+        symbol VARCHAR(20) UNIQUE,
+        name TEXT,
+        exchange VARCHAR(10),
+        currency VARCHAR(10),
+        mic_code VARCHAR(10),
+        country VARCHAR(50),
+        type_ VARCHAR(50)
+    );
     """)
     conn.commit()
     cursor.close()
