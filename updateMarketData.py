@@ -24,3 +24,6 @@ candles1 = market.get_candlestick(
             )   
 
 print(candles1)
+
+info = equity.get_symbol_info("PTT")
+print(info)
