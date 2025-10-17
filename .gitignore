@@ -1,3 +1,6 @@
 # .gitignore
 .env
 desktop.ini
+importCsvHistoryPrice/PriceHistoryEOD2022-2024.csv
+importCsvHistoryPrice/PriceHistoryEOD20241220.csv
+importCsvHistoryPrice/combined2022-2024.csv

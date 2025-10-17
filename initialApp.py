@@ -20,13 +20,14 @@ args_Investor = {
 #     'port': "5432"
 # }
 
-postgresqldb_args = dict(
-    host=os.getenv("posql_host"),
-    port=int(os.getenv("posql_port")),
-    dbname=os.getenv("posql_db"),
-    user=os.getenv("posql_user"),
-    password=os.getenv("posql_password"),
-)
+postgresqldb_args = {
+    'host': os.getenv("posql_host"),
+    # 'host': '192.168.1.124',
+    'port': os.getenv("posql_port"),
+    'database': os.getenv("posql_db"),
+    'user': os.getenv("posql_user"),
+    'password': os.getenv("posql_password"),
+}
 
 # sqlSvr_args = {
 #     'server': 'stockGoldenCross',
