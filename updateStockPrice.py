@@ -25,8 +25,8 @@ def main():
     # print(market)
 
     # date = datetime.now().strftime("%Y-%m-%d")
-    startDate = "2025-10-15"
-    endDate = "2025-10-17"
+    startDate = datetime.now().strftime("%Y-%m-%d")
+    endDate = datetime.now().strftime("%Y-%m-%d")
     # print(date)
 
     conn_str = (
@@ -61,7 +61,7 @@ def main():
 
 
     # cursor = conn.cursor()
-    cursor.execute("SELECT symbol FROM settrade_stocklist where symbol = 'BLISS' ORDER BY symbol ;")
+    cursor.execute("SELECT symbol FROM settrade_stocklist  ORDER BY symbol ;")
     symbols = [row[0] for row in cursor.fetchall()]
 
     for symbol in symbols:
@@ -81,7 +81,7 @@ def main():
                 continue
 
             df = pd.DataFrame(candles)
-            df.to_csv("debug_candles.csv", index=False)  # Debug: Save to CSV to inspect
+            # df.to_csv("debug_candles.csv", index=False)  # Debug: Save to CSV to inspect
 
             df['date'] = (pd.to_datetime(df['time'], unit='s')+ timedelta(hours=7)).dt.date # แปลง timestamp เป็น date
             # แปลงคอลัมน์ที่เป็นตัวเลขให้เป็นชนิดตัวเลข
