@@ -1,0 +1,15 @@
+เวลา “อัปเดตโค้ด” จากเครื่อง dev
+# commit + push ทั้งสอง repo
+git add -A && git commit -m "update" && git push
+
+บน Pi:
+cd ~/apps/thai-stock-screener && git pull
+cd ~/apps/PyN_Library && git pull
+
+cd ~/apps/thai-stock-screener
+source ~/.venvs/stocks/bin/activate
+
+pip install -e ~/apps/PyN_Library -U   # รีเฟรชไลบรารี
+# ถ้า requirements.txt เปลี่ยน
+pip install -r ~/apps/thai-stock-screener/requirements.txt
+# restart service/cron ถ้ามี

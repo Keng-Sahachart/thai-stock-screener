@@ -39,10 +39,10 @@ cols = [cols[0]] + [cols[-1]] + cols[1:-1]
 dfPortfolioList = dfPortfolioList[cols]
 
 # #print first 5 rows
-print(dfPortfolioList.head())
+# print(dfPortfolioList.head())
 
 #print columns
-print(dfPortfolioList.columns)
+# print(dfPortfolioList.columns)
 
 #create table if not exists
 conn_str = (
@@ -93,7 +93,7 @@ rename_map_cols = {
 dfPortfolioList.rename(columns=rename_map_cols, inplace=True)
 
 sqlCreateTable = fpg.generate_create_table_script(df=dfPortfolioList,table_name="portfolio_stock",use_index=False)
-print(sqlCreateTable)
+# print(sqlCreateTable)
 
 cursor = conn.cursor()
 cursor.execute(sqlCreateTable)
