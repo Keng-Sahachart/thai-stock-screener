@@ -6,7 +6,7 @@ import stockScore_siamChart as ssc
 import updateStockPrice as usp
 import compute_indicators_v3 as com_ind
 import compute_signals as com_sig
-
+import updatePort as uport
 
 def main():
     print("=========================================")
@@ -32,6 +32,8 @@ def main():
     usp.main()  # Update stock prices
     com_ind.main()  # Compute technical indicators
     com_sig.main() # Compute trading signals
+    uport.main()  # Update portfolio stock data
+
     todayYYYYMMDD_hhmmss = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"at {todayYYYYMMDD_hhmmss} => ✅ Stock prices, indicators, and signals updated.")
 
@@ -40,5 +42,9 @@ def main():
     # Period วันถัดไป ส่งคำสั่งซื้อขาย => *** ยังไม่ทำ ***
     print(f"Task Update finished at {todayYYYYMMDD_hhmmss}")
     print("=========================================")
+
+
+
+    
 if __name__ == "__main__":
     main()
