@@ -1,10 +1,9 @@
-
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 v3: คำนวณเต็มช่วงย้อนหลังที่กำหนด แล้ว "เขียนเฉพาะที่เปลี่ยนจริง"
 - START_DATE (YYYY-MM-DD) หรือ LOOKBACK_DAYS (เช่น 1300)
-- เปรียบเทียบกับค่าที่มีใน stock_indicator_daily ด้วย epsilon เพื่อลด write I/O
+- เปรียบเทียบกับค่าที่มีใน stock_indicator_daily_v4 ด้วย epsilon เพื่อลด write I/O
 """
 
 import os
@@ -34,39 +33,60 @@ EPS            = float(os.getenv("IND_EPS", "1e-6"))  # tolerance สำหร�
 
 # ------- SQL -------
 DDL = """
-CREATE TABLE IF NOT EXISTS stock_indicator_daily (
+CREATE TABLE IF NOT EXISTS stock_indicator_daily_v4 (
     symbol          TEXT NOT NULL,
     trade_date      DATE NOT NULL,
+    ema5            NUMERIC(18,6),
+    ema10           NUMERIC(18,6),
+    ema12           NUMERIC(18,6),
     ema20           NUMERIC(18,6),
+    ema26           NUMERIC(18,6),
     ema50           NUMERIC(18,6),
     ema200          NUMERIC(18,6),
     rsi14           NUMERIC(18,6),
+    rsi21           NUMERIC(18,6),
     macd            NUMERIC(18,6),
     macd_signal     NUMERIC(18,6),
     macd_hist       NUMERIC(18,6),
+    macd_19_39_9    NUMERIC(18,6),
+    macd_19_39_9_signal    NUMERIC(18,6),
+    macd_19_39_9_hist      NUMERIC(18,6),
     volume_avg20    NUMERIC(18,2),
+    vol_Ema10       NUMERIC(18,2),
+    vol_Ema20       NUMERIC(18,2),
+    vol_Ema50       NUMERIC(18,2),
     trend_status    TEXT,
     updated_at      TIMESTAMP DEFAULT now(),
     PRIMARY KEY(symbol, trade_date)
 );
-CREATE INDEX IF NOT EXISTS ix_stock_indicator_daily_symdate ON stock_indicator_daily(symbol, trade_date);
+CREATE INDEX IF NOT EXISTS ix_stock_indicator_daily_v4_symdate ON stock_indicator_daily_v4(symbol, trade_date);
 """
 
 UPSERT_SQL = """
-INSERT INTO stock_indicator_daily
-(symbol, trade_date, ema20, ema50, ema200, rsi14, macd, macd_signal, macd_hist, volume_avg20, trend_status)
+INSERT INTO stock_indicator_daily_v4
+(symbol, trade_date, ema20, ema50, ema200, rsi14, macd, macd_signal, macd_hist, volume_avg20, trend_status,
+ ema5, ema10, ema12, ema26, rsi21, macd_19_39_9, macd_19_39_9_signal, macd_19_39_9_hist)
 VALUES %s
 ON CONFLICT (symbol, trade_date) DO UPDATE SET
-  ema20        = EXCLUDED.ema20,
-  ema50        = EXCLUDED.ema50,
-  ema200       = EXCLUDED.ema200,
-  rsi14        = EXCLUDED.rsi14,
-  macd         = EXCLUDED.macd,
-  macd_signal  = EXCLUDED.macd_signal,
-  macd_hist    = EXCLUDED.macd_hist,
+  ema20 = EXCLUDED.ema20,
+  ema50 = EXCLUDED.ema50,
+  ema200 = EXCLUDED.ema200,
+  rsi14 = EXCLUDED.rsi14,
+  macd = EXCLUDED.macd,
+  macd_signal = EXCLUDED.macd_signal,
+  macd_hist = EXCLUDED.macd_hist,
   volume_avg20 = EXCLUDED.volume_avg20,
   trend_status = EXCLUDED.trend_status,
-  updated_at   = now();
+  ema5 = EXCLUDED.ema5,
+  ema10 = EXCLUDED.ema10,
+  ema12 = EXCLUDED.ema12,
+  ema26 = EXCLUDED.ema26,
+  rsi21 = EXCLUDED.rsi21,
+  macd_19_39_9 = EXCLUDED.macd_19_39_9,
+  macd_19_39_9_signal = EXCLUDED.macd_19_39_9_signal,
+  macd_19_39_9_hist = EXCLUDED.macd_19_39_9_hist,
+  updated_at = now();   
+    
 """
 
 def pg_conn():
@@ -101,8 +121,9 @@ def fetch_existing_indicators(symbols, start_date):
     """ดึง indicator ที่มีอยู่แล้วในช่วงเดียวกัน เพื่อใช้เทียบค่า (ลดการเขียน)"""
     with pg_conn() as conn:
         q = """
-        SELECT symbol, trade_date, ema20, ema50, ema200, rsi14, macd, macd_signal, macd_hist, volume_avg20, trend_status
-        FROM stock_indicator_daily
+        SELECT symbol, trade_date, ema20, ema50, ema200, rsi14, macd, macd_signal, macd_hist, volume_avg20, trend_status,
+               ema5, ema10, ema12, ema26, rsi21, macd_19_39_9, macd_19_39_9_signal, macd_19_39_9_hist
+        FROM stock_indicator_daily_v4
         WHERE trade_date >= %s AND symbol = ANY(%s)
         ORDER BY symbol, trade_date;
         """
@@ -126,7 +147,9 @@ def rsi(series, period=14):
     rs = avg_gain / avg_loss
     return 100 - (100 / (1 + rs))
 
+# classify คือ uptrend / downtrend / sideway / None
 def classify_trend(c, e20, e50, e200, r):
+    # c = close price, eXX = EMA XX, r = RSI14
     if pd.notna(c) and pd.notna(e200) and pd.notna(e20) and pd.notna(e50):
         if c > e200 and e20 > e50: return "uptrend"
         if c < e200 and e20 < e50: return "downtrend"
@@ -143,13 +166,25 @@ def compute_for_symbol(df_sym):
     macd, sig, hist = macd_components(d["close"])
     d["macd"], d["macd_signal"], d["macd_hist"] = macd, sig, hist
     d["volume_avg20"] = d["volume"].rolling(20, min_periods=20).mean()
+
+    #new add 2025-10-21
+    d["ema5"]    = ema(d["close"], 5)
+    d["ema10"]   = ema(d["close"], 10)
+    d["ema12"]   = ema(d["close"], 12)
+    d["ema26"]   = ema(d["close"], 26)
+    d["rsi21"]  = rsi(d["close"], 21)
+    macd_19_39_9, sig_19_39_9, hist_19_39_9 = macd_components(d["close"], fast=19, slow=39, signal=9)
+    d["macd_19_39_9"], d["macd_19_39_9_signal"], d["macd_19_39_9_hist"] = macd_19_39_9, sig_19_39_9, hist_19_39_9
+
+    # classify trend  
     d["trend_status"] = d.apply(lambda r: classify_trend(r["close"], r["ema20"], r["ema50"], r["ema200"], r["rsi14"]), axis=1)
 
-    return d[["symbol","trade_date","ema20","ema50","ema200","rsi14","macd","macd_signal","macd_hist","volume_avg20","trend_status"]]
+    return d[["symbol","trade_date","ema20","ema50","ema200","rsi14","macd","macd_signal","macd_hist","volume_avg20","trend_status","macd_19_39_9","macd_19_39_9_signal","macd_19_39_9_hist","ema5","ema10","ema12","ema26","rsi21"]]
 
 # -------- compare & selective write --------
-FLOAT_COLS = ["ema20","ema50","ema200","rsi14","macd","macd_signal","macd_hist","volume_avg20"]
-STR_COLS   = ["trend_status"]
+# คอลัมน์ที่จะเปรียบเทียบ (ถ้าเปลี่ยนจึงเขียน)
+FLOAT_COLS = ["ema20","ema50","ema200","rsi14","macd","macd_signal","macd_hist","volume_avg20","macd_19_39_9","macd_19_39_9_signal","macd_19_39_9_hist","ema5","ema10","ema12","ema26","rsi21"] # คอลัมน์ที่เป็น float
+STR_COLS   = ["trend_status"] # คอลัมน์ที่เป็น string
 
 def is_diff(a, b, eps=EPS):
     # เทียบ float: True ถ้าแตกต่างเกิน eps; เทียบ None/NaN ให้เท่ากัน
@@ -212,11 +247,16 @@ def main():
     old_map = {}
     if not existing.empty:
         for rec in existing.itertuples(index=False):
+            #
             old_map[(rec.symbol, rec.trade_date)] = {
                 "ema20": rec.ema20, "ema50": rec.ema50, "ema200": rec.ema200,
                 "rsi14": rec.rsi14, "macd": rec.macd, "macd_signal": rec.macd_signal,
                 "macd_hist": rec.macd_hist, "volume_avg20": rec.volume_avg20,
-                "trend_status": rec.trend_status
+                "trend_status": rec.trend_status,
+                # new add 2025-10-21
+                "ema5": rec.ema5, "ema10": rec.ema10, "ema12": rec.ema12, "ema26": rec.ema26,
+                "rsi21": rec.rsi21,
+                "macd_19_39_9": rec.macd_19_39_9, "macd_19_39_9_signal": rec.macd_19_39_9_signal,"macd_19_39_9_hist": rec.macd_19_39_9_hist
             }
 
     # 3) คำนวณทั้งหมดในช่วงที่กำหนด
@@ -232,6 +272,10 @@ def main():
                 "rsi14": rec.rsi14, "macd": rec.macd, "macd_signal": rec.macd_signal,
                 "macd_hist": rec.macd_hist, "volume_avg20": rec.volume_avg20,
                 "trend_status": rec.trend_status
+                # new add 2025-10-21
+                ,"ema5": rec.ema5, "ema10": rec.ema10, "ema12": rec.ema12, "ema26": rec.ema26,
+                "rsi21": rec.rsi21,
+                "macd_19_39_9": rec.macd_19_39_9, "macd_19_39_9_signal": rec.macd_19_39_9_signal, "macd_19_39_9_hist": rec.macd_19_39_9_hist
             }
             old_row = old_map.get((rec.symbol, rec.trade_date))
             if need_update(new_row, old_row):
@@ -245,7 +289,16 @@ def main():
                     None if pd.isna(rec.macd_signal) else float(rec.macd_signal),
                     None if pd.isna(rec.macd_hist) else float(rec.macd_hist),
                     None if pd.isna(rec.volume_avg20) else float(rec.volume_avg20),
-                    rec.trend_status
+                    rec.trend_status,
+                    # new add 2025-10-21
+                    None if pd.isna(rec.ema5) else float(rec.ema5),
+                    None if pd.isna(rec.ema10) else float(rec.ema10),
+                    None if pd.isna(rec.ema12) else float(rec.ema12),
+                    None if pd.isna(rec.ema26) else float(rec.ema26),
+                    None if pd.isna(rec.rsi21) else float(rec.rsi21),
+                    None if pd.isna(rec.macd_19_39_9) else float(rec.macd_19_39_9),
+                    None if pd.isna(rec.macd_19_39_9_signal) else float(rec.macd_19_39_9_signal),
+                    None if pd.isna(rec.macd_19_39_9_hist) else float(rec.macd_19_39_9_hist),
                 ))
 
         # flush เป็นช่วง ๆ เพื่อลด RAM

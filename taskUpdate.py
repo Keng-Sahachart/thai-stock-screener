@@ -32,7 +32,7 @@ def main():
     usp.main()  # Update stock prices
     com_ind.main()  # Compute technical indicators
     com_sig.main() # Compute trading signals
-    uport.main()  # Update portfolio stock data
+    uport.UpdatePortfolio()  # Update portfolio stock data
 
     todayYYYYMMDD_hhmmss = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"at {todayYYYYMMDD_hhmmss} => ✅ Stock prices, indicators, and signals updated.")
