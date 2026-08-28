@@ -26,8 +26,8 @@ def get_last_stock_date(conn, symbol):
         cursor.execute(query, (symbol,))
         row = cursor.fetchone()
         if row and row[0]:
-            # ถ้าเจอวันล่าสุด ให้เริ่มวันถัดไป (+1 day)
-            return row[0] + timedelta(days=1)
+            ##xxx => + timedelta(days=1) #ถ้าเจอวันล่าสุด ให้เริ่มวันถัดไป (+1 day)
+            return row[0]  # เผื่อกรณีวันล่าสุดเรียงตอนยังไม่ปิดวัน ให้ดึงใหม่
         else:
             # ถ้าไม่เจอข้อมูลเลย ให้ย้อนหลังไป 12 เดือน
             return date.today() - timedelta(days=365)
@@ -72,8 +72,23 @@ def main():
     cursor.execute(sqlCreateTable)
     conn.commit()
 
+#     symbol_list = ["1DIV"
+# ,"1I01BSET50"
+# ,"2I01BSET50"
+# ,"2X01BSET50"
+# ,"ABFTH"
+# ,"BMSCG"
+# ,"BMSCITH"
+# ,"BSET100"
+# ,"CHINA"
+# ,"GLD"
+# ,"TDEX"
+# ,"UBOT"
+# ,"UHERO"]
+
     # cursor = conn.cursor()
-    cursor.execute("SELECT symbol FROM settrade_stocklist  ORDER BY symbol ;")
+    cursor.execute("SELECT symbol FROM settrade_stocklist where symbol ='TDEX' ORDER BY symbol  ;")
+    # cursor.execute("SELECT symbol FROM settrade_stocklist where symbol IN %s ORDER BY symbol;", (tuple(symbol_list),))
     symbols = [row[0] for row in cursor.fetchall()]
 
     for symbol in symbols:

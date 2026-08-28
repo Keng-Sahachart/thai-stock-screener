@@ -33,7 +33,7 @@ def main():
     # อัพเดทราคาหุ้นรายวัน
     uport.UpdatePortfolio()  # Update portfolio stock data
     usp.main()  # Update stock prices
-    # com_ind.main()  # Compute technical indicators
+    ################################ com_ind.main()  # Compute technical indicators
     com_ind_v5.main()  # Compute technical indicators v5
     com_sig.main() # Compute trading signals
 

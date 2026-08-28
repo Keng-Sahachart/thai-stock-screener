@@ -7,9 +7,13 @@ from datetime import datetime
 import sys
 import os
 # import pyodbc
-import initialApp as cfg
 from dotenv import load_dotenv
 load_dotenv()
+
+
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+import initialApp as cfg
 
 investor = Investor( **cfg.args_Investor )
 # # กรณี Market Representative
@@ -45,10 +49,10 @@ market = investor.MarketData()
 # normalized=True,
 # )
 candles1 = market.get_candlestick(
-                symbol="NOBLE",
+                symbol="TDEX",
                 interval="1d",
                 limit=30,
-                start= "2026-08-25T00:00" ,  # "YYYY-mm-ddTHH:MM"
+                start= "2025-01-01T00:00" ,  # "YYYY-mm-ddTHH:MM"
                 end = "2026-08-25T23:59" ,
                 normalized=True,
             )   

@@ -106,6 +106,7 @@ def rsi(series, period=14):
     return 100 - (100 / (1 + rs))
 
 def classify_trend(c, e20, e50, e200, r):
+    # ตรวจสอบว่าเป็น uptrend, downtrend หรือ sideway
     if pd.notna(c) and pd.notna(e200) and pd.notna(e20) and pd.notna(e50):
         if c > e200 and e20 > e50: return "uptrend"
         if c < e200 and e20 < e50: return "downtrend"
@@ -132,6 +133,7 @@ def bollinger_bands(close, period=20, std_dev=2):
 
 # ------------------------------------------------
 def compute_indicators(df):
+    ## คำนวณ indicator ทั้งหมดและ return DataFrame ใหม่
     d = df.copy()
     # Exponential Moving Averages
     d["ema5"]    = ema(d["close"], 5)
@@ -260,7 +262,8 @@ def main():
 
 def call_function_recreate_view():
     with pg_conn() as conn, conn.cursor() as cur:
-        cur.execute("drop view if exists v_stock_indicators; SELECT public.refresh_indicator_view();")
+        # cur.execute("drop view if exists v_stock_indicators; SELECT public.refresh_indicator_view();")
+        cur.execute("SELECT public.refresh_indicator_view();")
         conn.commit()
     print("✅ refreshed view v_stock_indicators")
 

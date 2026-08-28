@@ -104,7 +104,7 @@ def fetch_symbolList_settrade_get_quote_v1_2():
     # สร้าง instance ของ WebDriver (Chrome)
     timeout = 20
     options = webdriver.ChromeOptions()
-    options.add_argument('--headless')
+    # options.add_argument('--headless')
     options.add_argument("--window-size=1920,1080")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--no-sandbox")
@@ -160,6 +160,24 @@ def fetch_symbolList_settrade_get_quote_v1_2():
     # df = pd.read_html(table_html)[0]  # ดึง DataFrame แรกจากรายการ DataFrames
     table_html = driver.find_element(By.XPATH, table_xpath).get_attribute("outerHTML")
     df = pd.read_html(table_html)[0]
+    print(df)
+
+    ################################################## etf แยกไปอยู่อีกปุ่ม ต้องคลิกปุ่ม ETF ก่อน ตารางจะอัดเดต
+    # click buton ETF => /html/body/div/div/div/div[2]/div/div[2]/div[2]/div[1]/div/div/div/div[1]/button[3]
+    # etf_button_xpath = '/html/body/div/div/div/div[2]/div/div[2]/div[2]/div[1]/div/div/div/div[1]/button[3]'
+    # etf_button = wait.until(EC.presence_of_element_located((By.XPATH, etf_button_xpath)))
+    # driver.execute_script("arguments[0].scrollIntoView();", etf_button)
+    # time.sleep(0.6)  # รอให้เลื่อนหน้าจอเสร็จ
+    # driver.execute_script("window.scrollBy(0, -80);") # กัน header บัง
+    # time.sleep(0.6)  # รอให้เลื่อนหน้าจอเสร็จ
+    # etf_button.click()
+
+    table_etf_xpath = "/html/body/div/div/div/div[2]/div/div[2]/div[2]/div[2]/div[3]/div/div[1]/div[2]/table"
+    table_html_etf = driver.find_element(By.XPATH, table_etf_xpath).get_attribute("outerHTML")
+    df_etf = pd.read_html(table_html_etf)[0]
+    print(df_etf)
+
+    df = pd.concat([df, df_etf], ignore_index=True)
     print(df)
 
     driver.quit()
