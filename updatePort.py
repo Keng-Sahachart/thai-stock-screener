@@ -1,3 +1,5 @@
+# ไฟล์นี้อัพเดตข้อมูลพอร์ตโฟลิโอหุ้นจาก settrade_v2 และบันทึกลง PostgreSQL
+import psycopg2
 from settrade_v2 import Investor
 import pandas as pd
 # import math
@@ -47,15 +49,15 @@ def UpdatePortfolio():
   # print(dfPortfolioList.columns)
 
   #create table if not exists
-  conn_str = (
-      f"DRIVER={{PostgreSQL Unicode}};"
-      f"SERVER={os.getenv('posql_host')};"
-      f"PORT={os.getenv('posql_port')};"
-      f"DATABASE={os.getenv('posql_db')};"
-      f"UID={os.getenv('posql_user')};"
-      f"PWD={os.getenv('posql_password')};"
+  # เชื่อมต่อ PostgreSQL โดยตรงผ่าน psycopg2
+  conn = psycopg2.connect(
+      host=os.getenv("posql_host"),
+      port=os.getenv("posql_port", "5432"),
+      dbname=os.getenv("posql_db"),
+      user=os.getenv("posql_user"),
+      password=os.getenv("posql_password")
   )
-  conn = pyodbc.connect(conn_str)
+
   # columns:
   # 'symbol', 'flag', 'nvdrFlag', 'marketPrice', 'amount',
   #  'marketdescription', 'marketValue', 'profit', 'percentProfit',
@@ -100,6 +102,8 @@ def UpdatePortfolio():
   cursor = conn.cursor()
   cursor.execute(sqlCreateTable)
   conn.commit()
+  cursor.close()
+  conn.close()
 
   #bulk insert dataframe to table
   fpg.bulk_copy_dataframe_to_table(df=dfPortfolioList, table_name="portfolio_stock", conn_params=cfg.postgresqldb_args)

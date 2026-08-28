@@ -1,4 +1,4 @@
-
+# ไฟล์นี้ดึงข้อมูลหุ้นจากเว็บ http://siamchart.com/stock/ แล้วอัพเดทลงตาราง stock_list_info_siamchart ใน postgresql
 from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.common.by import By

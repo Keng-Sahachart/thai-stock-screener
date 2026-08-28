@@ -1,4 +1,4 @@
-
+# ไฟล์นี้ดึงรายชื่อหุ้นจากเว็บ https://www.settrade.com/th/get-quote แล้วอัพเดทลงตาราง settrade_stocklist ใน postgresql
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 import time

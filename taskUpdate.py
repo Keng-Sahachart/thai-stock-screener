@@ -1,10 +1,12 @@
+#ไฟล์นี้เป็นสคริปต์หลักสำหรับรันงานอัพเดตข้อมูลหุ้นต่างๆ โดยจะเรียกใช้ฟังก์ชันจากโมดูลอื่นๆ เพื่ออัพเดตข้อมูลรายชื่อหุ้น, ข้อมูลพื้นฐาน, คะแนนมูลค่าหุ้น, ราคาหุ้น, ตัวชี้วัดทางเทคนิค และสัญญาณการซื้อขาย
 from datetime import date, datetime
 import updateStockList as usl
 import updateStockInfo_siamChart as usi
 import stockScore_siamChart as ssc
 
 import updateStockPrice as usp
-import compute_indicators_v3 as com_ind
+# import compute_indicators_v3 as com_ind
+import compute_indicators_v5 as com_ind_v5 # jsonb version
 import compute_signals as com_sig
 import updatePort as uport
 
@@ -19,8 +21,8 @@ def main():
         print(f"at {todayYYYYMMDD_hhmmss} => ❌ Today is weekend. Exiting...")
         return
 
-    # อัพเดทรายชื่อหุ้น เดือนละครั้ง ทุกวันที่ 5 หรือวันแรกทำการของเดือน หรืออาจจะต้องปรับ ให้เช็ค แหล่งข้อมูลถูกอัพเดตหรือยัง?
-    if date.today().day == 5:
+    # อัพเดทรายชื่อหุ้น เดือนละครั้ง ทุกวันที่ X หรือวันแรกทำการของเดือน หรืออาจจะต้องปรับ ให้เช็ค แหล่งข้อมูลถูกอัพเดตหรือยัง?
+    if date.today().day == 5: 
         usl.main()  # Update stock list from settrade
         usi.main()  # Update stock info from SiamChart
         ssc.main()  # Compute stock scores from SiamChart
@@ -29,10 +31,11 @@ def main():
 
 
     # อัพเดทราคาหุ้นรายวัน
-    usp.main()  # Update stock prices
-    com_ind.main()  # Compute technical indicators
-    com_sig.main() # Compute trading signals
     uport.UpdatePortfolio()  # Update portfolio stock data
+    usp.main()  # Update stock prices
+    # com_ind.main()  # Compute technical indicators
+    com_ind_v5.main()  # Compute technical indicators v5
+    com_sig.main() # Compute trading signals
 
     todayYYYYMMDD_hhmmss = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"at {todayYYYYMMDD_hhmmss} => ✅ Stock prices, indicators, and signals updated.")

@@ -1,3 +1,4 @@
+# ไฟล์นี้คำนวณคะแนนมูลค่าหุ้น (value_score) จากข้อมูลพื้นฐานที่ได้จากตาราง stock_list_info_siamchart
 import os
 import urllib
 import numpy as np
@@ -127,8 +128,6 @@ def main():
         # ถ้าไม่มีข้อมูลในแถว → ให้ 0
         return score.where(s.notna(), 0.0)
 
-
-
     scores = pd.DataFrame(index=work.index)
     for m in present:
         if m in higher_better:
@@ -172,26 +171,47 @@ def main():
     # -----------------------------
     #  Save to Postgres
     # -----------------------------
+    # with engine.begin() as con: # แบบลบ table เดิมแล้วสร้างใหม่ (จะลบ view ที่ผูกอยู่ด้วย)
+    #     # สร้างตารางปลายทาง (replace)
+    #     create_sql = f"""
+    #     DROP TABLE IF EXISTS {DEST_TABLE};
+    #     CREATE TABLE {DEST_TABLE} (
+    #         name TEXT,
+    #         value_score DOUBLE PRECISION,
+    #         rank INTEGER,
+    #         {", ".join([f"{k} DOUBLE PRECISION" for k in sorted(norm_weights.keys())])}
+    #     );
+    #     """
+    #     con.execute(text(create_sql))
+
+    #     # เขียนข้อมูลลงตารางปลายทาง
+    #     out.to_sql(DEST_TABLE.split(".")[-1], con, schema=DEST_TABLE.split(".")[0],
+    #             if_exists="append", index=False)
+
+    #     # ดัชนีช่วยค้น (ทางเลือก)
+    #     con.execute(text(f"CREATE INDEX ON {DEST_TABLE} (rank);"))
+    #     con.execute(text(f"CREATE INDEX ON {DEST_TABLE} (name);"))
+
     with engine.begin() as con:
-        # สร้างตารางปลายทาง (replace)
+        # สร้างตารางถ้ายังไม่มี (จะไม่ Error และไม่ Drop View ที่ผูกอยู่)
         create_sql = f"""
-        DROP TABLE IF EXISTS {DEST_TABLE};
-        CREATE TABLE {DEST_TABLE} (
+        CREATE TABLE IF NOT EXISTS {DEST_TABLE} (
             name TEXT,
             value_score DOUBLE PRECISION,
             rank INTEGER,
             {", ".join([f"{k} DOUBLE PRECISION" for k in sorted(norm_weights.keys())])}
         );
+        TRUNCATE TABLE {DEST_TABLE};
         """
         con.execute(text(create_sql))
 
-        # เขียนข้อมูลลงตารางปลายทาง
+        # เขียนข้อมูลชุดใหม่ลงไป
         out.to_sql(DEST_TABLE.split(".")[-1], con, schema=DEST_TABLE.split(".")[0],
                 if_exists="append", index=False)
 
-        # ดัชนีช่วยค้น (ทางเลือก)
-        con.execute(text(f"CREATE INDEX ON {DEST_TABLE} (rank);"))
-        con.execute(text(f"CREATE INDEX ON {DEST_TABLE} (name);"))
+        # สร้าง Index เฉพาะเมื่อยังไม่มี
+        con.execute(text(f"CREATE INDEX IF NOT EXISTS idx_stock_value_score_rank ON {DEST_TABLE} (rank);"))
+        con.execute(text(f"CREATE INDEX IF NOT EXISTS idx_stock_value_score_name ON {DEST_TABLE} (name);"))
 
     print(f"Done. Wrote {len(out)} rows to {DEST_TABLE}")
 

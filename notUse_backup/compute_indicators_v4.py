@@ -4,6 +4,9 @@
 v3: คำนวณเต็มช่วงย้อนหลังที่กำหนด แล้ว "เขียนเฉพาะที่เปลี่ยนจริง"
 - START_DATE (YYYY-MM-DD) หรือ LOOKBACK_DAYS (เช่น 1300)
 - เปรียบเทียบกับค่าที่มีใน stock_indicator_daily_v4 ด้วย epsilon เพื่อลด write I/O
+
+v4: ปรับโครงสร้างตารางใหม่ (เพิ่มคอลัมน์ใหม่) และปรับฟังก์ชันคำนวณให้รองรับคอลัมน์ใหม่
+- เพิ่มคอลัมน์ ema5, ema10, ema12, ema26, r
 """
 
 import os
@@ -45,9 +48,9 @@ CREATE TABLE IF NOT EXISTS stock_indicator_daily_v4 (
     ema200          NUMERIC(18,6),
     rsi14           NUMERIC(18,6),
     rsi21           NUMERIC(18,6),
-    macd            NUMERIC(18,6),
-    macd_signal     NUMERIC(18,6),
-    macd_hist       NUMERIC(18,6),
+    macd_12_26_9    NUMERIC(18,6),
+    macd_12_26_9_signal     NUMERIC(18,6),
+    macd_12_26_9_hist       NUMERIC(18,6),
     macd_19_39_9    NUMERIC(18,6),
     macd_19_39_9_signal    NUMERIC(18,6),
     macd_19_39_9_hist      NUMERIC(18,6),
@@ -64,7 +67,7 @@ CREATE INDEX IF NOT EXISTS ix_stock_indicator_daily_v4_symdate ON stock_indicato
 
 UPSERT_SQL = """
 INSERT INTO stock_indicator_daily_v4
-(symbol, trade_date, ema20, ema50, ema200, rsi14, macd, macd_signal, macd_hist, volume_avg20, trend_status,
+(symbol, trade_date, ema20, ema50, ema200, rsi14, macd_12_26_9, macd_12_26_9_signal, macd_12_26_9_hist, volume_avg20, trend_status,
  ema5, ema10, ema12, ema26, rsi21, macd_19_39_9, macd_19_39_9_signal, macd_19_39_9_hist)
 VALUES %s
 ON CONFLICT (symbol, trade_date) DO UPDATE SET
@@ -72,9 +75,9 @@ ON CONFLICT (symbol, trade_date) DO UPDATE SET
   ema50 = EXCLUDED.ema50,
   ema200 = EXCLUDED.ema200,
   rsi14 = EXCLUDED.rsi14,
-  macd = EXCLUDED.macd,
-  macd_signal = EXCLUDED.macd_signal,
-  macd_hist = EXCLUDED.macd_hist,
+  macd_12_26_9 = EXCLUDED.macd_12_26_9,
+  macd_12_26_9_signal = EXCLUDED.macd_12_26_9_signal,
+  macd_12_26_9_hist = EXCLUDED.macd_12_26_9_hist,
   volume_avg20 = EXCLUDED.volume_avg20,
   trend_status = EXCLUDED.trend_status,
   ema5 = EXCLUDED.ema5,
@@ -121,7 +124,7 @@ def fetch_existing_indicators(symbols, start_date):
     """ดึง indicator ที่มีอยู่แล้วในช่วงเดียวกัน เพื่อใช้เทียบค่า (ลดการเขียน)"""
     with pg_conn() as conn:
         q = """
-        SELECT symbol, trade_date, ema20, ema50, ema200, rsi14, macd, macd_signal, macd_hist, volume_avg20, trend_status,
+        SELECT symbol, trade_date, ema20, ema50, ema200, rsi14, macd_12_26_9, macd_12_26_9_signal, macd_12_26_9_hist, volume_avg20, trend_status,
                ema5, ema10, ema12, ema26, rsi21, macd_19_39_9, macd_19_39_9_signal, macd_19_39_9_hist
         FROM stock_indicator_daily_v4
         WHERE trade_date >= %s AND symbol = ANY(%s)
@@ -163,8 +166,8 @@ def compute_for_symbol(df_sym):
     d["ema50"]  = ema(d["close"], 50)
     d["ema200"] = ema(d["close"], 200)
     d["rsi14"]  = rsi(d["close"], 14)
-    macd, sig, hist = macd_components(d["close"])
-    d["macd"], d["macd_signal"], d["macd_hist"] = macd, sig, hist
+    macd_12_26_9, sig_12_26_9, hist_12_26_9 = macd_components(d["close"])
+    d["macd_12_26_9"], d["macd_12_26_9_signal"], d["macd_12_26_9_hist"] = macd_12_26_9, sig_12_26_9, hist_12_26_9
     d["volume_avg20"] = d["volume"].rolling(20, min_periods=20).mean()
 
     #new add 2025-10-21
@@ -179,11 +182,11 @@ def compute_for_symbol(df_sym):
     # classify trend  
     d["trend_status"] = d.apply(lambda r: classify_trend(r["close"], r["ema20"], r["ema50"], r["ema200"], r["rsi14"]), axis=1)
 
-    return d[["symbol","trade_date","ema20","ema50","ema200","rsi14","macd","macd_signal","macd_hist","volume_avg20","trend_status","macd_19_39_9","macd_19_39_9_signal","macd_19_39_9_hist","ema5","ema10","ema12","ema26","rsi21"]]
+    return d[["symbol","trade_date","ema20","ema50","ema200","rsi14","macd_12_26_9","macd_12_26_9_signal","macd_12_26_9_hist","volume_avg20","trend_status","macd_19_39_9","macd_19_39_9_signal","macd_19_39_9_hist","ema5","ema10","ema12","ema26","rsi21"]]
 
 # -------- compare & selective write --------
 # คอลัมน์ที่จะเปรียบเทียบ (ถ้าเปลี่ยนจึงเขียน)
-FLOAT_COLS = ["ema20","ema50","ema200","rsi14","macd","macd_signal","macd_hist","volume_avg20","macd_19_39_9","macd_19_39_9_signal","macd_19_39_9_hist","ema5","ema10","ema12","ema26","rsi21"] # คอลัมน์ที่เป็น float
+FLOAT_COLS = ["ema20","ema50","ema200","rsi14","macd_12_26_9","macd_12_26_9_signal","macd_12_26_9_hist","volume_avg20","macd_19_39_9","macd_19_39_9_signal","macd_19_39_9_hist","ema5","ema10","ema12","ema26","rsi21"] # คอลัมน์ที่เป็น float
 STR_COLS   = ["trend_status"] # คอลัมน์ที่เป็น string
 
 def is_diff(a, b, eps=EPS):
@@ -250,8 +253,8 @@ def main():
             #
             old_map[(rec.symbol, rec.trade_date)] = {
                 "ema20": rec.ema20, "ema50": rec.ema50, "ema200": rec.ema200,
-                "rsi14": rec.rsi14, "macd": rec.macd, "macd_signal": rec.macd_signal,
-                "macd_hist": rec.macd_hist, "volume_avg20": rec.volume_avg20,
+                "rsi14": rec.rsi14, "macd_12_26_9": rec.macd_12_26_9, "macd_12_26_9_signal": rec.macd_12_26_9_signal,
+                "macd_12_26_9_hist": rec.macd_12_26_9_hist, "volume_avg20": rec.volume_avg20,
                 "trend_status": rec.trend_status,
                 # new add 2025-10-21
                 "ema5": rec.ema5, "ema10": rec.ema10, "ema12": rec.ema12, "ema26": rec.ema26,
@@ -269,8 +272,8 @@ def main():
         for rec in calc.itertuples(index=False):
             new_row = {
                 "ema20": rec.ema20, "ema50": rec.ema50, "ema200": rec.ema200,
-                "rsi14": rec.rsi14, "macd": rec.macd, "macd_signal": rec.macd_signal,
-                "macd_hist": rec.macd_hist, "volume_avg20": rec.volume_avg20,
+                "rsi14": rec.rsi14, "macd_12_26_9": rec.macd_12_26_9, "macd_12_26_9_signal": rec.macd_12_26_9_signal,
+                "macd_12_26_9_hist": rec.macd_12_26_9_hist, "volume_avg20": rec.volume_avg20,
                 "trend_status": rec.trend_status
                 # new add 2025-10-21
                 ,"ema5": rec.ema5, "ema10": rec.ema10, "ema12": rec.ema12, "ema26": rec.ema26,
@@ -285,9 +288,9 @@ def main():
                     None if pd.isna(rec.ema50) else float(rec.ema50),
                     None if pd.isna(rec.ema200) else float(rec.ema200),
                     None if pd.isna(rec.rsi14) else float(rec.rsi14),
-                    None if pd.isna(rec.macd) else float(rec.macd),
-                    None if pd.isna(rec.macd_signal) else float(rec.macd_signal),
-                    None if pd.isna(rec.macd_hist) else float(rec.macd_hist),
+                    None if pd.isna(rec.macd_12_26_9) else float(rec.macd_12_26_9),
+                    None if pd.isna(rec.macd_12_26_9_signal) else float(rec.macd_12_26_9_signal),
+                    None if pd.isna(rec.macd_12_26_9_hist) else float(rec.macd_12_26_9_hist),
                     None if pd.isna(rec.volume_avg20) else float(rec.volume_avg20),
                     rec.trend_status,
                     # new add 2025-10-21
@@ -314,7 +317,7 @@ def main():
     else:
         print("No changed rows to write.")
 
-    print("✅ Done v3")
+    print("✅ Done v4")
 
 if __name__ == "__main__":
     main()

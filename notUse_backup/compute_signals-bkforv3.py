@@ -67,17 +67,13 @@ def fetch_recent_indicators(days_back=LOOKBACK_DAYS):
         # ตาราง stock_indicator_daily มีข้อมูล indicator รายวันที่คำนวณจาก compute_indicators_v3 หรือ v5
         q = """
         SELECT
-            v.symbol, v.trade_date,
-            v.ema20, v.ema50, v.ema200,
-            v.rsi14, 
-            v.macd_12_26_9 AS macd, 
-            v.macd_12_26_9_signal AS macd_signal,
-            v.atr14, v.bb_lower, v.bb_upper, -- ดึงค่าความผันผวนที่เราเพิ่มใน v5
-            p.close  -- <--- ต้องดึงคอลัมน์นี้เพิ่มเข้ามา
-        FROM v_stock_indicators v
-        JOIN stock_price_history p ON v.symbol = p.symbol AND v.trade_date = p.date
-        WHERE v.trade_date >= %s
-        ORDER BY v.symbol, v.trade_date;
+            symbol, trade_date,
+            ema20, ema50, ema200,
+            rsi14, macd, macd_signal, macd_hist,
+            trend_status
+        FROM stock_indicator_daily
+        WHERE trade_date >= %s
+        ORDER BY symbol, trade_date;
         """
         return pd.read_sql(q, conn, params=(start,))
 
@@ -89,93 +85,28 @@ def fetch_existing_signals():
         df = pd.read_sql(q, conn)
         return {(r.symbol, r.trade_date): r.signal_type for r in df.itertuples(index=False)}
 
-def check_rsi_divergence(df_window):
-    """
-    ตรวจหา Divergence ภายใน window ของข้อมูลที่ส่งมา (เช่น 10 วันล่าสุด)
-    df_window ต้องมีคอลัมน์ 'close' และ 'rsi14'
-    """
-    if len(df_window) < 5: return None
-
-    # หาจุดต่ำสุด/สูงสุดของราคาและ RSI ในช่วง window
-    price_min_idx = df_window['close'].idxmin()
-    price_max_idx = df_window['close'].idxmax()
-    rsi_min_idx = df_window['rsi14'].idxmin()
-    rsi_max_idx = df_window['rsi14'].idxmax()
-
-    # --- Bullish Divergence (สัญญาณกลับตัวขึ้น) ---
-    # ราคาทำ New Low แต่ RSI ไม่ทำ New Low (ยกตัวสูงขึ้น)
-    first_half = df_window.iloc[:len(df_window)//2]
-    second_half = df_window.iloc[len(df_window)//2:]
-    
-    if second_half['close'].min() < first_half['close'].min(): # ราคาทำ Low ใหม่
-        if second_half['rsi14'].min() > first_half['rsi14'].min(): # RSI ยกตัว
-            return "BULLISH_DIVERGENCE"
-
-    # --- Bearish Divergence (สัญญาณกลับตัวลง) ---
-    # ราคาทำ New High แต่ RSI ไม่ทำ New High (ลดตัวลง)
-    if second_half['close'].max() > first_half['close'].max(): # ราคาทำ High ใหม่
-        if second_half['rsi14'].max() < first_half['rsi14'].max(): # RSI ลดลง
-            return "BEARISH_DIVERGENCE"
-
-    return None
-
 # ------------------------------------------------
 def detect_signals(df_sym: pd.DataFrame):
     """คืนค่า list ของสัญญาณสำหรับ symbol เดียว"""
     out = []
     df_sym = df_sym.sort_values("trade_date").reset_index(drop=True)
-    # กำหนดระยะเวลาที่ใช้มองย้อนหลังเพื่อหา Divergence (เช่น 10 วัน)
-    DIV_WINDOW = 10
-
     for i, r in df_sym.iterrows():
-        # ข้ามถ้าข้อมูลไม่พอสำหรับคำนวณ Window ย้อนหลัง
-
         sig, pri, reason = None, 0, None
-        # --- 1. เตรียมข้อมูลพื้นฐาน ---
-        # ข้ามถ้า Indicator หลักยังไม่พร้อม (ช่วงเริ่มคำนวณ EMA/ATR)
+
         # skip incomplete data
-        if pd.isna(r["ema20"]) or pd.isna(r["ema50"]) or pd.isna(r["rsi14"]) or pd.isna(r["macd_signal"]) or pd.isna(r["atr14"]):
+        if pd.isna(r["ema20"]) or pd.isna(r["ema50"]) or pd.isna(r["rsi14"]) or pd.isna(r["macd_signal"]):
             continue
-        
-        # --- 2. คำนวณ MACD Cross (ใช้ Logic เดิมของคุณเป๊ะๆ) ---
-        macd_cross_up = False
-        macd_cross_down = False
+
+        prev_macd, prev_sigline = (None, None)
         if i > 0:
             prev_macd, prev_sigline = df_sym.loc[i-1, ["macd", "macd_signal"]]
-            if prev_macd is not None and prev_sigline is not None:
-                macd_cross_up = (prev_macd < prev_sigline) and (r["macd"] > r["macd_signal"])
-                macd_cross_down = (prev_macd > prev_sigline) and (r["macd"] < r["macd_signal"])
 
-        # --- 3. ตรวจหา Divergence (เฉพาะเมื่อมีข้อมูลครบ window) ---
-        div_type = None
-        if i >= DIV_WINDOW - 1:
-            window_df = df_sym.iloc[i-DIV_WINDOW+1 : i+1]
-            div_type = check_rsi_divergence(window_df)
+        macd_cross_up = prev_macd is not None and prev_sigline is not None and (prev_macd < prev_sigline) and (r["macd"] > r["macd_signal"])
+        macd_cross_down = prev_macd is not None and prev_sigline is not None and (prev_macd > prev_sigline) and (r["macd"] < r["macd_signal"])
 
-      
-        # --- 4. RULES (เรียงลำดับความสำคัญ) ---
-
-        # เงื่อนไขการขาย: MACD ตัดลง (ที่คำนวณไว้ด้านบน) หรือ ราคาปิดหลุด Bollinger Band เส้นล่าง
-        if macd_cross_down or (pd.notna(r["bb_lower"]) and r["close"] < r["bb_lower"]) or div_type == "BEARISH_DIVERGENCE":
-            sig = "SELL"
-            pri = 4 if div_type == "BEARISH_DIVERGENCE" else 3
-            reason = "MACD Cross Down / BB Lower Breakout / Bearish Div"
-
-        # [RULE 2] สัญญาณซื้อรุนแรง (BUY-STRONG) 
-        elif div_type == "BULLISH_DIVERGENCE" and macd_cross_up:
-            stop_loss = r["close"] - (r["atr14"] * 2)
-            sig, pri, reason = "BUY-STRONG", 5, f"Bullish Div & MACD↑ (SL: {stop_loss:.2f})"
-
-        # [RULE 3] สัญญาณซื้อปกติ (BUY) - Logic เดิมของคุณ
-        elif r["ema20"] > r["ema50"] and macd_cross_up and r["rsi14"] > 45:
-            # sig, pri, reason = "BUY", 3, "EMA20>EMA50 & MACD↑ & RSI>45" # แนวโน้มขาขึ้น + MACD ตัดขึ้น + RSI ไม่ต่ำเกิน
-            # คำนวณ Stop Loss โดยใช้ ATR (Volatility-based)
-            stop_loss = r["close"] - (r["atr14"] * 2) 
-            sig, pri, reason = "BUY", 3, f"EMA Bullish & MACD↑ (SL: {stop_loss:.2f})"
-        # กรณี SELL (ใช้ ATR ช่วยดู Trailing Stop ได้)
-        elif r["ema20"] < r["ema50"] and macd_cross_down:
-            sig, pri, reason = "SELL", 3, "EMA Bearish & MACD↓"
-        # สัญญาณ SELL: ราคาหลุด Bollinger Band ล่าง หรือ หลุด EMA200
+        # --- RULES ---
+        if r["ema20"] > r["ema50"] and macd_cross_up and r["rsi14"] > 45:
+            sig, pri, reason = "BUY", 3, "EMA20>EMA50 & MACD↑ & RSI>45" # แนวโน้มขาขึ้น + MACD ตัดขึ้น + RSI ไม่ต่ำเกิน
         elif r["ema20"] > r["ema50"] and r["rsi14"] < 40:
             sig, pri, reason = "BUY-WATCH", 2, "EMA20>EMA50 & RSI<40 (pullback)" # แนวโน้มขาขึ้น แต่ RSI ต่ำ
         elif r["ema20"] < r["ema50"] and macd_cross_down and r["rsi14"] < 55:
