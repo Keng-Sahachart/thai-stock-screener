@@ -54,7 +54,7 @@ def fetch_all_data():
 
         # 4. ดึง ATR ล่าสุดของทุกตัว
         q_inds = text("""
-            SELECT symbol, atr14 FROM v_stock_indicators 
+            SELECT symbol, atr14 FROM mv_stock_indicators 
             WHERE trade_date = (SELECT MAX(trade_date) FROM stock_indicator_jsonb);
         """)
         df_all_inds = pd.read_sql(q_inds, conn)

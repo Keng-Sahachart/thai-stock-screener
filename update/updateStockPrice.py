@@ -19,6 +19,9 @@ import sys
 
 from PyN_Library import fncDateTime as fDtTm
 
+
+API_RATE_LIMIT_ = 5  # จำนวนครั้งสูงสุดที่เรียก API ต่อวินาที (Settrade API rate limit)
+
 def get_last_stock_date(conn, symbol):
     """หาวันล่าสุดที่มีข้อมูลในตาราง stock_price_history ของหุ้นตัวนั้นๆ"""
     with conn.cursor() as cursor:
@@ -32,7 +35,7 @@ def get_last_stock_date(conn, symbol):
             # ถ้าไม่เจอข้อมูลเลย ให้ย้อนหลังไป 12 เดือน
             return date.today() - timedelta(days=365)
         
-def main():
+def main(endDateFix=None):
     investor = Investor( **cfg.args_Investor )
     equity = investor.Equity(account_no=os.getenv("account_no"))
     market = investor.MarketData()
@@ -40,7 +43,7 @@ def main():
 
     # date = datetime.now().strftime("%Y-%m-%d")
     # startDate = datetime.now().strftime("%Y-%m-%d") #"2026-03-31" # 
-    endDate = datetime.now().strftime("%Y-%m-%d")
+    endDate = datetime.now().strftime("%Y-%m-%d") if endDateFix is None else endDateFix
     # print(date)
 
     # เชื่อมต่อ PostgreSQL โดยตรงผ่าน psycopg2
@@ -64,6 +67,7 @@ def main():
         low NUMERIC(18,6),
         close NUMERIC(18,6),
         volume BIGINT,
+        import_datetime TIMESTAMP DEFAULT NOW(),
         PRIMARY KEY (symbol, date)
     );
     """
@@ -87,7 +91,7 @@ def main():
 # ,"UHERO"]
 
     # cursor = conn.cursor()
-    cursor.execute("SELECT symbol FROM settrade_stocklist where symbol ='TDEX' ORDER BY symbol  ;")
+    cursor.execute("SELECT symbol FROM settrade_stocklist ORDER BY symbol  ;")
     # cursor.execute("SELECT symbol FROM settrade_stocklist where symbol IN %s ORDER BY symbol;", (tuple(symbol_list),))
     symbols = [row[0] for row in cursor.fetchall()]
 
@@ -130,22 +134,27 @@ def main():
 
             for index, row in df.iterrows():
                 cursor.execute("""
-                    INSERT INTO stock_price_history (symbol, date, open, high, low, close, volume)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    INSERT INTO stock_price_history (symbol, date, open, high, low, close, volume, import_datetime)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())
                     ON CONFLICT (symbol, date) DO UPDATE SET
                         open = EXCLUDED.open,
                         high = EXCLUDED.high,
                         low = EXCLUDED.low,
                         close = EXCLUDED.close,
-                        volume = EXCLUDED.volume;
+                        volume = EXCLUDED.volume,
+                        import_datetime = NOW();
                 """, (symbol, row['date'], row['open'], row['high'], row['low'], row['close'], row['volume']))
             conn.commit()
-            print(f"process in {time.time() - start_time} second , Updated data for symbol: {symbol}")
+            process_time_used = time.time() - start_time
+            print(f"process in {process_time_used:.2f} second , Updated data for symbol: {symbol}")
         except Exception as e:
             print(f"Error processing symbol {symbol}: {e}")
-        delay = random.uniform(2, 5)  # Random delay between 2 to 5 seconds
+            conn.rollback()
+        sec_sleep_rate_limit = 1.0 / API_RATE_LIMIT_  # คำนวณเวลาที่ต้องรอเพื่อไม่ให้เกิน rate limit
+        delay = sec_sleep_rate_limit - process_time_used
         print(f"Sleeping for {delay:.2f} seconds to avoid hitting API rate limits.")
-        time.sleep(delay)  # เพื่อหลีกเลี่ยงการเรียก API เร็วเกินไป
+        time.sleep(delay if delay > 0 else 0)  # เพื่อหลีกเลี่ยงการเรียก API เร็วเกินไป
+
     cursor.close()
     conn.close()
     print("Stock price update completed.")

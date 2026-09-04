@@ -2,7 +2,9 @@
 .env
 desktop.ini
 __pycache__/
-DatabaseBackup/
-importCsvHistoryPrice/
+_DatabaseBackup/
+_importCsvHistoryPrice/
+_notUse_backup/
+_testLab/
 env/ 
 /*.txt 

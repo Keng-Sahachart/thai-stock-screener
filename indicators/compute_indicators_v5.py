@@ -28,7 +28,7 @@ PG_CONN_STR = (
 )
 
 # ------- PARAM -------
-LOOKBACK_DAYS = int(os.getenv("LOOKBACK_DAYS", "1300"))
+LOOKBACK_DAYS = int(os.getenv("LOOKBACK_DAYS", "730"))
 EPS = float(os.getenv("IND_EPS", "1e-6"))
 BATCH_SIZE = 3000
 
@@ -89,15 +89,18 @@ def fetch_existing_json(symbols, start_date):
 
 # ------- indicator functions -------
 def ema(series, span): 
+    '''คำนวณ Exponential Moving Average (EMA)'''
     return series.ewm(span=span, adjust=False, min_periods=span).mean()
 
 def macd_components(close, fast=12, slow=26, signal=9):
+    '''คำนวณ MACD, Signal line, Histogram'''
     ef, es = ema(close, fast), ema(close, slow)
     macd = ef - es
     sig = ema(macd, signal)
     return macd, sig, macd - sig
 
 def rsi(series, period=14):
+    '''คำนวณ Relative Strength Index (RSI)'''
     delta = series.diff()
     gain, loss = delta.clip(lower=0), (-delta).clip(lower=0)
     avg_gain = gain.ewm(alpha=1/period, adjust=False, min_periods=period).mean()
@@ -106,7 +109,7 @@ def rsi(series, period=14):
     return 100 - (100 / (1 + rs))
 
 def classify_trend(c, e20, e50, e200, r):
-    # ตรวจสอบว่าเป็น uptrend, downtrend หรือ sideway
+    '''จำแนกแนวโน้มของหุ้นเป็น uptrend, downtrend หรือ sideway'''
     if pd.notna(c) and pd.notna(e200) and pd.notna(e20) and pd.notna(e50):
         if c > e200 and e20 > e50: return "uptrend"
         if c < e200 and e20 < e50: return "downtrend"
@@ -133,7 +136,7 @@ def bollinger_bands(close, period=20, std_dev=2):
 
 # ------------------------------------------------
 def compute_indicators(df):
-    ## คำนวณ indicator ทั้งหมดและ return DataFrame ใหม่
+    '''คำนวณ indicator ทั้งหมดและ return DataFrame ใหม่'''
     d = df.copy()
     # Exponential Moving Averages
     d["ema5"]    = ema(d["close"], 5)
@@ -173,6 +176,7 @@ def compute_indicators(df):
 
 # ------- compare -------
 def diff_json(new, old, eps=EPS):
+    '''เปรียบเทียบ JSONB ใหม่กับเก่า ถ้าแตกต่างกัน return True'''
     if old is None:
         return True
     for k, v in new.items():
@@ -186,6 +190,7 @@ def diff_json(new, old, eps=EPS):
 
 # ------- write -------
 def upsert_batch(rows):
+    '''Upsert a batch of rows into the database'''
     if not rows:
         return
     with pg_conn() as conn, conn.cursor() as cur:
@@ -215,6 +220,7 @@ def main():
         d = compute_indicators(df)
         for rec in d.itertuples(index=False):
             indicators = {
+                # ema
                 "ema5": float(rec.ema5) if pd.notna(rec.ema5) else None,
                 "ema10": float(rec.ema10) if pd.notna(rec.ema10) else None,
                 "ema12": float(rec.ema12) if pd.notna(rec.ema12) else None,
@@ -223,9 +229,11 @@ def main():
                 "ema50": float(rec.ema50) if pd.notna(rec.ema50) else None,
                 "ema200": float(rec.ema200) if pd.notna(rec.ema200) else None,
 
+                # rsi
                 "rsi14": float(rec.rsi14) if pd.notna(rec.rsi14) else None,
                 "rsi21": float(rec.rsi21) if pd.notna(rec.rsi21) else None,
 
+                # macd
                 "macd_12_26_9": float(rec.macd_12_26_9) if pd.notna(rec.macd_12_26_9) else None,
                 "macd_12_26_9_signal": float(rec.macd_12_26_9_signal) if pd.notna(rec.macd_12_26_9_signal) else None,
                 "macd_12_26_9_hist": float(rec.macd_12_26_9_hist) if pd.notna(rec.macd_12_26_9_hist) else None,
@@ -233,12 +241,13 @@ def main():
                 "macd_19_39_9_signal": float(rec.macd_19_39_9_signal) if pd.notna(rec.macd_19_39_9_signal) else None,
                 "macd_19_39_9_hist": float(rec.macd_19_39_9_hist) if pd.notna(rec.macd_19_39_9_hist) else None,
 
+                # volume
                 "volume_avg20": float(rec.volume_avg20) if pd.notna(rec.volume_avg20) else None,
                 "volume_ema5": float(rec.volume_ema5) if pd.notna(rec.volume_ema5) else None,
                 "volume_ema20": float(rec.volume_ema20) if pd.notna(rec.volume_ema20) else None,
                 "volume_ema50": float(rec.volume_ema50) if pd.notna(rec.volume_ema50) else None,
 
-                "atr14": float(rec.atr14) if pd.notna(rec.atr14) else None,
+                "atr14": float(rec.atr14) if pd.notna(rec.atr14) else None, # Average True Range
                 "bb_upper": float(rec.bb_upper) if pd.notna(rec.bb_upper) else None,
                 "bb_mid": float(rec.bb_mid) if pd.notna(rec.bb_mid) else None,
                 "bb_lower": float(rec.bb_lower) if pd.notna(rec.bb_lower) else None,
@@ -258,15 +267,17 @@ def main():
         print(f"🧾 upserting final: {len(to_write):,}")
         upsert_batch(to_write)
 
+    call_function_recreate_view()
     print("✅ done v5 JSONB")
 
 def call_function_recreate_view():
+    '''เรียกใช้ฟังก์ชันใน Postgres เพื่อรีเฟรช materialized view mv_stock_indicators'''
+    print("✅ refreshed view v_stock_indicators")
     with pg_conn() as conn, conn.cursor() as cur:
         # cur.execute("drop view if exists v_stock_indicators; SELECT public.refresh_indicator_view();")
         cur.execute("SELECT public.refresh_indicator_view();")
+        cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY mv_stock_indicators;")
         conn.commit()
-    print("✅ refreshed view v_stock_indicators")
 
 if __name__ == "__main__":
     main()
-    call_function_recreate_view()

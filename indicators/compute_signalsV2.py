@@ -49,7 +49,7 @@ ON CONFLICT (symbol, trade_date) DO UPDATE
 SET signal_type = EXCLUDED.signal_type,
     priority    = EXCLUDED.priority,
     reason      = EXCLUDED.reason,
-    created_at  = now();
+    created_at  = timezone('Asia/Bangkok', now());
 """
 
 # ------------------------------------------------
@@ -62,6 +62,7 @@ def ensure_table():
         conn.commit()
 
 def fetch_recent_indicators(days_back=LOOKBACK_DAYS):
+    # ดึงข้อมูล indicator ย้อนหลังจาก v_stock_indicators (หรือ stock_indicator_daily) เพื่อใช้คำนวณสัญญาณ
     start = date.today() - timedelta(days=days_back)
     with pg_conn() as conn:
         # ตาราง stock_indicator_daily มีข้อมูล indicator รายวันที่คำนวณจาก compute_indicators_v3 หรือ v5
@@ -74,7 +75,7 @@ def fetch_recent_indicators(days_back=LOOKBACK_DAYS):
             v.macd_12_26_9_signal AS macd_signal,
             v.atr14, v.bb_lower, v.bb_upper, -- ดึงค่าความผันผวนที่เราเพิ่มใน v5
             p.close  -- <--- ต้องดึงคอลัมน์นี้เพิ่มเข้ามา
-        FROM v_stock_indicators v
+        FROM mv_stock_indicators v
         JOIN stock_price_history p ON v.symbol = p.symbol AND v.trade_date = p.date
         WHERE v.trade_date >= %s
         ORDER BY v.symbol, v.trade_date;
@@ -84,7 +85,7 @@ def fetch_recent_indicators(days_back=LOOKBACK_DAYS):
 
 def fetch_existing_signals():
     """โหลดสัญญาณล่าสุด เพื่อเทียบว่าควรเขียนใหม่ไหม"""
-    with pg_conn() as conn:
+    with pg_conn() as conn: 
         q = "SELECT symbol, trade_date, signal_type FROM stock_signal;"
         df = pd.read_sql(q, conn)
         return {(r.symbol, r.trade_date): r.signal_type for r in df.itertuples(index=False)}
@@ -121,71 +122,98 @@ def check_rsi_divergence(df_window):
 
 # ------------------------------------------------
 def detect_signals(df_sym: pd.DataFrame):
-    """คืนค่า list ของสัญญาณสำหรับ symbol เดียว"""
+    """คืนค่า list ของสัญญาณสำหรับ symbol เดียว แบบ Independent Checks (Multi-tagging)"""
     out = []
     df_sym = df_sym.sort_values("trade_date").reset_index(drop=True)
-    # กำหนดระยะเวลาที่ใช้มองย้อนหลังเพื่อหา Divergence (เช่น 10 วัน)
     DIV_WINDOW = 10
 
     for i, r in df_sym.iterrows():
-        # ข้ามถ้าข้อมูลไม่พอสำหรับคำนวณ Window ย้อนหลัง
-
-        sig, pri, reason = None, 0, None
-        # --- 1. เตรียมข้อมูลพื้นฐาน ---
-        # ข้ามถ้า Indicator หลักยังไม่พร้อม (ช่วงเริ่มคำนวณ EMA/ATR)
-        # skip incomplete data
-        if pd.isna(r["ema20"]) or pd.isna(r["ema50"]) or pd.isna(r["rsi14"]) or pd.isna(r["macd_signal"]) or pd.isna(r["atr14"]):
+        # ข้ามถ้า Indicator หลักยังไม่พร้อม
+        if (
+            pd.isna(r["ema20"]) 
+            or pd.isna(r["ema50"]) 
+            or pd.isna(r["rsi14"]) 
+            or pd.isna(r["macd_signal"]) 
+            or pd.isna(r["atr14"])
+        ):
             continue
-        
-        # --- 2. คำนวณ MACD Cross (ใช้ Logic เดิมของคุณเป๊ะๆ) ---
+
+        # --- 1. คำนวณ Crossover และ Divergence ---
         macd_cross_up = False
         macd_cross_down = False
         if i > 0:
-            prev_macd, prev_sigline = df_sym.loc[i-1, ["macd", "macd_signal"]]
+            prev_macd, prev_sigline = df_sym.loc[i - 1, ["macd", "macd_signal"]]
             if prev_macd is not None and prev_sigline is not None:
                 macd_cross_up = (prev_macd < prev_sigline) and (r["macd"] > r["macd_signal"])
                 macd_cross_down = (prev_macd > prev_sigline) and (r["macd"] < r["macd_signal"])
 
-        # --- 3. ตรวจหา Divergence (เฉพาะเมื่อมีข้อมูลครบ window) ---
         div_type = None
         if i >= DIV_WINDOW - 1:
-            window_df = df_sym.iloc[i-DIV_WINDOW+1 : i+1]
+            window_df = df_sym.iloc[i - DIV_WINDOW + 1 : i + 1]
             div_type = check_rsi_divergence(window_df)
 
-      
-        # --- 4. RULES (เรียงลำดับความสำคัญ) ---
+        # --- 2. Independent Tagging (ตรวจสอบทุกเงื่อนไขแบบอิสระ) ---
+        buy_tags = []
+        sell_tags = []
+        watch_tags = []
+        neutral_tags = []
 
-        # เงื่อนไขการขาย: MACD ตัดลง (ที่คำนวณไว้ด้านบน) หรือ ราคาปิดหลุด Bollinger Band เส้นล่าง
-        if macd_cross_down or (pd.notna(r["bb_lower"]) and r["close"] < r["bb_lower"]) or div_type == "BEARISH_DIVERGENCE":
-            sig = "SELL"
-            pri = 4 if div_type == "BEARISH_DIVERGENCE" else 3
-            reason = "MACD Cross Down / BB Lower Breakout / Bearish Div"
+        # [หมวด BUY Signals]
+        if div_type == "BULLISH_DIVERGENCE":
+            buy_tags.append("Bullish Div")
+        if macd_cross_up:
+            buy_tags.append("MACD Cross Up")
+        if r["ema20"] > r["ema50"]:
+            buy_tags.append("EMA Bullish (20>50)")
+        if r["rsi14"] > 45:
+            buy_tags.append("RSI Bullish (>45)")
 
-        # [RULE 2] สัญญาณซื้อรุนแรง (BUY-STRONG) 
-        elif div_type == "BULLISH_DIVERGENCE" and macd_cross_up:
-            stop_loss = r["close"] - (r["atr14"] * 2)
-            sig, pri, reason = "BUY-STRONG", 5, f"Bullish Div & MACD↑ (SL: {stop_loss:.2f})"
+        # [หมวด SELL Signals]
+        if div_type == "BEARISH_DIVERGENCE":
+            sell_tags.append("Bearish Div")
+        if macd_cross_down:
+            sell_tags.append("MACD Cross Down")
+        if pd.notna(r.get("bb_lower")) and r["close"] < r["bb_lower"]:
+            sell_tags.append("Break BB Lower")
+        if r["ema20"] < r["ema50"]:
+            sell_tags.append("EMA Bearish (20<50)")
+        if r["rsi14"] < 55:
+            sell_tags.append("RSI Bearish (<55)")
 
-        # [RULE 3] สัญญาณซื้อปกติ (BUY) - Logic เดิมของคุณ
-        elif r["ema20"] > r["ema50"] and macd_cross_up and r["rsi14"] > 45:
-            # sig, pri, reason = "BUY", 3, "EMA20>EMA50 & MACD↑ & RSI>45" # แนวโน้มขาขึ้น + MACD ตัดขึ้น + RSI ไม่ต่ำเกิน
-            # คำนวณ Stop Loss โดยใช้ ATR (Volatility-based)
-            stop_loss = r["close"] - (r["atr14"] * 2) 
-            sig, pri, reason = "BUY", 3, f"EMA Bullish & MACD↑ (SL: {stop_loss:.2f})"
-        # กรณี SELL (ใช้ ATR ช่วยดู Trailing Stop ได้)
-        elif r["ema20"] < r["ema50"] and macd_cross_down:
-            sig, pri, reason = "SELL", 3, "EMA Bearish & MACD↓"
-        # สัญญาณ SELL: ราคาหลุด Bollinger Band ล่าง หรือ หลุด EMA200
-        elif r["ema20"] > r["ema50"] and r["rsi14"] < 40:
-            sig, pri, reason = "BUY-WATCH", 2, "EMA20>EMA50 & RSI<40 (pullback)" # แนวโน้มขาขึ้น แต่ RSI ต่ำ
-        elif r["ema20"] < r["ema50"] and macd_cross_down and r["rsi14"] < 55:
-            sig, pri, reason = "SELL", 3, "EMA20<EMA50 & MACD↓ & RSI<55" # แนวโน้มขาลง + MACD ตัดลง + RSI ไม่สูงเกิน
-        elif r["ema20"] < r["ema50"] and r["rsi14"] > 60:
-            sig, pri, reason = "SELL-WATCH", 2, "EMA20<EMA50 & RSI>60 (bounce)" # แนวโน้มขาลง แต่ RSI สูง
-        elif abs(r["ema20"] - r["ema50"]) / r["ema50"] < 0.01 and 40 <= r["rsi14"] <= 60:
-            sig, pri, reason = "SIDEWAY", 1, "EMA20≈EMA50 & RSI neutral" # แนวโน้มแกว่งตัว
+        # [หมวด WATCH / SIDEWAY]
+        if r["ema20"] > r["ema50"] and r["rsi14"] < 40:
+            watch_tags.append("Pullback (EMA Uptrend & RSI<40)")
+        if r["ema20"] < r["ema50"] and r["rsi14"] > 60:
+            watch_tags.append("Technical Bounce (EMA Downtrend & RSI>60)")
+        if abs(r["ema20"] - r["ema50"]) / r["ema50"] < 0.01 and 40 <= r["rsi14"] <= 60:
+            neutral_tags.append("Sideway (EMA Flat & RSI Neutral)")
+
+        # --- 3. การประเมิน Action หลัก (Synthesis & Prioritization) ---
+        sig, pri = "HOLD", 0
+        stop_loss = r["close"] - (r["atr14"] * 2)
+
+        # จัดลำดับความสำคัญของ Decision
+        if "Bearish Div" in sell_tags or "Break BB Lower" in sell_tags or ("MACD Cross Down" in sell_tags and "EMA Bearish (20<50)" in sell_tags):
+            sig, pri = "SELL", 4 if "Bearish Div" in sell_tags else 3
+        elif "Bullish Div" in buy_tags and "MACD Cross Up" in buy_tags:
+            sig, pri = "BUY-STRONG", 5
+        elif "EMA Bullish (20>50)" in buy_tags and "MACD Cross Up" in buy_tags and "RSI Bullish (>45)" in buy_tags:
+            sig, pri = "BUY", 3
+        elif watch_tags:
+            if "Pullback (EMA Uptrend & RSI<40)" in watch_tags:
+                sig, pri = "BUY-WATCH", 2
+            else:
+                sig, pri = "SELL-WATCH", 2
+        elif neutral_tags:
+            sig, pri = "SIDEWAY", 1
+
+        # รวมเหตุผลทั้งหมดที่เกิดขึ้นในวันนั้น (Multi-tag string)
+        all_detected = buy_tags + sell_tags + watch_tags + neutral_tags
+        if all_detected:
+            tag_summary = ", ".join(all_detected)
+            reason = f"[{sig}] {tag_summary}" + (f" | SL: {stop_loss:.2f}" if "BUY" in sig else "")
         else:
-            sig, pri, reason = "HOLD", 0, "No signal change"# ถือสถานะเดิม
+            reason = "HOLD: No active technical tags"
 
         out.append((r["symbol"], r["trade_date"], sig, pri, reason))
 
@@ -202,7 +230,7 @@ def upsert(rows):
 def main():
     ensure_table() # สร้างตารางถ้ายังไม่มี
 
-    ind = fetch_recent_indicators()
+    ind = fetch_recent_indicators()  # ดึงข้อมูล indicator ย้อนหลังจาก v_stock_indicators (หรือ stock_indicator_daily) เพื่อใช้คำนวณสัญญาณ
     if ind.empty:
         print("❌ No indicator data found.")
         return
@@ -226,4 +254,4 @@ def main():
     print("✅ Done compute_signals.")
 
 if __name__ == "__main__":
-    main()
+    main()  #['TDEX'] ตัวอย่างรันสำหรับ symbol 'TDEX'

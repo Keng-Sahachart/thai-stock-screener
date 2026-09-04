@@ -1,26 +1,193 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+==============================================================================
+FILE NAME   : risk_manager.py
+LOCATION    : core/ หรือ root
+OCCASION    : ถูกเรียกใช้โดย aggregator.py, callback_handlers.py
+DESCRIPTION : คำนวณ Position Sizing ควบคุมความเสี่ยงและงบประมาณ 4 ชั้น:
+              1. Risk Sizing (ยอมเสีย 1% ของพอร์ต)
+              2. Cash Limit (ไม่เกิน line_available)
+              3. Max Amount Cap (ไม่เกินเพดานเงินบาทต่อไม้)
+              4. Max Shares Cap (ไม่เกินเพดานจำนวนหุ้นต่อไม้)
+==============================================================================
+"""
+
 import pandas as pd
 import numpy as np
 
-def calculate_position_size(symbol, entry_price, atr14, total_equity, risk_percent=0.01):
+# def calculate_position_size(symbol, entry_price, atr14, total_equity, risk_percent=0.01):
+#     """
+#     คำนวณจำนวนหุ้นที่ควรซื้อตามหลัก Risk Management
+#     risk_percent: 0.01 คือยอมเสีย 1% ของพอร์ต
+#     """
+#     if pd.isna(atr14) or atr14 <= 0:
+#         # ถ้าไม่มี ATR ให้ใช้ Default Risk ที่ 5% ของราคา
+#         stop_loss = entry_price * 0.95 
+#     else:
+#         stop_loss = entry_price - (atr14 * 2) # ระยะ 2 เท่าของความผันผวน
+
+#     risk_per_share = entry_price - stop_loss
+    
+#     if risk_per_share <= 0: return 0, stop_loss
+    
+#     # คำนวณจำนวนหุ้นจากเงินที่ยอมเสียได้
+#     risk_amount = total_equity * risk_percent
+#     shares_to_buy = int((risk_amount / risk_per_share) // 100) * 100
+    
+#     return shares_to_buy, stop_loss
+
+def calculate_position_size_v2(
+    symbol: str,
+    entry_price: float,
+    atr14: float,
+    total_equity: float,
+    available_cash: float,
+    risk_percent: float = 0.01,
+    max_position_pct: float = 0.20,
+    default_shares: int = 0,
+    fee_buffer_pct: float = 0.0025
+):
     """
-    คำนวณจำนวนหุ้นที่ควรซื้อตามหลัก Risk Management
-    risk_percent: 0.01 คือยอมเสีย 1% ของพอร์ต
+    คำนวณจำนวนหุ้นที่ควรซื้อตามหลัก Risk Management และ Budget Limits 3 ชั้น:
+    1. Risk Sizing (ยอมเสีย 1% ของพอร์ต)
+    2. Cash Limit (ไม่เกิน line_available)
+    3. Max Position Cap (ไม่เกินเพดาน % ของพอร์ต)
+    Parameters:
+    - symbol: str, ชื่อหุ้น
+    - entry_price: float, ราคาซื้อ
+    - atr14: float, ATR 14 วัน
+    - total_equity: float, เงินทุนรวม
+    - available_cash: float, เงินสดที่มี
+    - risk_percent: float, เปอร์เซ็นต์ความเสี่ยง
+    - max_position_pct: float, เพดาน % ของพอร์ตต่อไม้
+    - default_shares: int, จำนวนหุ้นคงที่ต่อไม้ (0 = ปรับตาม Position Sizing)
+    - fee_buffer_pct: float, อัตราค่าธรรมเนียม buffer
+    Returns:
+    - final_shares: int, จำนวนหุ้นที่ควรซื้อ (ปัดเศษลงเป็น Board Lot)
+    - stop_loss: float, จุด Stop Loss ที่คำนวณได้
     """
+    if entry_price <= 0:
+        return 0, 0.0
+
+    # 1. กำหนดระยะ Stop Loss พื้นฐาน
     if pd.isna(atr14) or atr14 <= 0:
-        # ถ้าไม่มี ATR ให้ใช้ Default Risk ที่ 5% ของราคา
-        stop_loss = entry_price * 0.95 
+        stop_loss = entry_price * 0.95
     else:
-        stop_loss = entry_price - (atr14 * 2) # ระยะ 2 เท่าของความผันผวน
+        stop_loss = entry_price - (atr14 * 2.0)
+
+    # ป้องกัน Stop Loss แคบหรือกว้างเกินไป (Safety Clamp 4% - 8%)
+    loss_pct = ((entry_price - stop_loss) / entry_price) * 100.0
+    if loss_pct < 4.0:
+        stop_loss = entry_price * 0.96
+    elif loss_pct > 8.0:
+        stop_loss = entry_price * 0.92
 
     risk_per_share = entry_price - stop_loss
-    
-    if risk_per_share <= 0: return 0, stop_loss
-    
-    # คำนวณจำนวนหุ้นจากเงินที่ยอมเสียได้
+    if risk_per_share <= 0:
+        return 0, round(stop_loss, 4)
+
+    # 2. กรณีตั้งค่าจำนวนหุ้นคงที่ (Fixed Shares Override)
+    if default_shares > 0:
+        cost_estimate = default_shares * entry_price * (1.0 + fee_buffer_pct)
+        if cost_estimate <= available_cash:
+            return default_shares, round(stop_loss, 4)
+        else:
+            # ถ้าเงินไม่พอซื้อจำนวนคงที่ ให้คำนวณถอยกลับมาเท่าที่เงินซื้อได้
+            max_shares_by_cash = int(available_cash / (entry_price * (1.0 + fee_buffer_pct)) // 100) * 100
+            return max_shares_by_cash, round(stop_loss, 4)
+
+    # 3. การคำนวณแบบ Dynamic (เพดาน 3 ชั้น)
+    # ชั้นที่ 1: เพดานความเสี่ยง (Risk-based size)
     risk_amount = total_equity * risk_percent
-    shares_to_buy = int((risk_amount / risk_per_share) // 100) * 100
-    
-    return shares_to_buy, stop_loss
+    shares_by_risk = risk_amount / risk_per_share
+
+    # ชั้นที่ 2: เพดานจำกัดน้ำหนักหุ้นต่อตัว (เช่น ไม่เกิน 20% ของพอร์ตรวม)
+    max_capital_per_stock = total_equity * max_position_pct
+    shares_by_cap = max_capital_per_stock / entry_price
+
+    # ชั้นที่ 3: เพดานอำนาจซื้อเงินสดจริง (Line Available หักเผื่อค่าคอม)
+    shares_by_cash = available_cash / (entry_price * (1.0 + fee_buffer_pct))
+
+    # เลือกค่าที่เข้มงวดที่สุดใน 3 เงื่อนไข
+    allowed_shares = min(shares_by_risk, shares_by_cap, shares_by_cash)
+
+    # ปัดเศษลงเป็น Board Lot ของตลาดหุ้นไทย (100 หุ้น)
+    final_shares = int(allowed_shares // 100) * 100
+
+    return max(0, final_shares), round(stop_loss, 4)
+
+def calculate_position_size(
+    symbol: str,
+    entry_price: float,
+    atr14: float,
+    total_equity: float,
+    available_cash: float,
+    risk_percent: float = 0.01,
+    max_amount_per_trade: float = 500.0,
+    max_shares_per_trade: int = 200,
+    fee_buffer_pct: float = 0.0025
+):
+    '''
+    คำนวณจำนวนหุ้นที่ควรซื้อตามหลัก Risk Management และ Budget Limits 4 ชั้น:
+    1. Risk Sizing (ยอมเสีย 1% ของพอร์ต)
+    2. Cash Limit (ไม่เกิน line_available)
+    3. Max Amount Cap (ไม่เกินเพดานเงินบาทต่อไม้)
+    4. Max Shares Cap (ไม่เกินเพดานจำนวนหุ้นต่อไม้)
+    Parameters:
+    - symbol: str, ชื่อหุ้น
+    - entry_price: float, ราคาซื้อ
+    - atr14: float, ATR 14 วัน
+    - total_equity: float, เงินทุนรวม
+    - available_cash: float, เงินสดที่มี
+    - risk_percent: float, เปอร์เซ็นต์ความเสี่ยง
+    - max_amount_per_trade: float, เพดานเงินบาทต่อไม้
+    - max_shares_per_trade: int, เพดานจำนวนหุ้นต่อไม้
+    - fee_buffer_pct: float, อัตราค่าธรรมเนียม buffer
+    Returns:
+    - final_shares: int, จำนวนหุ้นที่ควรซื้อ (ปัดเศษลงเป็น Board Lot)
+    - stop_loss: float, จุด Stop Loss ที่คำนวณได้
+    '''
+    if entry_price <= 0:
+        return 0, 0.0
+
+    # 1. คำนวณ Stop Loss พร้อม Safety Clamp (4% - 8%)
+    if pd.isna(atr14) or atr14 <= 0:
+        stop_loss = entry_price * 0.95
+    else:
+        stop_loss = entry_price - (atr14 * 2.0)
+
+    # ป้องกัน Stop Loss แคบหรือกว้างเกินไป (Safety Clamp 4% - 8%)
+    loss_pct = ((entry_price - stop_loss) / entry_price) * 100.0
+    if loss_pct < 4.0:
+        stop_loss = entry_price * 0.96
+    elif loss_pct > 8.0:
+        stop_loss = entry_price * 0.92
+
+    risk_per_share = entry_price - stop_loss
+    if risk_per_share <= 0:
+        return 0, round(stop_loss, 4)
+
+    # 2. คำนวณเพดาน 4 มิติ
+    # มิติที่ 1: เพดานความเสี่ยง (Risk-based)
+    shares_by_risk = (total_equity * risk_percent) / risk_per_share
+
+    # มิติที่ 2: เพดานอำนาจซื้อเงินสดจริง (Line Available)
+    shares_by_cash = available_cash / (entry_price * (1.0 + fee_buffer_pct))
+
+    # มิติที่ 3: เพดานเงินบาทต่อไม้ (เช่น ไม่เกิน 500 บ.)
+    shares_by_amount_cap = max_amount_per_trade / (entry_price * (1.0 + fee_buffer_pct))
+
+    # มิติที่ 4: เพดานจำนวนหุ้นต่อไม้ (เช่น ไม่เกิน 200 หุ้น)
+    shares_by_share_cap = float(max_shares_per_trade)
+
+    # เลือกจำนวนที่น้อยที่สุดในทุกมิติ
+    allowed_shares = min(shares_by_risk, shares_by_cash, shares_by_amount_cap, shares_by_share_cap)
+
+    # ปัดเศษลงเป็น Board Lot (คูณด้วย 100)
+    final_shares = int(allowed_shares // 100) * 100
+
+    return max(0, final_shares), round(stop_loss, 4)
 
 def check_portfolio_risk(df_portfolio, df_indicators, total_equity):
     """

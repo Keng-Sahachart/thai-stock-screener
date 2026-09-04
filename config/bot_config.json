@@ -1,0 +1,54 @@
+{
+  "trading_mode": {
+    "dry_run": true,
+    "description": "true = ทดสอบจำลองคำสั่ง (บันทึก Order เสมือน), false = ยิงเข้า Broker จริง"
+  },
+  "budget_limits": {
+    "max_amount_per_trade_thb": 500.0,
+    "max_shares_per_trade": 200,
+    "max_amount_per_day_thb": 1500.0,
+    "max_trades_per_day": 3,
+    "min_lot_size": 100
+  },
+  "risk_management": {
+    "risk_per_trade_pct": 0.01,
+    "hard_cut_loss_pct": -10.0,
+    "safety_clamp": {
+      "min_stop_pct": 4.0,
+      "max_stop_pct": 8.0
+    },
+
+    "max_position_pct": 0.20,
+    "default_shares_per_trade": 100,
+    "fee_buffer_pct": 0.0025,
+
+    "atr_multiplier": {
+      "EQUITY": 2.0,
+      "ETF": 3.0,
+      "MUTUALFUND": 3.0,
+      "DEFAULT": 2.0
+    }
+  },
+  "excluded_symbols": [
+    "3BBIF",
+    "TEAM",
+    "QH",
+    "PIN",
+    "WICE",
+    "KIAT",
+    "SIAM",
+    "SENA",
+    "TPIPP",
+    "CHG",
+    "TPLAS",
+    "NOBLE",
+    "SMD100",
+    "NOBLE-W3"
+  ],
+  "//": "จำนวนหุ้นต่อไม้เทรด / ใส่ 0 เพื่อให้คำนวณตาม Position Sizing",
+  "default_shares_per_trade": 100,
+  "//": "test comment :  ",
+  "//": "test comment :  ",
+  "//": "test comment :  ",
+  "//": "test comment :  "
+}
