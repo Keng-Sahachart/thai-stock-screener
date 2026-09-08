@@ -62,7 +62,7 @@ def run_signal_aggregator():
             line_available = float(acc["line_available"]) if acc else 0.0
             cash_balance = float(acc["cash_balance"]) if acc else 0.0
 
-            cur.execute("SELECT COALESCE(SUM(market_value), 0.0) AS port_val FROM public.portfolio_stock;")
+            cur.execute("SELECT COALESCE(SUM(market_value), 0.0) AS port_val FROM public.portfolio_stock where imported_at = (SELECT max(imported_at) FROM public.portfolio_stock);")
             port_val = float(cur.fetchone()["port_val"])
             total_equity = port_val + cash_balance if (port_val + cash_balance) > 0 else max(line_available, 100000.0)
 

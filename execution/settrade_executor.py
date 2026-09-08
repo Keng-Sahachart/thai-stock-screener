@@ -9,6 +9,7 @@ DESCRIPTION : ส่งคำสั่งซื้อ-ขายหลักท�
 ==============================================================================
 """
 
+import datetime
 import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -46,6 +47,24 @@ def execute_real_buy(signal_id: int, symbol: str, volume: int, target_price: flo
             volume=volume,
             validity_type="DAY"
         )
+
+        # current_date = datetime.now().strftime('%Y-%m-%d')
+        # res = equity.place_order(
+        #                     side= "Buy",
+        #                     symbol= symbol,
+        #                     trustee_id_type= "Local",
+        #                     volume= volume,
+        #                     qty_open= 0,
+        #                     price= target_price,
+        #                     price_type= "Limit",
+        #                     validity_type= "Day",
+        #                     bypass_warning= False,
+        #                     valid_till_date= current_date,
+        #                     pin= "190628"
+        #                     )
+
+
+
         broker_order_no = str(res.get("orderNo", ""))
 
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -103,6 +122,22 @@ def execute_real_sell(symbol: str, volume: int, exit_price: float, exit_reason: 
             volume=volume,
             validity_type="DAY"
         )
+
+        # current_date = datetime.now().strftime('%Y-%m-%d')
+        # res = equity.place_order(
+        #                     side= "Sell",
+        #                     symbol= symbol,
+        #                     trustee_id_type= "Local",
+        #                     volume= volume,
+        #                     qty_open= 0,
+        #                     price= exit_price,
+        #                     price_type= "Limit",
+        #                     validity_type= "Day",
+        #                     bypass_warning= False,
+        #                     valid_till_date= current_date,
+        #                     pin= "190628"
+        #                     )
+
         broker_order_no = str(res.get("orderNo", ""))
 
         with conn.cursor(cursor_factory=RealDictCursor) as cur:

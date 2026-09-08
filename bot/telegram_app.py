@@ -93,6 +93,7 @@ async def cmd_port(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conn = get_db_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # 1. ดึงยอดเงินสดและอำนาจซื้อล่าสุด
             cur.execute("""
                 SELECT line_available, cash_balance 
                 FROM public.account_info_history 
@@ -103,47 +104,81 @@ async def cmd_port(update: Update, context: ContextTypes.DEFAULT_TYPE):
             line_avail = float(acc["line_available"]) if acc else 0.0
             cash_bal = float(acc["cash_balance"]) if acc else 0.0
 
+            # 2. ดึงพอร์ตจริงทั้งหมด (มี percent_profit และ stop loss)
+            cur.execute("""
+                SELECT symbol, current_volume, average_price, market_price, 
+                       percent_profit, initial_stop_loss, is_managed_by_bot
+                FROM public.v_portfolio_with_signals
+                WHERE current_volume > 0
+                ORDER BY percent_profit DESC;
+            """)
+            real_rows = cur.fetchall()
+
+            # 3. ดึงไม้จำลอง (DRY-RUN) ที่บอทถืออยู่แต่ยังไม่มีในพอร์ตจริง
             cur.execute("""
                 SELECT b.symbol, b.current_volume, b.entry_price, b.initial_stop_loss,
                        COALESCE(p.close, b.entry_price) AS market_price,
-                       ROUND(((COALESCE(p.close, b.entry_price) - b.entry_price) / b.entry_price * 100)::numeric, 2) AS pnl_pct,
-                       b.is_managed_by_bot
+                       ROUND(((COALESCE(p.close, b.entry_price) - b.entry_price) / b.entry_price * 100)::numeric, 2) AS pnl_pct
+                       --,b.is_managed_by_bot
                 FROM public.bot_active_positions b
                 LEFT JOIN (
                     SELECT symbol, close FROM public.stock_price_history
                     WHERE date = (SELECT MAX(date) FROM public.stock_price_history)
                 ) p ON b.symbol = p.symbol
-                WHERE b.status = 'OPEN';
+                WHERE b.status = 'OPEN'
+                  AND b.symbol NOT IN (
+                      SELECT symbol FROM public.portfolio_stock 
+                      WHERE imported_at = (SELECT MAX(imported_at) FROM public.portfolio_stock) 
+                        AND current_volume > 0
+                  );
             """)
-            rows = cur.fetchall()
+            dry_rows = cur.fetchall()
 
             msg = (
-                f"💼 <b>พอร์ตโฟลิโอส่วนของบอท</b>\n"
+                f"💼 <b>ภาพรวมสถานะการเงิน</b>\n"
                 f"• อำนาจซื้อ (Line Available): <code>{line_avail:,.2f}</code> THB\n"
                 f"• เงินสดคงเหลือ (Cash): <code>{cash_bal:,.2f}</code> THB\n"
                 f"------------------------------------\n"
-                f"📊 <b>รายการหุ้นที่ถือครอง:</b> {len(rows)} ตัว\n"
+                f"📊 <b>พอร์ตจริงในบัญชี (Real Portfolio): {len(real_rows)}</b>\n"
             )
-            if not rows:
-                msg += "<i>ไม่มีหุ้นที่บอทถือครองในขณะนี้</i>"
+
+            if not real_rows:
+                msg += "<i>ไม่มีหุ้นถือครองในพอร์ตจริง</i>\n"
             else:
                 num = 1
-                for r in rows:
+                for r in real_rows:
                   tag = "🤖 [BOT]" if r["is_managed_by_bot"] else "👤 [MANUAL]"
-                  # sl_str = f"{float(r['initial_stop_loss']):.2f}" if r["initial_stop_loss"] else "N/A"
+                  sl_str = f"{float(r['initial_stop_loss']):.2f}" if r["initial_stop_loss"] else "N/A"
+                  pnl = float(r["percent_profit"]) if r["percent_profit"] is not None else 0.0
                   msg += (
                       f"\nNo.{num}: {tag} <b>{r['symbol']}</b> ({r['current_volume']:,} หุ้น)\n"
+                      f"• ทุน: <code>{float(r['average_price']):.2f}</code> | ตลาด: <code>{float(r['market_price']):.2f}</code>\n"
+                      f"• กำไร/ขาดทุน: <code>{pnl:+.2f}%</code>\n"
                       # f"• กำไร/ขาดทุน: <code>{float(r['percent_profit']):+.2f}%</code>\n"
+                      f"• Initial SL: <code>{sl_str}</code> THB\n"
                       # f"• Initial SL: <code>{sl_str}</code> THB\n"
-                      f"• ทุน: <code>{float(r['entry_price']):.2f}</code> | ตลาด: <code>{float(r['market_price']):.2f}</code>\n"
-                      f"• PnL: <code>{float(r['pnl_pct']):+.2f}%</code> | SL: <code>{float(r['initial_stop_loss']):.2f}</code>\n\n"
+                      # f"• ทุน: <code>{float(r['entry_price']):.2f}</code> | ตลาด: <code>{float(r['market_price']):.2f}</code>\n"
+                      # f"• PnL: <code>{float(r['pnl_pct']):+.2f}%</code> | SL: <code>{float(r['initial_stop_loss']):.2f}</code>\n\n"
                   )
                   num += 1
+            if dry_rows:
+                msg += "\n------------------------------------\n"
+                msg += "🧪 <b>ไม้จำลองที่บอทถืออยู่ (Dry-Run Positions):</b>\n"
+                for d in dry_rows:
+                    msg += (
+                        f"\n🤖 <b>{d['symbol']}</b> ({d['current_volume']:,} หุ้น)\n"
+                        f"• ทุนจำลอง: <code>{float(d['entry_price']):.2f}</code> | ตลาด: <code>{float(d['market_price']):.2f}</code>\n"
+                        f"• กำไร/ขาดทุน: <code>{float(d['pnl_pct']):+.2f}%</code>\n"
+                        f"• Initial SL: <code>{float(d['initial_stop_loss']):.2f}</code> THB\n"
+                    )
+
             await update.message.reply_text(msg, parse_mode="HTML")
     finally:
         conn.close()
 
 async def cmd_close_pos(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    '''
+    /close_pos <SYM> - สั่งขายปิดสถานะหุ้นรายตัวทันที (ใช้ราคาจับคู่ล่าสุดเป็น Exit Price)'''
     if not context.args:
         await update.message.reply_text("กรุณาระบุชื่อหุ้น เช่น <code>/close_pos THREL</code>", parse_mode="HTML")
         return
