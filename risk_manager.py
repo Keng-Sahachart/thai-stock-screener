@@ -211,6 +211,35 @@ def check_portfolio_risk(df_portfolio, df_indicators, total_equity):
     risk_pct = (total_risk_val / total_equity) * 100
     return risk_pct
 
+def is_market_trading_time() -> tuple[bool, str]:
+    """
+    ตรวจสอบว่าเวลาปัจจุบันอยู่ในช่วงเวลาเปิดทำการซื้อขายของตลาดหุ้นไทย (SET) หรือไม่:
+    - วันทำการ: จันทร์ - ศุกร์ (weekday 0 ถึง 4)
+    - รอบเช้า: 09:55 - 12:35 น.
+    - รอบบ่าย: 14:25 - 16:35 น.
+    :return: (is_open: bool, reason: str)
+    """
+    from datetime import datetime, time
+    now = datetime.now()
+    if now.weekday() >= 5:
+        return False, "ตลาดปิดทำการ (วันหยุดสุดสัปดาห์ เสาร์-อาทิตย์)"
+
+    cur_time = now.time()
+    m_open = time(9, 55)
+    m_close = time(12, 35)
+    a_open = time(14, 25)
+    a_close = time(16, 35)
+
+    if (m_open <= cur_time <= m_close) or (a_open <= cur_time <= a_close):
+        return True, "ตลาดเปิดทำการปกติ"
+
+    if cur_time < m_open:
+        return False, f"ตลาดปิดทำการ (ก่อนเวลาเปิดตลาดรอบเช้า เวลาปัจจุบัน {now.strftime('%H:%M:%S')} น.)"
+    elif m_close < cur_time < a_open:
+        return False, f"ตลาดปิดทำการ (ช่วงพักกลางวัน Intermission เวลาปัจจุบัน {now.strftime('%H:%M:%S')} น.)"
+    else:
+        return False, f"ตลาดปิดทำการ (Off-hour ตลาดปิดแล้ว เวลาปัจจุบัน {now.strftime('%H:%M:%S')} น.)"
+
 #ปรับแต่งตรงไหนได้บ้าง?
 # Risk Percent (ความเสี่ยงต่อไม้):
 

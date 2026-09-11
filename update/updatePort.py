@@ -108,6 +108,8 @@ def UpdatePortfolio():
   #bulk insert dataframe to table
   fpg.bulk_copy_dataframe_to_table(df=dfPortfolioList, table_name="portfolio_stock", conn_params=cfg.postgresqldb_args)
 
+def main():
+  UpdatePortfolio()
 
 if __name__ == "__main__":
-  UpdatePortfolio()
+  main()

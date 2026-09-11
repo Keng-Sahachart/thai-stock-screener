@@ -7,7 +7,6 @@ import random
 
 import psycopg2
 import pyodbc
-import initialApp as cfg
 from dotenv import load_dotenv
 load_dotenv()
 import os
@@ -16,9 +15,12 @@ import pandas as pd
 from datetime import date, datetime, timedelta
 import time
 import sys
-
+from collections import Counter
 from PyN_Library import fncDateTime as fDtTm
 
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+import initialApp as cfg
 
 API_RATE_LIMIT_ = 5  # จำนวนครั้งสูงสุดที่เรียก API ต่อวินาที (Settrade API rate limit)
 
@@ -34,6 +36,57 @@ def get_last_stock_date(conn, symbol):
         else:
             # ถ้าไม่เจอข้อมูลเลย ให้ย้อนหลังไป 12 เดือน
             return date.today() - timedelta(days=365)
+
+def is_market_open(min_consensus: float = 0.6) -> bool:
+    """
+    ตรวจสอบว่าตลาดเปิดทำการอยู่หรือไม่ โดยสุ่มตรวจจากหุ้นขนาดใหญ่ 10 ตัว
+    
+    :param market: อ็อบเจกต์ MarketData จาก settrade_v2
+    :param min_consensus: สัดส่วนความเห็นพ้องขั้นต่ำ (default 0.6 = 60%)
+    :return: True หากตลาดเปิด (Open1 หรือ Open2), False หากปิดหรือวันหยุด
+    """
+    investor = Investor( **cfg.args_Investor )
+    equity = investor.Equity(account_no=os.getenv("account_no"))
+    market = investor.MarketData()
+    
+    # เลือกหุ้น Big Cap ที่มีสภาพคล่องสูงและกระจายกลุ่มอุตสาหกรรม
+    symbols = [
+        "PTT", "CPALL", "DELTA", "AOT", "SCB", 
+        "KBANK", "ADVANC", "BDMS", "GULF", "PTTEP"
+    ]
+    
+    open_statuses = {"Open1", "Open2"}
+    status_records = []
+
+    for sym in symbols:
+        try:
+            quote = market.get_quote_symbol(sym)
+            status = quote.get("marketStatus")
+            if status:
+                status_records.append(status)
+        except Exception as e:
+            # ข้ามกรณีมีข้อผิดพลาดเครือข่ายหรือยิง API รายตัวไม่ผ่าน
+            continue
+
+    if not status_records:
+        print("ไม่สามารถดึงข้อมูลสถานะจากหุ้นตัวใดได้เลย")
+        return False
+
+    # นับจำนวนสถานะทั้งหมดที่ได้รับกลับมา
+    counts = Counter(status_records)
+    total_valid = len(status_records)
+    
+    # นับเฉพาะสถานะที่จัดว่าตลาดเปิด
+    open_count = sum(counts[st] for st in open_statuses if st in counts)
+    open_ratio = open_count / total_valid
+
+    # สรุปสถานะส่วนใหญ่
+    dominant_status, dominant_count = counts.most_common(1)[0]
+    print(f"Market Status Check -> หุ้นที่ตรวจได้: {total_valid}/{len(symbols)} | "
+          f"สถานะส่วนใหญ่: '{dominant_status}' ({dominant_count}/{total_valid}) | "
+          f"เปิดอยู่: {open_ratio:.0%}")
+
+    return open_ratio >= min_consensus
         
 def main(endDateFix=None):
     investor = Investor( **cfg.args_Investor )
@@ -161,3 +214,5 @@ def main(endDateFix=None):
 
 if __name__ == "__main__":
     main()
+    result = is_market_open()
+    print(f"Market open status: {result}")

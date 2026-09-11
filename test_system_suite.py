@@ -20,6 +20,12 @@ import importlib
 from datetime import datetime
 from dotenv import load_dotenv
 
+if sys.platform == "win32" and hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 load_dotenv()
 
 GREEN = "\033[92m"
@@ -103,7 +109,8 @@ def test_database():
     required_tables = [
         "portfolio_stock", "stock_price_history", "stock_indicator_jsonb",
         "master_stock_classification", "account_info_history",
-        "bot_active_positions", "bot_trade_signals", "bot_orders"
+        "bot_active_positions", "bot_trade_signals", "bot_orders",
+        "bot_system_logs"
     ]
     required_views = [
         "mv_stock_indicators", "v_portfolio_with_signals",
@@ -144,6 +151,7 @@ def test_module_imports():
     modules = [
         "initialApp",
         "risk_manager",
+        "core.audit_logger",
         "update.updateStockPrice",
         "update.updatePort",
         "update.update_Port_info",
@@ -219,6 +227,25 @@ def test_core_logic():
         record_result("Core Logic", "Position Sizing Clamp", is_lot_valid, f"Shares: {shares}, SL: {sl}")
     except Exception as e:
         record_result("Core Logic", "Position Sizing Formula", False, str(e))
+
+    try:
+        from core.audit_logger import log_event, ensure_log_table
+        ensured = ensure_log_table()
+        logged = log_event("DIAGNOSTIC_TEST", "ทดสอบการบันทึก Audit Log จาก Test Suite", level="INFO")
+        record_result("Core Logic", "Audit Logger Functionality", ensured and logged, "Logged successfully")
+    except Exception as e:
+        record_result("Core Logic", "Audit Logger Functionality", False, str(e))
+
+    try:
+        from execution.order_manager import check_daily_budget_limits, get_db_connection, load_config
+        conn = get_db_connection()
+        cfg = load_config()
+        # ทดสอบกรณีงบปกติ
+        ok, err = check_daily_budget_limits(conn, "TEST_SYM", 100, 1.0, cfg)
+        conn.close()
+        record_result("Core Logic", "Daily Budget Limits Check", isinstance(ok, bool), f"Passed check (allowed={ok})")
+    except Exception as e:
+        record_result("Core Logic", "Daily Budget Limits Check", False, str(e))
 
 # ==============================================================================
 # SUMMARY SCOREBOARD

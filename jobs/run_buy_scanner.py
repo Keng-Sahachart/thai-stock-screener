@@ -78,6 +78,11 @@ async def scan_and_notify():
 
             if not signals:
                 print("ไม่มีสัญญาณใหม่")
+                await bot.send_message(
+                    chat_id=CHAT_ID,
+                    text="🛡️ <b>ผลการสแกนประจำวัน</b>\nไม่พบสัญญาณซื้อใหม่ที่ผ่านเกณฑ์ในขณะนี้",
+                    parse_mode="HTML"
+                )
                 return
 
             for sig in signals:
@@ -108,6 +113,14 @@ async def scan_and_notify():
                     await asyncio.sleep(2)
                 except Exception as e:
                     print(f"Error sending {sym}: {e}")
+
+            # ส่งข้อความสรุปปิดท้ายรอบการสแกน
+            summary_msg = (
+                f"🏁 <b>การสแกนเสร็จสิ้น</b>\n"
+                f"• ตรวจพบสัญญาณซื้อทั้งหมด: <code>{len(signals)}</code> รายการ\n"
+                f"<i>(สามารถกด Approve หรือปรับจำนวนหุ้นผ่านการ์ดด้านบน หรือพิมพ์ /port เพื่อดูยอดเงิน)</i>"
+            )
+            await bot.send_message(chat_id=CHAT_ID, text=summary_msg, parse_mode="HTML")
     finally:
         conn.close()
 

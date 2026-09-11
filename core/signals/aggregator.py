@@ -25,6 +25,7 @@ from dotenv import load_dotenv
 import risk_manager as rm
 from core.signals.macd_signal import MacdMomentumSignal
 from core.signals.hybrid_signal import HybridSelectionSignal
+from core.audit_logger import log_event
 
 load_dotenv()
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "config", "bot_config.json")
@@ -42,6 +43,28 @@ def get_db_connection():
         password=os.getenv("posql_password", "postgres")
     )
 
+def expire_outdated_signals(conn):
+    """กวาดล้างสัญญาณสถานะ PENDING ที่เลยเวลา expired_at ให้กลายเป็น EXPIRED"""
+    with conn.cursor() as cur:
+        cur.execute("""
+            UPDATE public.bot_trade_signals
+            SET status = 'EXPIRED'
+            WHERE status = 'PENDING'
+              AND expired_at IS NOT NULL
+              AND expired_at < timezone('Asia/Bangkok', now())
+            RETURNING id, symbol;
+        """)
+        expired_rows = cur.fetchall()
+        if expired_rows:
+            conn.commit()
+            print(f"⌛ กวาดล้างสัญญาณหมดอายุแล้ว {len(expired_rows)} รายการ")
+            log_event(
+                event_type="SIGNALS_EXPIRED",
+                message=f"ระบบกวาดล้างสัญญาณหมดอายุ {len(expired_rows)} ตัว",
+                level="INFO",
+                raw_payload={"count": len(expired_rows), "expired_ids": [r[0] for r in expired_rows]}
+            )
+
 def run_signal_aggregator():
     config = load_config()
     risk_cfg = config.get("risk_management", {})
@@ -50,6 +73,9 @@ def run_signal_aggregator():
 
     conn = get_db_connection()
     try:
+        # 0. กวาดล้างสัญญาณเก่าที่หมดอายุก่อนเริ่มสแกนใหม่
+        expire_outdated_signals(conn)
+
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             # ดึงยอดเงินสดและพอร์ต
             cur.execute("""

@@ -2,12 +2,12 @@
 -- PostgreSQL database dump
 --
 
-\restrict MtS7JTljYPw77Z5uHcpSeQSYtMzCEObAJV9WifiveLHNi4roHzrm2MNCO5g7neO
+\restrict LFBoe1tQSRpK5EdwtGJcuV8p4h9TDdewge4yRdMM0qoSHRmbGXGPuvXIfNk4pdE
 
 -- Dumped from database version 15.15
 -- Dumped by pg_dump version 18.4
 
--- Started on 2026-09-04 13:32:56
+-- Started on 2026-09-10 13:21:50
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -22,7 +22,7 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- TOC entry 267 (class 1255 OID 16390)
+-- TOC entry 275 (class 1255 OID 16390)
 -- Name: refresh_indicator_view(); Type: FUNCTION; Schema: public; Owner: AdminKeng
 --
 
@@ -110,7 +110,7 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
--- TOC entry 250 (class 1259 OID 183689)
+-- TOC entry 256 (class 1259 OID 183689)
 -- Name: account_info_history; Type: TABLE; Schema: public; Owner: AdminKeng
 --
 
@@ -141,7 +141,7 @@ CREATE TABLE public.account_info_history (
 ALTER TABLE public.account_info_history OWNER TO "AdminKeng";
 
 --
--- TOC entry 249 (class 1259 OID 183688)
+-- TOC entry 255 (class 1259 OID 183688)
 -- Name: account_info_history_id_seq; Type: SEQUENCE; Schema: public; Owner: AdminKeng
 --
 
@@ -157,8 +157,8 @@ CREATE SEQUENCE public.account_info_history_id_seq
 ALTER SEQUENCE public.account_info_history_id_seq OWNER TO "AdminKeng";
 
 --
--- TOC entry 3613 (class 0 OID 0)
--- Dependencies: 249
+-- TOC entry 3631 (class 0 OID 0)
+-- Dependencies: 255
 -- Name: account_info_history_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: AdminKeng
 --
 
@@ -166,7 +166,7 @@ ALTER SEQUENCE public.account_info_history_id_seq OWNED BY public.account_info_h
 
 
 --
--- TOC entry 229 (class 1259 OID 16430)
+-- TOC entry 235 (class 1259 OID 16430)
 -- Name: stock_price_history; Type: TABLE; Schema: public; Owner: AdminKeng
 --
 
@@ -185,8 +185,8 @@ CREATE TABLE public.stock_price_history (
 ALTER TABLE public.stock_price_history OWNER TO "AdminKeng";
 
 --
--- TOC entry 3614 (class 0 OID 0)
--- Dependencies: 229
+-- TOC entry 3632 (class 0 OID 0)
+-- Dependencies: 235
 -- Name: TABLE stock_price_history; Type: COMMENT; Schema: public; Owner: AdminKeng
 --
 
@@ -194,7 +194,7 @@ COMMENT ON TABLE public.stock_price_history IS 'เก็บ ราคาหุ�
 
 
 --
--- TOC entry 233 (class 1259 OID 16443)
+-- TOC entry 239 (class 1259 OID 16443)
 -- Name: stock_signal; Type: TABLE; Schema: public; Owner: AdminKeng
 --
 
@@ -211,8 +211,8 @@ CREATE TABLE public.stock_signal (
 ALTER TABLE public.stock_signal OWNER TO "AdminKeng";
 
 --
--- TOC entry 3615 (class 0 OID 0)
--- Dependencies: 233
+-- TOC entry 3633 (class 0 OID 0)
+-- Dependencies: 239
 -- Name: TABLE stock_signal; Type: COMMENT; Schema: public; Owner: AdminKeng
 --
 
@@ -220,7 +220,7 @@ COMMENT ON TABLE public.stock_signal IS 'ตารางสัญญาณที
 
 
 --
--- TOC entry 241 (class 1259 OID 16555)
+-- TOC entry 247 (class 1259 OID 16555)
 -- Name: backtest; Type: VIEW; Schema: public; Owner: AdminKeng
 --
 
@@ -260,7 +260,7 @@ CREATE VIEW public.backtest AS
 ALTER VIEW public.backtest OWNER TO "AdminKeng";
 
 --
--- TOC entry 244 (class 1259 OID 179686)
+-- TOC entry 250 (class 1259 OID 179686)
 -- Name: bot_active_positions; Type: TABLE; Schema: public; Owner: AdminKeng
 --
 
@@ -287,8 +287,8 @@ CREATE TABLE public.bot_active_positions (
 ALTER TABLE public.bot_active_positions OWNER TO "AdminKeng";
 
 --
--- TOC entry 3616 (class 0 OID 0)
--- Dependencies: 244
+-- TOC entry 3634 (class 0 OID 0)
+-- Dependencies: 250
 -- Name: TABLE bot_active_positions; Type: COMMENT; Schema: public; Owner: AdminKeng
 --
 
@@ -296,8 +296,8 @@ COMMENT ON TABLE public.bot_active_positions IS 'ตารางบันทึ�
 
 
 --
--- TOC entry 3617 (class 0 OID 0)
--- Dependencies: 244
+-- TOC entry 3635 (class 0 OID 0)
+-- Dependencies: 250
 -- Name: COLUMN bot_active_positions.status; Type: COMMENT; Schema: public; Owner: AdminKeng
 --
 
@@ -305,7 +305,7 @@ COMMENT ON COLUMN public.bot_active_positions.status IS '''OPEN'', ''CLOSED''';
 
 
 --
--- TOC entry 243 (class 1259 OID 179685)
+-- TOC entry 249 (class 1259 OID 179685)
 -- Name: bot_active_positions_id_seq; Type: SEQUENCE; Schema: public; Owner: AdminKeng
 --
 
@@ -321,8 +321,8 @@ CREATE SEQUENCE public.bot_active_positions_id_seq
 ALTER SEQUENCE public.bot_active_positions_id_seq OWNER TO "AdminKeng";
 
 --
--- TOC entry 3618 (class 0 OID 0)
--- Dependencies: 243
+-- TOC entry 3636 (class 0 OID 0)
+-- Dependencies: 249
 -- Name: bot_active_positions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: AdminKeng
 --
 
@@ -330,7 +330,7 @@ ALTER SEQUENCE public.bot_active_positions_id_seq OWNED BY public.bot_active_pos
 
 
 --
--- TOC entry 248 (class 1259 OID 179713)
+-- TOC entry 254 (class 1259 OID 179713)
 -- Name: bot_orders; Type: TABLE; Schema: public; Owner: AdminKeng
 --
 
@@ -354,8 +354,8 @@ CREATE TABLE public.bot_orders (
 ALTER TABLE public.bot_orders OWNER TO "AdminKeng";
 
 --
--- TOC entry 3619 (class 0 OID 0)
--- Dependencies: 248
+-- TOC entry 3637 (class 0 OID 0)
+-- Dependencies: 254
 -- Name: TABLE bot_orders; Type: COMMENT; Schema: public; Owner: AdminKeng
 --
 
@@ -363,8 +363,8 @@ COMMENT ON TABLE public.bot_orders IS 'ตารางควบคุมสถ�
 
 
 --
--- TOC entry 3620 (class 0 OID 0)
--- Dependencies: 248
+-- TOC entry 3638 (class 0 OID 0)
+-- Dependencies: 254
 -- Name: COLUMN bot_orders.side; Type: COMMENT; Schema: public; Owner: AdminKeng
 --
 
@@ -372,8 +372,8 @@ COMMENT ON COLUMN public.bot_orders.side IS '''BUY'', ''SELL''';
 
 
 --
--- TOC entry 3621 (class 0 OID 0)
--- Dependencies: 248
+-- TOC entry 3639 (class 0 OID 0)
+-- Dependencies: 254
 -- Name: COLUMN bot_orders.status; Type: COMMENT; Schema: public; Owner: AdminKeng
 --
 
@@ -381,7 +381,7 @@ COMMENT ON COLUMN public.bot_orders.status IS '''DRY_RUN'', ''PENDING'', ''SENT'
 
 
 --
--- TOC entry 247 (class 1259 OID 179712)
+-- TOC entry 253 (class 1259 OID 179712)
 -- Name: bot_orders_order_id_seq; Type: SEQUENCE; Schema: public; Owner: AdminKeng
 --
 
@@ -397,8 +397,8 @@ CREATE SEQUENCE public.bot_orders_order_id_seq
 ALTER SEQUENCE public.bot_orders_order_id_seq OWNER TO "AdminKeng";
 
 --
--- TOC entry 3622 (class 0 OID 0)
--- Dependencies: 247
+-- TOC entry 3640 (class 0 OID 0)
+-- Dependencies: 253
 -- Name: bot_orders_order_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: AdminKeng
 --
 
@@ -406,7 +406,49 @@ ALTER SEQUENCE public.bot_orders_order_id_seq OWNED BY public.bot_orders.order_i
 
 
 --
--- TOC entry 246 (class 1259 OID 179701)
+-- TOC entry 263 (class 1259 OID 218732)
+-- Name: bot_system_logs; Type: TABLE; Schema: public; Owner: AdminKeng
+--
+
+CREATE TABLE public.bot_system_logs (
+    log_id bigint NOT NULL,
+    event_type character varying(50) NOT NULL,
+    level character varying(20) DEFAULT 'INFO'::character varying,
+    symbol character varying(20),
+    message text NOT NULL,
+    raw_payload jsonb,
+    created_at timestamp with time zone DEFAULT timezone('Asia/Bangkok'::text, now())
+);
+
+
+ALTER TABLE public.bot_system_logs OWNER TO "AdminKeng";
+
+--
+-- TOC entry 262 (class 1259 OID 218731)
+-- Name: bot_system_logs_log_id_seq; Type: SEQUENCE; Schema: public; Owner: AdminKeng
+--
+
+CREATE SEQUENCE public.bot_system_logs_log_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.bot_system_logs_log_id_seq OWNER TO "AdminKeng";
+
+--
+-- TOC entry 3641 (class 0 OID 0)
+-- Dependencies: 262
+-- Name: bot_system_logs_log_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: AdminKeng
+--
+
+ALTER SEQUENCE public.bot_system_logs_log_id_seq OWNED BY public.bot_system_logs.log_id;
+
+
+--
+-- TOC entry 252 (class 1259 OID 179701)
 -- Name: bot_trade_signals; Type: TABLE; Schema: public; Owner: AdminKeng
 --
 
@@ -430,8 +472,8 @@ CREATE TABLE public.bot_trade_signals (
 ALTER TABLE public.bot_trade_signals OWNER TO "AdminKeng";
 
 --
--- TOC entry 3623 (class 0 OID 0)
--- Dependencies: 246
+-- TOC entry 3642 (class 0 OID 0)
+-- Dependencies: 252
 -- Name: TABLE bot_trade_signals; Type: COMMENT; Schema: public; Owner: AdminKeng
 --
 
@@ -439,8 +481,8 @@ COMMENT ON TABLE public.bot_trade_signals IS 'ตารางบันทึก�
 
 
 --
--- TOC entry 3624 (class 0 OID 0)
--- Dependencies: 246
+-- TOC entry 3643 (class 0 OID 0)
+-- Dependencies: 252
 -- Name: COLUMN bot_trade_signals.signal_type; Type: COMMENT; Schema: public; Owner: AdminKeng
 --
 
@@ -448,8 +490,8 @@ COMMENT ON COLUMN public.bot_trade_signals.signal_type IS '''BUY'', ''BUY-STRONG
 
 
 --
--- TOC entry 3625 (class 0 OID 0)
--- Dependencies: 246
+-- TOC entry 3644 (class 0 OID 0)
+-- Dependencies: 252
 -- Name: COLUMN bot_trade_signals.signal_source; Type: COMMENT; Schema: public; Owner: AdminKeng
 --
 
@@ -457,8 +499,8 @@ COMMENT ON COLUMN public.bot_trade_signals.signal_source IS 'แหล่งท�
 
 
 --
--- TOC entry 3626 (class 0 OID 0)
--- Dependencies: 246
+-- TOC entry 3645 (class 0 OID 0)
+-- Dependencies: 252
 -- Name: COLUMN bot_trade_signals.status; Type: COMMENT; Schema: public; Owner: AdminKeng
 --
 
@@ -466,7 +508,7 @@ COMMENT ON COLUMN public.bot_trade_signals.status IS '''PENDING'', ''APPROVED'',
 
 
 --
--- TOC entry 245 (class 1259 OID 179700)
+-- TOC entry 251 (class 1259 OID 179700)
 -- Name: bot_trade_signals_id_seq; Type: SEQUENCE; Schema: public; Owner: AdminKeng
 --
 
@@ -482,8 +524,8 @@ CREATE SEQUENCE public.bot_trade_signals_id_seq
 ALTER SEQUENCE public.bot_trade_signals_id_seq OWNER TO "AdminKeng";
 
 --
--- TOC entry 3627 (class 0 OID 0)
--- Dependencies: 245
+-- TOC entry 3646 (class 0 OID 0)
+-- Dependencies: 251
 -- Name: bot_trade_signals_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: AdminKeng
 --
 
@@ -491,7 +533,7 @@ ALTER SEQUENCE public.bot_trade_signals_id_seq OWNED BY public.bot_trade_signals
 
 
 --
--- TOC entry 222 (class 1259 OID 16391)
+-- TOC entry 228 (class 1259 OID 16391)
 -- Name: dim_symbol_th; Type: TABLE; Schema: public; Owner: AdminKeng
 --
 
@@ -517,7 +559,7 @@ CREATE TABLE public.dim_symbol_th (
 ALTER TABLE public.dim_symbol_th OWNER TO "AdminKeng";
 
 --
--- TOC entry 242 (class 1259 OID 175849)
+-- TOC entry 248 (class 1259 OID 175849)
 -- Name: master_stock_classification; Type: TABLE; Schema: public; Owner: AdminKeng
 --
 
@@ -536,7 +578,7 @@ CREATE TABLE public.master_stock_classification (
 ALTER TABLE public.master_stock_classification OWNER TO "AdminKeng";
 
 --
--- TOC entry 227 (class 1259 OID 16419)
+-- TOC entry 233 (class 1259 OID 16419)
 -- Name: stock_indicator_jsonb; Type: TABLE; Schema: public; Owner: AdminKeng
 --
 
@@ -551,8 +593,8 @@ CREATE TABLE public.stock_indicator_jsonb (
 ALTER TABLE public.stock_indicator_jsonb OWNER TO "AdminKeng";
 
 --
--- TOC entry 3628 (class 0 OID 0)
--- Dependencies: 227
+-- TOC entry 3647 (class 0 OID 0)
+-- Dependencies: 233
 -- Name: TABLE stock_indicator_jsonb; Type: COMMENT; Schema: public; Owner: AdminKeng
 --
 
@@ -560,7 +602,7 @@ COMMENT ON TABLE public.stock_indicator_jsonb IS 'บันทึก indicator �
 
 
 --
--- TOC entry 251 (class 1259 OID 187589)
+-- TOC entry 257 (class 1259 OID 187589)
 -- Name: mv_stock_indicators; Type: MATERIALIZED VIEW; Schema: public; Owner: AdminKeng
 --
 
@@ -598,7 +640,7 @@ CREATE MATERIALIZED VIEW public.mv_stock_indicators AS
 ALTER MATERIALIZED VIEW public.mv_stock_indicators OWNER TO "AdminKeng";
 
 --
--- TOC entry 223 (class 1259 OID 16397)
+-- TOC entry 229 (class 1259 OID 16397)
 -- Name: portfolio_stock; Type: TABLE; Schema: public; Owner: AdminKeng
 --
 
@@ -632,8 +674,8 @@ CREATE TABLE public.portfolio_stock (
 ALTER TABLE public.portfolio_stock OWNER TO "AdminKeng";
 
 --
--- TOC entry 3629 (class 0 OID 0)
--- Dependencies: 223
+-- TOC entry 3648 (class 0 OID 0)
+-- Dependencies: 229
 -- Name: TABLE portfolio_stock; Type: COMMENT; Schema: public; Owner: AdminKeng
 --
 
@@ -641,7 +683,7 @@ COMMENT ON TABLE public.portfolio_stock IS 'รายละเอียด ร�
 
 
 --
--- TOC entry 224 (class 1259 OID 16402)
+-- TOC entry 230 (class 1259 OID 16402)
 -- Name: settrade_stocklist; Type: TABLE; Schema: public; Owner: AdminKeng
 --
 
@@ -656,8 +698,8 @@ CREATE TABLE public.settrade_stocklist (
 ALTER TABLE public.settrade_stocklist OWNER TO "AdminKeng";
 
 --
--- TOC entry 3630 (class 0 OID 0)
--- Dependencies: 224
+-- TOC entry 3649 (class 0 OID 0)
+-- Dependencies: 230
 -- Name: TABLE settrade_stocklist; Type: COMMENT; Schema: public; Owner: AdminKeng
 --
 
@@ -665,7 +707,7 @@ COMMENT ON TABLE public.settrade_stocklist IS 'ข้อมูล รายช�
 
 
 --
--- TOC entry 225 (class 1259 OID 16407)
+-- TOC entry 231 (class 1259 OID 16407)
 -- Name: stock_indicator_daily; Type: TABLE; Schema: public; Owner: AdminKeng
 --
 
@@ -688,8 +730,8 @@ CREATE TABLE public.stock_indicator_daily (
 ALTER TABLE public.stock_indicator_daily OWNER TO "AdminKeng";
 
 --
--- TOC entry 3631 (class 0 OID 0)
--- Dependencies: 225
+-- TOC entry 3650 (class 0 OID 0)
+-- Dependencies: 231
 -- Name: TABLE stock_indicator_daily; Type: COMMENT; Schema: public; Owner: AdminKeng
 --
 
@@ -697,7 +739,7 @@ COMMENT ON TABLE public.stock_indicator_daily IS 'ข้อมูล indicator �
 
 
 --
--- TOC entry 226 (class 1259 OID 16413)
+-- TOC entry 232 (class 1259 OID 16413)
 -- Name: stock_indicator_daily_v4; Type: TABLE; Schema: public; Owner: AdminKeng
 --
 
@@ -728,7 +770,7 @@ CREATE TABLE public.stock_indicator_daily_v4 (
 ALTER TABLE public.stock_indicator_daily_v4 OWNER TO "AdminKeng";
 
 --
--- TOC entry 228 (class 1259 OID 16425)
+-- TOC entry 234 (class 1259 OID 16425)
 -- Name: stock_list_info_siamchart; Type: TABLE; Schema: public; Owner: AdminKeng
 --
 
@@ -764,8 +806,8 @@ CREATE TABLE public.stock_list_info_siamchart (
 ALTER TABLE public.stock_list_info_siamchart OWNER TO "AdminKeng";
 
 --
--- TOC entry 3632 (class 0 OID 0)
--- Dependencies: 228
+-- TOC entry 3651 (class 0 OID 0)
+-- Dependencies: 234
 -- Name: TABLE stock_list_info_siamchart; Type: COMMENT; Schema: public; Owner: AdminKeng
 --
 
@@ -773,7 +815,7 @@ COMMENT ON TABLE public.stock_list_info_siamchart IS 'รายชื่อห�
 
 
 --
--- TOC entry 230 (class 1259 OID 16433)
+-- TOC entry 236 (class 1259 OID 16433)
 -- Name: stock_price_history_archive1975_2018; Type: TABLE; Schema: public; Owner: AdminKeng
 --
 
@@ -791,8 +833,8 @@ CREATE TABLE public.stock_price_history_archive1975_2018 (
 ALTER TABLE public.stock_price_history_archive1975_2018 OWNER TO "AdminKeng";
 
 --
--- TOC entry 3633 (class 0 OID 0)
--- Dependencies: 230
+-- TOC entry 3652 (class 0 OID 0)
+-- Dependencies: 236
 -- Name: TABLE stock_price_history_archive1975_2018; Type: COMMENT; Schema: public; Owner: AdminKeng
 --
 
@@ -800,7 +842,7 @@ COMMENT ON TABLE public.stock_price_history_archive1975_2018 IS 'ราคาห
 
 
 --
--- TOC entry 231 (class 1259 OID 16436)
+-- TOC entry 237 (class 1259 OID 16436)
 -- Name: stock_prices; Type: TABLE; Schema: public; Owner: AdminKeng
 --
 
@@ -817,7 +859,7 @@ CREATE TABLE public.stock_prices (
 ALTER TABLE public.stock_prices OWNER TO "AdminKeng";
 
 --
--- TOC entry 232 (class 1259 OID 16442)
+-- TOC entry 238 (class 1259 OID 16442)
 -- Name: stock_prices_id_seq; Type: SEQUENCE; Schema: public; Owner: AdminKeng
 --
 
@@ -833,8 +875,8 @@ CREATE SEQUENCE public.stock_prices_id_seq
 ALTER SEQUENCE public.stock_prices_id_seq OWNER TO "AdminKeng";
 
 --
--- TOC entry 3634 (class 0 OID 0)
--- Dependencies: 232
+-- TOC entry 3653 (class 0 OID 0)
+-- Dependencies: 238
 -- Name: stock_prices_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: AdminKeng
 --
 
@@ -842,7 +884,7 @@ ALTER SEQUENCE public.stock_prices_id_seq OWNED BY public.stock_prices.id;
 
 
 --
--- TOC entry 238 (class 1259 OID 16510)
+-- TOC entry 244 (class 1259 OID 16510)
 -- Name: stock_value_score; Type: TABLE; Schema: public; Owner: AdminKeng
 --
 
@@ -868,7 +910,7 @@ CREATE TABLE public.stock_value_score (
 ALTER TABLE public.stock_value_score OWNER TO "AdminKeng";
 
 --
--- TOC entry 234 (class 1259 OID 16454)
+-- TOC entry 240 (class 1259 OID 16454)
 -- Name: stocklist_twelvedata; Type: TABLE; Schema: public; Owner: AdminKeng
 --
 
@@ -887,7 +929,7 @@ CREATE TABLE public.stocklist_twelvedata (
 ALTER TABLE public.stocklist_twelvedata OWNER TO "AdminKeng";
 
 --
--- TOC entry 235 (class 1259 OID 16459)
+-- TOC entry 241 (class 1259 OID 16459)
 -- Name: stocklist_twelvedata_id_seq; Type: SEQUENCE; Schema: public; Owner: AdminKeng
 --
 
@@ -903,8 +945,8 @@ CREATE SEQUENCE public.stocklist_twelvedata_id_seq
 ALTER SEQUENCE public.stocklist_twelvedata_id_seq OWNER TO "AdminKeng";
 
 --
--- TOC entry 3635 (class 0 OID 0)
--- Dependencies: 235
+-- TOC entry 3654 (class 0 OID 0)
+-- Dependencies: 241
 -- Name: stocklist_twelvedata_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: AdminKeng
 --
 
@@ -912,7 +954,7 @@ ALTER SEQUENCE public.stocklist_twelvedata_id_seq OWNED BY public.stocklist_twel
 
 
 --
--- TOC entry 236 (class 1259 OID 16460)
+-- TOC entry 242 (class 1259 OID 16460)
 -- Name: tablesize; Type: VIEW; Schema: public; Owner: AdminKeng
 --
 
@@ -930,7 +972,7 @@ CREATE VIEW public.tablesize AS
 ALTER VIEW public.tablesize OWNER TO "AdminKeng";
 
 --
--- TOC entry 253 (class 1259 OID 187878)
+-- TOC entry 259 (class 1259 OID 187878)
 -- Name: v_macd_advanced_analysis; Type: VIEW; Schema: public; Owner: AdminKeng
 --
 
@@ -1114,8 +1156,8 @@ CREATE VIEW public.v_macd_advanced_analysis AS
 ALTER VIEW public.v_macd_advanced_analysis OWNER TO "AdminKeng";
 
 --
--- TOC entry 3636 (class 0 OID 0)
--- Dependencies: 253
+-- TOC entry 3655 (class 0 OID 0)
+-- Dependencies: 259
 -- Name: COLUMN v_macd_advanced_analysis.macd_12_zero_status; Type: COMMENT; Schema: public; Owner: AdminKeng
 --
 
@@ -1123,8 +1165,8 @@ COMMENT ON COLUMN public.v_macd_advanced_analysis.macd_12_zero_status IS '(Trend
 
 
 --
--- TOC entry 3637 (class 0 OID 0)
--- Dependencies: 253
+-- TOC entry 3656 (class 0 OID 0)
+-- Dependencies: 259
 -- Name: COLUMN v_macd_advanced_analysis.dual_macd_confluence; Type: COMMENT; Schema: public; Owner: AdminKeng
 --
 
@@ -1132,8 +1174,8 @@ COMMENT ON COLUMN public.v_macd_advanced_analysis.dual_macd_confluence IS 'Fast 
 
 
 --
--- TOC entry 3638 (class 0 OID 0)
--- Dependencies: 253
+-- TOC entry 3657 (class 0 OID 0)
+-- Dependencies: 259
 -- Name: COLUMN v_macd_advanced_analysis.hist_reversal_signal; Type: COMMENT; Schema: public; Owner: AdminKeng
 --
 
@@ -1141,7 +1183,7 @@ COMMENT ON COLUMN public.v_macd_advanced_analysis.hist_reversal_signal IS '(Hist
 
 
 --
--- TOC entry 254 (class 1259 OID 187893)
+-- TOC entry 260 (class 1259 OID 187893)
 -- Name: v_bot_buy_opportunities; Type: VIEW; Schema: public; Owner: AdminKeng
 --
 
@@ -1155,6 +1197,7 @@ CREATE VIEW public.v_bot_buy_opportunities AS
             m.close AS trigger_price,
             m.volume,
             m.vol_surge_ratio,
+            m.macd_12_26_9_hist,
             m.macd_12_26_9_hist_accel_pct,
             m.market_zone,
             m.signal_validation_status,
@@ -1162,6 +1205,7 @@ CREATE VIEW public.v_bot_buy_opportunities AS
             m.days_since_signal_cross,
             m.dual_macd_confluence,
             i.atr14,
+            m.rank_hist_accel_12,
             'MACD_MOMENTUM'::text AS strategy_name,
                 CASE
                     WHEN ((m.signal_validation_status = 'EXPLOSIVE_VOLUME_SURGE'::text) AND (m.dual_macd_confluence = 'DUAL_BULLISH'::text)) THEN 5
@@ -1173,7 +1217,7 @@ CREATE VIEW public.v_bot_buy_opportunities AS
            FROM ((public.v_macd_advanced_analysis m
              JOIN latest_date ld ON ((m.trade_date = ld.max_date)))
              LEFT JOIN public.mv_stock_indicators i ON (((m.symbol = i.symbol) AND (m.trade_date = i.trade_date))))
-          WHERE ((m.macd_12_26_9_hist_accel_pct > (0)::numeric) AND (m.signal_validation_status = ANY (ARRAY['CONFIRMED_BY_VOLUME'::text, 'EXPLOSIVE_VOLUME_SURGE'::text])) AND (m.market_zone = ANY (ARRAY['BUY_ZONE'::text, 'STRONG_BUY_ZONE'::text])))
+          WHERE ((m.macd_12_26_9_hist_accel_pct > (0)::numeric) AND (m.signal_validation_status = ANY (ARRAY['CONFIRMED_BY_VOLUME'::text, 'EXPLOSIVE_VOLUME_SURGE'::text])) AND (m.market_zone = ANY (ARRAY['BUY_ZONE'::text, 'STRONG_BUY_ZONE'::text])) AND (m.macd_12_26_9_hist > (0)::numeric) AND (m.days_since_signal_cross >= 2))
         )
  SELECT macd_candidates.symbol,
     macd_candidates.trade_date,
@@ -1191,124 +1235,17 @@ CREATE VIEW public.v_bot_buy_opportunities AS
     macd_candidates.priority,
     macd_candidates.reason
    FROM macd_candidates
-  ORDER BY macd_candidates.priority DESC, macd_candidates.macd_12_26_9_hist_accel_pct DESC;
+  ORDER BY
+        CASE
+            WHEN (macd_candidates.trigger_price <= (10)::numeric) THEN 1
+            ELSE 2
+        END, macd_candidates.priority DESC, macd_candidates.macd_12_26_9_hist DESC;
 
 
 ALTER VIEW public.v_bot_buy_opportunities OWNER TO "AdminKeng";
 
 --
--- TOC entry 255 (class 1259 OID 188316)
--- Name: v_bot_sell_triggers; Type: VIEW; Schema: public; Owner: AdminKeng
---
-
-CREATE VIEW public.v_bot_sell_triggers AS
- WITH latest_price AS (
-         SELECT t.symbol,
-            t.close AS current_price,
-            t.date AS price_date
-           FROM ( SELECT stock_price_history.symbol,
-                    stock_price_history.close,
-                    stock_price_history.date,
-                    row_number() OVER (PARTITION BY stock_price_history.symbol ORDER BY stock_price_history.date DESC) AS rn
-                   FROM public.stock_price_history) t
-          WHERE (t.rn = 1)
-        ), latest_signal AS (
-         SELECT stock_signal.symbol,
-            stock_signal.signal_type,
-            stock_signal.trade_date
-           FROM public.stock_signal
-          WHERE (stock_signal.trade_date = ( SELECT max(stock_signal_1.trade_date) AS max
-                   FROM public.stock_signal stock_signal_1))
-        )
- SELECT b.id AS position_id,
-    b.symbol,
-    b.current_volume,
-    b.entry_price,
-    b.initial_stop_loss,
-    b.trailing_stop_loss,
-    b.max_price_reached,
-    COALESCE(p.current_price, b.entry_price) AS market_price,
-    round((((COALESCE(p.current_price, b.entry_price) - b.entry_price) / b.entry_price) * (100)::numeric), 2) AS percent_profit,
-    s.signal_type,
-        CASE
-            WHEN ((((COALESCE(p.current_price, b.entry_price) - b.entry_price) / b.entry_price) * (100)::numeric) <= '-10.0'::numeric) THEN 'HARD_CUT_LOSS'::text
-            WHEN (COALESCE(p.current_price, b.entry_price) <= b.initial_stop_loss) THEN 'INITIAL_SL_HIT'::text
-            WHEN ((b.trailing_stop_loss IS NOT NULL) AND (COALESCE(p.current_price, b.entry_price) <= b.trailing_stop_loss)) THEN 'TRAILING_STOP_HIT'::text
-            WHEN (s.signal_type = ANY (ARRAY['SELL'::text, 'SELL-STRONG'::text])) THEN 'TECHNICAL_SELL_SIGNAL'::text
-            ELSE NULL::text
-        END AS exit_trigger_type,
-        CASE
-            WHEN ((((COALESCE(p.current_price, b.entry_price) - b.entry_price) / b.entry_price) * (100)::numeric) <= '-10.0'::numeric) THEN 5
-            WHEN (COALESCE(p.current_price, b.entry_price) <= b.initial_stop_loss) THEN 4
-            WHEN ((b.trailing_stop_loss IS NOT NULL) AND (COALESCE(p.current_price, b.entry_price) <= b.trailing_stop_loss)) THEN 3
-            WHEN (s.signal_type = ANY (ARRAY['SELL'::text, 'SELL-STRONG'::text])) THEN 2
-            ELSE 0
-        END AS exit_urgency_priority
-   FROM ((public.bot_active_positions b
-     LEFT JOIN latest_price p ON (((b.symbol)::text = (p.symbol)::text)))
-     LEFT JOIN latest_signal s ON (((b.symbol)::text = s.symbol)))
-  WHERE (((b.status)::text = 'OPEN'::text) AND (((((COALESCE(p.current_price, b.entry_price) - b.entry_price) / b.entry_price) * (100)::numeric) <= '-10.0'::numeric) OR (COALESCE(p.current_price, b.entry_price) <= b.initial_stop_loss) OR ((b.trailing_stop_loss IS NOT NULL) AND (COALESCE(p.current_price, b.entry_price) <= b.trailing_stop_loss)) OR (s.signal_type = ANY (ARRAY['SELL'::text, 'SELL-STRONG'::text]))));
-
-
-ALTER VIEW public.v_bot_sell_triggers OWNER TO "AdminKeng";
-
---
--- TOC entry 3639 (class 0 OID 0)
--- Dependencies: 255
--- Name: VIEW v_bot_sell_triggers; Type: COMMENT; Schema: public; Owner: AdminKeng
---
-
-COMMENT ON VIEW public.v_bot_sell_triggers IS 'ตรวจจับเงื่อนไขการตัดขาย (database/v_bot_sell_triggers.sql)
-ปรับ View ให้ตรวจเช็คสถานะหุ้นทั้งหมดที่เปิดอยู่ใน bot_active_positions คู่กับราคาล่าสุดจาก stock_price_history';
-
-
---
--- TOC entry 3640 (class 0 OID 0)
--- Dependencies: 255
--- Name: COLUMN v_bot_sell_triggers.exit_trigger_type; Type: COMMENT; Schema: public; Owner: AdminKeng
---
-
-COMMENT ON COLUMN public.v_bot_sell_triggers.exit_trigger_type IS 'ระบุเงื่อนไขการตัดขาย';
-
-
---
--- TOC entry 240 (class 1259 OID 16545)
--- Name: v_hybrid_stock_selection; Type: VIEW; Schema: public; Owner: AdminKeng
---
-
-CREATE VIEW public.v_hybrid_stock_selection AS
- SELECT s.symbol,
-    s.trade_date,
-    s.signal_type,
-    s.priority,
-    s.reason AS technical_reason,
-    v.value_score,
-    v.rank AS fundamental_rank,
-    p.close AS last_price
-   FROM ((public.stock_signal s
-     JOIN public.stock_value_score v ON ((s.symbol = v.name)))
-     JOIN public.stock_price_history p ON (((s.symbol = (p.symbol)::text) AND (s.trade_date = p.date))))
-  WHERE ((v.value_score >= (0.5)::double precision) AND (s.signal_type = ANY (ARRAY['BUY'::text, 'BUY-STRONG'::text])) AND (s.symbol IN ( SELECT settrade_stocklist.symbol
-           FROM public.settrade_stocklist)) AND (s.trade_date IN ( SELECT DISTINCT stock_signal_1.trade_date
-           FROM public.stock_signal stock_signal_1
-          ORDER BY stock_signal_1.trade_date DESC
-         LIMIT 3)))
-  ORDER BY s.trade_date DESC, v.value_score DESC;
-
-
-ALTER VIEW public.v_hybrid_stock_selection OWNER TO "AdminKeng";
-
---
--- TOC entry 3641 (class 0 OID 0)
--- Dependencies: 240
--- Name: VIEW v_hybrid_stock_selection; Type: COMMENT; Schema: public; Owner: AdminKeng
---
-
-COMMENT ON VIEW public.v_hybrid_stock_selection IS 'คัดมาเฉพาะ หุ้นที่ มีคุณค่า และกำลัง ขึ้นแรง';
-
-
---
--- TOC entry 252 (class 1259 OID 187860)
+-- TOC entry 258 (class 1259 OID 187860)
 -- Name: v_portfolio_with_signals; Type: VIEW; Schema: public; Owner: AdminKeng
 --
 
@@ -1373,7 +1310,8 @@ CREATE VIEW public.v_portfolio_with_signals AS
         CASE
             WHEN ((b.initial_stop_loss IS NOT NULL) AND (p.market_price > (0)::double precision)) THEN round(((((p.market_price - (b.initial_stop_loss)::double precision) / p.market_price) * (100)::double precision))::numeric, 2)
             ELSE NULL::numeric
-        END AS buffer_to_initial_sl_pct
+        END AS buffer_to_initial_sl_pct,
+    (p.average_price - ((i.atr14 * (2)::numeric))::double precision) AS avg_stop_loss
    FROM ((((latest_port p
      LEFT JOIN public.master_stock_classification c ON (((p.symbol)::text = (c.symbol)::text)))
      LEFT JOIN public.bot_active_positions b ON ((((p.symbol)::text = (b.symbol)::text) AND ((b.status)::text = 'OPEN'::text))))
@@ -1385,7 +1323,135 @@ CREATE VIEW public.v_portfolio_with_signals AS
 ALTER VIEW public.v_portfolio_with_signals OWNER TO "AdminKeng";
 
 --
--- TOC entry 237 (class 1259 OID 16464)
+-- TOC entry 261 (class 1259 OID 210537)
+-- Name: v_bot_sell_triggers; Type: VIEW; Schema: public; Owner: AdminKeng
+--
+
+CREATE VIEW public.v_bot_sell_triggers AS
+ WITH combined_holdings AS (
+         SELECT p.symbol,
+            p.current_volume,
+            p.average_price,
+            p.market_price,
+            p.percent_profit,
+            COALESCE((p.initial_stop_loss)::double precision, p.avg_stop_loss) AS stop_loss_price,
+            p.trailing_stop_loss,
+            p.signal_type,
+            p.is_managed_by_bot,
+            'REAL_PORTFOLIO'::text AS holding_source
+           FROM public.v_portfolio_with_signals p
+          WHERE (p.current_volume > 0)
+        UNION ALL
+         SELECT b.symbol,
+            b.current_volume,
+            b.entry_price AS average_price,
+            COALESCE(sph.close, b.entry_price) AS market_price,
+            round((((COALESCE(sph.close, b.entry_price) - b.entry_price) / b.entry_price) * (100)::numeric), 2) AS percent_profit,
+            b.initial_stop_loss AS stop_loss_price,
+            b.trailing_stop_loss,
+            s.signal_type,
+            true AS is_managed_by_bot,
+            'DRY_RUN_POSITION'::text AS holding_source
+           FROM ((public.bot_active_positions b
+             LEFT JOIN ( SELECT stock_price_history.symbol,
+                    stock_price_history.close,
+                    row_number() OVER (PARTITION BY stock_price_history.symbol ORDER BY stock_price_history.date DESC) AS rn
+                   FROM public.stock_price_history) sph ON ((((b.symbol)::text = (sph.symbol)::text) AND (sph.rn = 1))))
+             LEFT JOIN public.stock_signal s ON ((((b.symbol)::text = s.symbol) AND (s.trade_date = ( SELECT max(stock_signal.trade_date) AS max
+                   FROM public.stock_signal)))))
+          WHERE (((b.status)::text = 'OPEN'::text) AND (NOT ((b.symbol)::text IN ( SELECT portfolio_stock.symbol
+                   FROM public.portfolio_stock
+                  WHERE (((portfolio_stock.imported_at)::text = ( SELECT max((portfolio_stock_1.imported_at)::text) AS max
+                           FROM public.portfolio_stock portfolio_stock_1)) AND (portfolio_stock.current_volume > 0))))))
+        )
+ SELECT c.symbol,
+    c.holding_source,
+    c.current_volume,
+    c.average_price,
+    c.market_price,
+    c.percent_profit,
+    c.stop_loss_price,
+    c.trailing_stop_loss,
+    c.signal_type,
+    c.is_managed_by_bot,
+        CASE
+            WHEN (c.percent_profit <= ('-10.0'::numeric)::double precision) THEN 'HARD_CUT_LOSS'::text
+            WHEN ((c.stop_loss_price IS NOT NULL) AND (c.market_price <= c.stop_loss_price)) THEN 'INITIAL_SL_HIT'::text
+            WHEN ((c.trailing_stop_loss IS NOT NULL) AND (c.market_price <= (c.trailing_stop_loss)::double precision)) THEN 'TRAILING_STOP_HIT'::text
+            WHEN (c.signal_type = ANY (ARRAY['SELL'::text, 'SELL-STRONG'::text])) THEN 'TECHNICAL_SELL_SIGNAL'::text
+            ELSE NULL::text
+        END AS exit_trigger_type,
+        CASE
+            WHEN (c.percent_profit <= ('-10.0'::numeric)::double precision) THEN 5
+            WHEN ((c.stop_loss_price IS NOT NULL) AND (c.market_price <= c.stop_loss_price)) THEN 4
+            WHEN ((c.trailing_stop_loss IS NOT NULL) AND (c.market_price <= (c.trailing_stop_loss)::double precision)) THEN 3
+            WHEN (c.signal_type = ANY (ARRAY['SELL'::text, 'SELL-STRONG'::text])) THEN 2
+            ELSE 0
+        END AS exit_urgency_priority
+   FROM combined_holdings c
+  WHERE ((c.percent_profit <= ('-10.0'::numeric)::double precision) OR ((c.stop_loss_price IS NOT NULL) AND (c.market_price <= c.stop_loss_price)) OR ((c.trailing_stop_loss IS NOT NULL) AND (c.market_price <= (c.trailing_stop_loss)::double precision)) OR (c.signal_type = ANY (ARRAY['SELL'::text, 'SELL-STRONG'::text])));
+
+
+ALTER VIEW public.v_bot_sell_triggers OWNER TO "AdminKeng";
+
+--
+-- TOC entry 3658 (class 0 OID 0)
+-- Dependencies: 261
+-- Name: VIEW v_bot_sell_triggers; Type: COMMENT; Schema: public; Owner: AdminKeng
+--
+
+COMMENT ON VIEW public.v_bot_sell_triggers IS '1. หุ้นจริงทั้งหมดในพอร์ต (ทั้งที่บอทซื้อและซื้อ Manual)
+combined_holdings
+
+ดึง Initial SL ของบอทก่อน ถ้าไม่มีให้ใช้ avg_stop_loss ที่คำนวณจาก ATR 
+AS stop_loss_price
+
+
+2. ไม้จำลอง Dry-Run ที่บอทถืออยู่แต่ยังไม่เข้าพอร์ตจริง
+
+วิเคราะห์ประเภทเงื่อนไขการตัดขาย AS exit_trigger_type,
+
+ลำดับความสำคัญเร่งด่วน (5 = เร่งด่วนสูงสุด) AS exit_urgency_priority';
+
+
+--
+-- TOC entry 246 (class 1259 OID 16545)
+-- Name: v_hybrid_stock_selection; Type: VIEW; Schema: public; Owner: AdminKeng
+--
+
+CREATE VIEW public.v_hybrid_stock_selection AS
+ SELECT s.symbol,
+    s.trade_date,
+    s.signal_type,
+    s.priority,
+    s.reason AS technical_reason,
+    v.value_score,
+    v.rank AS fundamental_rank,
+    p.close AS last_price
+   FROM ((public.stock_signal s
+     JOIN public.stock_value_score v ON ((s.symbol = v.name)))
+     JOIN public.stock_price_history p ON (((s.symbol = (p.symbol)::text) AND (s.trade_date = p.date))))
+  WHERE ((v.value_score >= (0.5)::double precision) AND (s.signal_type = ANY (ARRAY['BUY'::text, 'BUY-STRONG'::text])) AND (s.symbol IN ( SELECT settrade_stocklist.symbol
+           FROM public.settrade_stocklist)) AND (s.trade_date IN ( SELECT DISTINCT stock_signal_1.trade_date
+           FROM public.stock_signal stock_signal_1
+          ORDER BY stock_signal_1.trade_date DESC
+         LIMIT 3)))
+  ORDER BY s.trade_date DESC, v.value_score DESC;
+
+
+ALTER VIEW public.v_hybrid_stock_selection OWNER TO "AdminKeng";
+
+--
+-- TOC entry 3659 (class 0 OID 0)
+-- Dependencies: 246
+-- Name: VIEW v_hybrid_stock_selection; Type: COMMENT; Schema: public; Owner: AdminKeng
+--
+
+COMMENT ON VIEW public.v_hybrid_stock_selection IS 'คัดมาเฉพาะ หุ้นที่ มีคุณค่า และกำลัง ขึ้นแรง';
+
+
+--
+-- TOC entry 243 (class 1259 OID 16464)
 -- Name: v_signal_last3day; Type: VIEW; Schema: public; Owner: AdminKeng
 --
 
@@ -1405,7 +1471,7 @@ CREATE VIEW public.v_signal_last3day AS
 ALTER VIEW public.v_signal_last3day OWNER TO "AdminKeng";
 
 --
--- TOC entry 239 (class 1259 OID 16538)
+-- TOC entry 245 (class 1259 OID 16538)
 -- Name: v_stock_indicators_bk_oldVer; Type: VIEW; Schema: public; Owner: AdminKeng
 --
 
@@ -1442,7 +1508,7 @@ CREATE VIEW public."v_stock_indicators_bk_oldVer" AS
 ALTER VIEW public."v_stock_indicators_bk_oldVer" OWNER TO "AdminKeng";
 
 --
--- TOC entry 3406 (class 2604 OID 183692)
+-- TOC entry 3417 (class 2604 OID 183692)
 -- Name: account_info_history id; Type: DEFAULT; Schema: public; Owner: AdminKeng
 --
 
@@ -1450,7 +1516,7 @@ ALTER TABLE ONLY public.account_info_history ALTER COLUMN id SET DEFAULT nextval
 
 
 --
--- TOC entry 3392 (class 2604 OID 179689)
+-- TOC entry 3403 (class 2604 OID 179689)
 -- Name: bot_active_positions id; Type: DEFAULT; Schema: public; Owner: AdminKeng
 --
 
@@ -1458,7 +1524,7 @@ ALTER TABLE ONLY public.bot_active_positions ALTER COLUMN id SET DEFAULT nextval
 
 
 --
--- TOC entry 3402 (class 2604 OID 179716)
+-- TOC entry 3413 (class 2604 OID 179716)
 -- Name: bot_orders order_id; Type: DEFAULT; Schema: public; Owner: AdminKeng
 --
 
@@ -1466,7 +1532,15 @@ ALTER TABLE ONLY public.bot_orders ALTER COLUMN order_id SET DEFAULT nextval('pu
 
 
 --
--- TOC entry 3398 (class 2604 OID 179704)
+-- TOC entry 3420 (class 2604 OID 218735)
+-- Name: bot_system_logs log_id; Type: DEFAULT; Schema: public; Owner: AdminKeng
+--
+
+ALTER TABLE ONLY public.bot_system_logs ALTER COLUMN log_id SET DEFAULT nextval('public.bot_system_logs_log_id_seq'::regclass);
+
+
+--
+-- TOC entry 3409 (class 2604 OID 179704)
 -- Name: bot_trade_signals id; Type: DEFAULT; Schema: public; Owner: AdminKeng
 --
 
@@ -1474,7 +1548,7 @@ ALTER TABLE ONLY public.bot_trade_signals ALTER COLUMN id SET DEFAULT nextval('p
 
 
 --
--- TOC entry 3387 (class 2604 OID 16473)
+-- TOC entry 3398 (class 2604 OID 16473)
 -- Name: stock_prices id; Type: DEFAULT; Schema: public; Owner: AdminKeng
 --
 
@@ -1482,7 +1556,7 @@ ALTER TABLE ONLY public.stock_prices ALTER COLUMN id SET DEFAULT nextval('public
 
 
 --
--- TOC entry 3390 (class 2604 OID 16474)
+-- TOC entry 3401 (class 2604 OID 16474)
 -- Name: stocklist_twelvedata id; Type: DEFAULT; Schema: public; Owner: AdminKeng
 --
 
@@ -1490,7 +1564,7 @@ ALTER TABLE ONLY public.stocklist_twelvedata ALTER COLUMN id SET DEFAULT nextval
 
 
 --
--- TOC entry 3451 (class 2606 OID 183696)
+-- TOC entry 3465 (class 2606 OID 183696)
 -- Name: account_info_history account_info_history_pkey; Type: CONSTRAINT; Schema: public; Owner: AdminKeng
 --
 
@@ -1499,7 +1573,7 @@ ALTER TABLE ONLY public.account_info_history
 
 
 --
--- TOC entry 3442 (class 2606 OID 179698)
+-- TOC entry 3456 (class 2606 OID 179698)
 -- Name: bot_active_positions bot_active_positions_pkey; Type: CONSTRAINT; Schema: public; Owner: AdminKeng
 --
 
@@ -1508,7 +1582,7 @@ ALTER TABLE ONLY public.bot_active_positions
 
 
 --
--- TOC entry 3448 (class 2606 OID 179723)
+-- TOC entry 3462 (class 2606 OID 179723)
 -- Name: bot_orders bot_orders_pkey; Type: CONSTRAINT; Schema: public; Owner: AdminKeng
 --
 
@@ -1517,7 +1591,16 @@ ALTER TABLE ONLY public.bot_orders
 
 
 --
--- TOC entry 3445 (class 2606 OID 179710)
+-- TOC entry 3470 (class 2606 OID 218741)
+-- Name: bot_system_logs bot_system_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: AdminKeng
+--
+
+ALTER TABLE ONLY public.bot_system_logs
+    ADD CONSTRAINT bot_system_logs_pkey PRIMARY KEY (log_id);
+
+
+--
+-- TOC entry 3459 (class 2606 OID 179710)
 -- Name: bot_trade_signals bot_trade_signals_pkey; Type: CONSTRAINT; Schema: public; Owner: AdminKeng
 --
 
@@ -1526,7 +1609,7 @@ ALTER TABLE ONLY public.bot_trade_signals
 
 
 --
--- TOC entry 3410 (class 2606 OID 16482)
+-- TOC entry 3424 (class 2606 OID 16482)
 -- Name: dim_symbol_th dim_symbol_th_pkey; Type: CONSTRAINT; Schema: public; Owner: AdminKeng
 --
 
@@ -1535,7 +1618,7 @@ ALTER TABLE ONLY public.dim_symbol_th
 
 
 --
--- TOC entry 3440 (class 2606 OID 175856)
+-- TOC entry 3454 (class 2606 OID 175856)
 -- Name: master_stock_classification master_stock_classification_pkey; Type: CONSTRAINT; Schema: public; Owner: AdminKeng
 --
 
@@ -1544,7 +1627,7 @@ ALTER TABLE ONLY public.master_stock_classification
 
 
 --
--- TOC entry 3414 (class 2606 OID 16484)
+-- TOC entry 3428 (class 2606 OID 16484)
 -- Name: stock_indicator_daily stock_indicator_daily_pkey; Type: CONSTRAINT; Schema: public; Owner: AdminKeng
 --
 
@@ -1553,7 +1636,7 @@ ALTER TABLE ONLY public.stock_indicator_daily
 
 
 --
--- TOC entry 3417 (class 2606 OID 16486)
+-- TOC entry 3431 (class 2606 OID 16486)
 -- Name: stock_indicator_daily_v4 stock_indicator_daily_v4_pkey; Type: CONSTRAINT; Schema: public; Owner: AdminKeng
 --
 
@@ -1562,7 +1645,7 @@ ALTER TABLE ONLY public.stock_indicator_daily_v4
 
 
 --
--- TOC entry 3420 (class 2606 OID 16488)
+-- TOC entry 3434 (class 2606 OID 16488)
 -- Name: stock_indicator_jsonb stock_indicator_jsonb_pkey; Type: CONSTRAINT; Schema: public; Owner: AdminKeng
 --
 
@@ -1571,7 +1654,7 @@ ALTER TABLE ONLY public.stock_indicator_jsonb
 
 
 --
--- TOC entry 3424 (class 2606 OID 16490)
+-- TOC entry 3438 (class 2606 OID 16490)
 -- Name: stock_price_history stock_price_history_pkey; Type: CONSTRAINT; Schema: public; Owner: AdminKeng
 --
 
@@ -1580,7 +1663,7 @@ ALTER TABLE ONLY public.stock_price_history
 
 
 --
--- TOC entry 3427 (class 2606 OID 16493)
+-- TOC entry 3441 (class 2606 OID 16493)
 -- Name: stock_prices stock_prices_pkey; Type: CONSTRAINT; Schema: public; Owner: AdminKeng
 --
 
@@ -1589,7 +1672,7 @@ ALTER TABLE ONLY public.stock_prices
 
 
 --
--- TOC entry 3430 (class 2606 OID 16495)
+-- TOC entry 3444 (class 2606 OID 16495)
 -- Name: stock_signal stock_signal_pkey; Type: CONSTRAINT; Schema: public; Owner: AdminKeng
 --
 
@@ -1598,7 +1681,7 @@ ALTER TABLE ONLY public.stock_signal
 
 
 --
--- TOC entry 3432 (class 2606 OID 16497)
+-- TOC entry 3446 (class 2606 OID 16497)
 -- Name: stocklist_twelvedata stocklist_twelvedata_pkey; Type: CONSTRAINT; Schema: public; Owner: AdminKeng
 --
 
@@ -1607,7 +1690,7 @@ ALTER TABLE ONLY public.stocklist_twelvedata
 
 
 --
--- TOC entry 3434 (class 2606 OID 16499)
+-- TOC entry 3448 (class 2606 OID 16499)
 -- Name: stocklist_twelvedata stocklist_twelvedata_symbol_key; Type: CONSTRAINT; Schema: public; Owner: AdminKeng
 --
 
@@ -1616,7 +1699,7 @@ ALTER TABLE ONLY public.stocklist_twelvedata
 
 
 --
--- TOC entry 3452 (class 1259 OID 183697)
+-- TOC entry 3466 (class 1259 OID 183697)
 -- Name: idx_account_active; Type: INDEX; Schema: public; Owner: AdminKeng
 --
 
@@ -1624,7 +1707,7 @@ CREATE INDEX idx_account_active ON public.account_info_history USING btree (acco
 
 
 --
--- TOC entry 3443 (class 1259 OID 179699)
+-- TOC entry 3457 (class 1259 OID 179699)
 -- Name: idx_bot_active_positions_open; Type: INDEX; Schema: public; Owner: AdminKeng
 --
 
@@ -1632,8 +1715,8 @@ CREATE UNIQUE INDEX idx_bot_active_positions_open ON public.bot_active_positions
 
 
 --
--- TOC entry 3642 (class 0 OID 0)
--- Dependencies: 3443
+-- TOC entry 3660 (class 0 OID 0)
+-- Dependencies: 3457
 -- Name: INDEX idx_bot_active_positions_open; Type: COMMENT; Schema: public; Owner: AdminKeng
 --
 
@@ -1641,7 +1724,7 @@ COMMENT ON INDEX public.idx_bot_active_positions_open IS 'ป้องกัน�
 
 
 --
--- TOC entry 3449 (class 1259 OID 179729)
+-- TOC entry 3463 (class 1259 OID 179729)
 -- Name: idx_bot_orders_symbol_status; Type: INDEX; Schema: public; Owner: AdminKeng
 --
 
@@ -1649,7 +1732,23 @@ CREATE INDEX idx_bot_orders_symbol_status ON public.bot_orders USING btree (symb
 
 
 --
--- TOC entry 3446 (class 1259 OID 179711)
+-- TOC entry 3471 (class 1259 OID 218742)
+-- Name: idx_bot_system_logs_event_date; Type: INDEX; Schema: public; Owner: AdminKeng
+--
+
+CREATE INDEX idx_bot_system_logs_event_date ON public.bot_system_logs USING btree (event_type, created_at DESC);
+
+
+--
+-- TOC entry 3472 (class 1259 OID 218743)
+-- Name: idx_bot_system_logs_symbol; Type: INDEX; Schema: public; Owner: AdminKeng
+--
+
+CREATE INDEX idx_bot_system_logs_symbol ON public.bot_system_logs USING btree (symbol) WHERE (symbol IS NOT NULL);
+
+
+--
+-- TOC entry 3460 (class 1259 OID 179711)
 -- Name: idx_bot_trade_signals_status; Type: INDEX; Schema: public; Owner: AdminKeng
 --
 
@@ -1657,7 +1756,7 @@ CREATE INDEX idx_bot_trade_signals_status ON public.bot_trade_signals USING btre
 
 
 --
--- TOC entry 3453 (class 1259 OID 187598)
+-- TOC entry 3467 (class 1259 OID 187598)
 -- Name: idx_mv_stock_ind_date; Type: INDEX; Schema: public; Owner: AdminKeng
 --
 
@@ -1665,7 +1764,7 @@ CREATE INDEX idx_mv_stock_ind_date ON public.mv_stock_indicators USING btree (tr
 
 
 --
--- TOC entry 3454 (class 1259 OID 187597)
+-- TOC entry 3468 (class 1259 OID 187597)
 -- Name: idx_mv_stock_ind_sym_date; Type: INDEX; Schema: public; Owner: AdminKeng
 --
 
@@ -1673,7 +1772,7 @@ CREATE UNIQUE INDEX idx_mv_stock_ind_sym_date ON public.mv_stock_indicators USIN
 
 
 --
--- TOC entry 3421 (class 1259 OID 16543)
+-- TOC entry 3435 (class 1259 OID 16543)
 -- Name: idx_stock_price_history_date; Type: INDEX; Schema: public; Owner: AdminKeng
 --
 
@@ -1681,7 +1780,7 @@ CREATE INDEX idx_stock_price_history_date ON public.stock_price_history USING bt
 
 
 --
--- TOC entry 3422 (class 1259 OID 16544)
+-- TOC entry 3436 (class 1259 OID 16544)
 -- Name: idx_stock_price_history_sym_date; Type: INDEX; Schema: public; Owner: AdminKeng
 --
 
@@ -1689,7 +1788,7 @@ CREATE INDEX idx_stock_price_history_sym_date ON public.stock_price_history USIN
 
 
 --
--- TOC entry 3425 (class 1259 OID 16500)
+-- TOC entry 3439 (class 1259 OID 16500)
 -- Name: idx_stock_prices_symbol_time; Type: INDEX; Schema: public; Owner: AdminKeng
 --
 
@@ -1697,7 +1796,7 @@ CREATE INDEX idx_stock_prices_symbol_time ON public.stock_prices USING btree (sy
 
 
 --
--- TOC entry 3435 (class 1259 OID 122222)
+-- TOC entry 3449 (class 1259 OID 122222)
 -- Name: idx_stock_value_score_name; Type: INDEX; Schema: public; Owner: AdminKeng
 --
 
@@ -1705,7 +1804,7 @@ CREATE INDEX idx_stock_value_score_name ON public.stock_value_score USING btree 
 
 
 --
--- TOC entry 3436 (class 1259 OID 122221)
+-- TOC entry 3450 (class 1259 OID 122221)
 -- Name: idx_stock_value_score_rank; Type: INDEX; Schema: public; Owner: AdminKeng
 --
 
@@ -1713,7 +1812,7 @@ CREATE INDEX idx_stock_value_score_rank ON public.stock_value_score USING btree 
 
 
 --
--- TOC entry 3411 (class 1259 OID 16501)
+-- TOC entry 3425 (class 1259 OID 16501)
 -- Name: ix_dim_symbol_th_market; Type: INDEX; Schema: public; Owner: AdminKeng
 --
 
@@ -1721,7 +1820,7 @@ CREATE INDEX ix_dim_symbol_th_market ON public.dim_symbol_th USING btree (market
 
 
 --
--- TOC entry 3412 (class 1259 OID 16502)
+-- TOC entry 3426 (class 1259 OID 16502)
 -- Name: ix_stock_indicator_daily_symdate; Type: INDEX; Schema: public; Owner: AdminKeng
 --
 
@@ -1729,7 +1828,7 @@ CREATE INDEX ix_stock_indicator_daily_symdate ON public.stock_indicator_daily US
 
 
 --
--- TOC entry 3415 (class 1259 OID 16503)
+-- TOC entry 3429 (class 1259 OID 16503)
 -- Name: ix_stock_indicator_daily_v4_symdate; Type: INDEX; Schema: public; Owner: AdminKeng
 --
 
@@ -1737,7 +1836,7 @@ CREATE INDEX ix_stock_indicator_daily_v4_symdate ON public.stock_indicator_daily
 
 
 --
--- TOC entry 3418 (class 1259 OID 16504)
+-- TOC entry 3432 (class 1259 OID 16504)
 -- Name: ix_stock_indicator_jsonb_symdate; Type: INDEX; Schema: public; Owner: AdminKeng
 --
 
@@ -1745,7 +1844,7 @@ CREATE INDEX ix_stock_indicator_jsonb_symdate ON public.stock_indicator_jsonb US
 
 
 --
--- TOC entry 3428 (class 1259 OID 16505)
+-- TOC entry 3442 (class 1259 OID 16505)
 -- Name: ix_stock_signal_symdate; Type: INDEX; Schema: public; Owner: AdminKeng
 --
 
@@ -1753,7 +1852,7 @@ CREATE INDEX ix_stock_signal_symdate ON public.stock_signal USING btree (symbol,
 
 
 --
--- TOC entry 3437 (class 1259 OID 16516)
+-- TOC entry 3451 (class 1259 OID 16516)
 -- Name: stock_value_score_name_idx; Type: INDEX; Schema: public; Owner: AdminKeng
 --
 
@@ -1761,7 +1860,7 @@ CREATE INDEX stock_value_score_name_idx ON public.stock_value_score USING btree 
 
 
 --
--- TOC entry 3438 (class 1259 OID 16515)
+-- TOC entry 3452 (class 1259 OID 16515)
 -- Name: stock_value_score_rank_idx; Type: INDEX; Schema: public; Owner: AdminKeng
 --
 
@@ -1769,7 +1868,7 @@ CREATE INDEX stock_value_score_rank_idx ON public.stock_value_score USING btree 
 
 
 --
--- TOC entry 3455 (class 2606 OID 179724)
+-- TOC entry 3473 (class 2606 OID 179724)
 -- Name: bot_orders bot_orders_signal_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: AdminKeng
 --
 
@@ -1777,11 +1876,11 @@ ALTER TABLE ONLY public.bot_orders
     ADD CONSTRAINT bot_orders_signal_id_fkey FOREIGN KEY (signal_id) REFERENCES public.bot_trade_signals(id);
 
 
--- Completed on 2026-09-04 13:32:57
+-- Completed on 2026-09-10 13:21:51
 
 --
 -- PostgreSQL database dump complete
 --
 
-\unrestrict MtS7JTljYPw77Z5uHcpSeQSYtMzCEObAJV9WifiveLHNi4roHzrm2MNCO5g7neO
+\unrestrict LFBoe1tQSRpK5EdwtGJcuV8p4h9TDdewge4yRdMM0qoSHRmbGXGPuvXIfNk4pdE
 

@@ -20,13 +20,18 @@ def main():
     print(f"Task Update started at {todayYYYYMMDD_hhmmss}")
 
     # ข้ามการรันสคริปต์ในวันหยุดสุดสัปดาห์
-    if date.today().weekday() >=5:
-        # 1= Monday, 2=Tuesday, ..., 5=Saturday, 6=Sunday
+    if date.today().weekday() > 4 :
+        # 0 = Monday, 1=Tuesday, ...4=Friday, 5=Saturday, 6=Sunday
         print(f"at {todayYYYYMMDD_hhmmss} => ❌ Today is weekend. Exiting...")
+        return
+    
+    #เช็ควันหยุดนักขัตฤกษ์(เช็คตอนเช้า) (ถ้าอยากให้รันก็สามารถคอมเมนต์บรรทัดนี้ออกได้)
+    if date.today().weekday() <= 4 and not usp.is_market_open() and  datetime.strptime("09:30:00", "%H:%M:%S").time() <= datetime.now().time() <= datetime.strptime("12:30:00", "%H:%M:%S").time() and  datetime.strptime("14:30:00", "%H:%M:%S").time() <= datetime.now().time() <= datetime.strptime("17:00:00", "%H:%M:%S").time():
+        print(f"at {todayYYYYMMDD_hhmmss} => ❌ Today is not a market day. Exiting...")
         return
 
     # อัพเดทรายชื่อหุ้น เดือนละครั้ง ทุกวันที่ X หรือวันแรกทำการของเดือน หรืออาจจะต้องปรับ ให้เช็ค แหล่งข้อมูลถูกอัพเดตหรือยัง?
-    if date.today().day == 5: 
+    if date.today().day in [1,15]:  # หรือวันแรกทำการของเดือน
         usl.main()  # Update stock list from settrade
         usi.main()  # Update stock info from SiamChart
         ssc.main()  # Compute stock scores from SiamChart
