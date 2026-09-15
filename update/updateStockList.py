@@ -20,6 +20,7 @@ from sqlalchemy import create_engine
 load_dotenv()
 
 from selenium.webdriver.common.action_chains import ActionChains
+from core.webdriver_utils import get_chrome_driver
 
 
 def fetch_symbolList_settrade_get_quote_v2(headless: bool = True, timeout: int = 20) -> pd.DataFrame:
@@ -30,17 +31,7 @@ def fetch_symbolList_settrade_get_quote_v2(headless: bool = True, timeout: int =
 
     return: pandas.DataFrame
     """
-    # --- 1) สร้าง Chrome แบบเสถียรใน headless ---
-    options = webdriver.ChromeOptions()
-    # if headless:
-        # options.add_argument("--headless=new")
-    options.add_argument("--window-size=1920,1080")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--remote-allow-origins=*")
-
-    driver = webdriver.Chrome(options=options)
+    driver = get_chrome_driver(headless=headless)
     wait = WebDriverWait(driver, timeout)
 
     try:
@@ -103,14 +94,7 @@ def fetch_symbolList_settrade_get_quote_v2(headless: bool = True, timeout: int =
 def fetch_symbolList_settrade_get_quote_v1_2():
     # สร้าง instance ของ WebDriver (Chrome)
     timeout = 20
-    options = webdriver.ChromeOptions()
-    # options.add_argument('--headless')
-    options.add_argument("--window-size=1920,1080")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--remote-allow-origins=*")
-    driver = webdriver.Chrome(options=options)
+    driver = get_chrome_driver(headless=True)
     wait = WebDriverWait(driver, timeout)
     # เปิดหน้าเว็บที่ต้องการ
     driver.get("https://www.settrade.com/th/get-quote")  # เปลี่ยน URL เป็นหน้าเว็บที่คุณต้องการ
@@ -186,10 +170,7 @@ def fetch_symbolList_settrade_get_quote_v1_2():
 
 def fetch_symbolList_settrade_get_quote():
     # สร้าง instance ของ WebDriver (Chrome)
-
-    options = webdriver.ChromeOptions()
-    options.add_argument('--headless')
-    driver = webdriver.Chrome(options=options)
+    driver = get_chrome_driver(headless=True)
     
     # เปิดหน้าเว็บที่ต้องการ
     driver.get("https://www.settrade.com/th/get-quote")  # เปลี่ยน URL เป็นหน้าเว็บที่คุณต้องการ
@@ -233,6 +214,10 @@ def fetch_symbolList_settrade_get_quote():
 def main():
 
     df = fetch_symbolList_settrade_get_quote_v1_2()
+    if df is None or df.empty:
+        print("⚠️ [SETTRADE STOCKLIST] ไม่พบข้อมูลที่ดึงได้ ข้ามการอัพเดตฐานข้อมูล")
+        return
+
     df = df.rename(columns={df.columns[0]: 'symbol'}) 
     df = df.rename(columns={df.columns[1]: 'name_th'})
     df = df.rename(columns={df.columns[2]: 'name_en'})  

@@ -21,21 +21,15 @@ from sqlalchemy import create_engine
 load_dotenv()
 
 from selenium.webdriver.common.action_chains import ActionChains
+from core.webdriver_utils import get_chrome_driver
 
 # ดึงข้อมูลจาก หน้าเว็บ http://siamchart.com/stock/
 # แล้วอัพเดทลงตาราง stock_list_info_siamchart ใน postgresql
 # ถ้ายังไม่มีตาราง ให้สร้างตารางนี้ก่อนรันสคริปต์นี้
 
 def fetch_stock_info():
-    # สร้าง instance ของ WebDriver (Chrome)
-    options = webdriver.ChromeOptions()
-    options.add_argument('--headless')
-    options.add_argument("--window-size=1920,1080")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--remote-allow-origins=*")
-    driver = webdriver.Chrome(options=options)
+    # สร้าง instance ของ WebDriver (Chrome) รองรับทุกแพลตฟอร์ม
+    driver = get_chrome_driver(headless=True)
     wait = WebDriverWait(driver, 20)
 
     try:
@@ -53,13 +47,16 @@ def fetch_stock_info():
     finally:
         driver.quit()
         if df is None:
-            return []
+            return None
         return df
 
         
 def main():
     # ดึงข้อมูลหุ้นจากเว็บ
     df = fetch_stock_info()
+    if df is None or (isinstance(df, pd.DataFrame) and df.empty):
+        print("⚠️ [SIAMCHART INFO] ไม่พบข้อมูลที่ดึงได้ ข้ามการอัพเดตฐานข้อมูล")
+        return
     df['import_datetime'] = datetime.now().strftime("%Y-%m-%d")
     print( df.head() )
 

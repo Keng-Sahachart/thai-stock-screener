@@ -38,13 +38,19 @@ def main(force: bool = False):
     notify_job_start_sync("Task Update", "เริ่มอัพเดตข้อมูลราคา, Indicators และประมวลผลสิ้นวัน")
 
     try:
-        # อัพเดทรายชื่อหุ้น เดือนละครั้ง ทุกวันที่ X หรือวันแรกทำการของเดือน หรืออาจจะต้องปรับ ให้เช็ค แหล่งข้อมูลถูกอัพเดตหรือยัง?
-        if date.today().day in [1,15]:  # หรือวันแรกทำการของเดือน
-            usl.main()  # Update stock list from settrade
-            usi.main()  # Update stock info from SiamChart
-            ssc.main()  # Compute stock scores from SiamChart
-            todayYYYYMMDD_hhmmss = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            print(f"at {todayYYYYMMDD_hhmmss} => ✅ Stock list, info, and scores updated.")
+        # อัพเดทรายชื่อหุ้น เดือนละครั้ง ทุกวันที่ 1 และ 15
+        if date.today().day in [1, 15]:
+            try:
+                print("🔄 [MONTHLY UPDATE] Updating stock list & SiamChart scores (Day 1/15)...")
+                usl.main()  # Update stock list from settrade
+                usi.main()  # Update stock info from SiamChart
+                ssc.main()  # Compute stock scores from SiamChart
+                todayYYYYMMDD_hhmmss = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                print(f"at {todayYYYYMMDD_hhmmss} => ✅ Stock list, info, and scores updated.")
+            except Exception as m_err:
+                todayYYYYMMDD_hhmmss = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                print(f"at {todayYYYYMMDD_hhmmss} => ⚠️ [MONTHLY UPDATE WARNING] {m_err}")
+                print("⚠️ ข้ามไปยังขั้นตอนอัพเดตราคาประจำวันและคำนวณ Signals ต่อเนื่อง...")
 
         # อัพเดทราคาหุ้นรายวัน
         uport.UpdatePortfolio()  # Update portfolio stock data
