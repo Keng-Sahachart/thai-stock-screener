@@ -320,13 +320,13 @@ async def cmd_update_port(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def cmd_sync_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """/sync_order หรือ /sync_orders - ซิงค์สถานะ Order ล่าสุดจาก Settrade ทันที"""
-    await update.message.reply_text("⏳ กำลังเชื่อมต่อ Settrade API เพื่อซิงค์สถานะ Order ล่าสุด...")
+    await update.message.reply_text("⏳ กำลังเชื่อมต่อ Settrade API เพื่อซิงค์สถานะ Order และตรวจสอบพอร์ต...")
     try:
         count = await sync_live_orders(bot=context.bot)
         if count == 0:
-            await update.message.reply_text("ℹ️ ไม่มี Order ค้างที่ต้องตรวจสอบสถานะ (ทุกคำสั่งอยู่ในสถานะสิ้นสุดแล้ว)")
+            await update.message.reply_text("ℹ️ ตรวจสอบเรียบร้อย: ไม่มี Order ค้างและพอร์ตสอดคล้องสมบูรณ์")
         else:
-            await update.message.reply_text(f"✅ ซิงค์สถานะ {count} รายการกับ Settrade เรียบร้อยแล้ว")
+            await update.message.reply_text(f"✅ ซิงค์สถานะและตรวจสอบพอร์ตสำเร็จ ({count} รายการ)")
         await cmd_order(update, context)
     except Exception as e:
         await update.message.reply_text(f"❌ เกิดข้อผิดพลาดในการซิงค์สถานะ Order: {e}")
@@ -378,16 +378,22 @@ async def cmd_port(update: Update, context: ContextTypes.DEFAULT_TYPE):
             """)
             real_rows = cur.fetchall()
 
-            # 3. ดึงไม้จำลอง (DRY-RUN) ที่บอทถืออยู่แต่ยังไม่มีในพอร์ตจริง
+            # 3. ดึงไม้จำลอง (DRY-RUN) หรือคำสั่งซื้อจริงที่กำลังรอคิว (PENDING)
             cur.execute("""
                 SELECT b.symbol, b.current_volume, b.entry_price, b.initial_stop_loss, b.trailing_stop_loss,
                        COALESCE(p.close, b.entry_price) AS market_price,
-                       ROUND(((COALESCE(p.close, b.entry_price) - b.entry_price) / b.entry_price * 100)::numeric, 2) AS pnl_pct
+                       ROUND(((COALESCE(p.close, b.entry_price) - b.entry_price) / b.entry_price * 100)::numeric, 2) AS pnl_pct,
+                       o.broker_order_no, o.status AS order_status
                 FROM public.bot_active_positions b
                 LEFT JOIN (
                     SELECT symbol, close FROM public.stock_price_history
                     WHERE date = (SELECT MAX(date) FROM public.stock_price_history)
                 ) p ON b.symbol = p.symbol
+                LEFT JOIN LATERAL (
+                    SELECT broker_order_no, status FROM public.bot_orders
+                    WHERE symbol = b.symbol AND side = 'BUY'
+                    ORDER BY order_id DESC LIMIT 1
+                ) o ON TRUE
                 WHERE b.status = 'OPEN'
                   AND b.symbol NOT IN (
                       SELECT symbol FROM public.portfolio_stock 
@@ -395,7 +401,7 @@ async def cmd_port(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         AND current_volume > 0
                   );
             """)
-            dry_rows = cur.fetchall()
+            extra_rows = cur.fetchall()
 
             header = (
                 f"💼 <b>ภาพรวมสถานะการเงิน</b>\n"
@@ -433,33 +439,61 @@ async def cmd_port(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         current_msg += item
                         items_in_batch += 1
 
-            if dry_rows:
-                dry_intro = "\n------------------------------------\n🧪 <b>ไม้จำลองที่บอทถืออยู่ (Dry-Run Positions):</b>\n"
-                if len(current_msg) + len(dry_intro) > 3800:
-                    messages_to_send.append(current_msg)
-                    current_msg = dry_intro
-                    items_in_batch = 0
-                else:
-                    current_msg += dry_intro
+            if extra_rows:
+                # แยก Pending Buy ในตลาด กับ Dry-Run
+                pending_list = [x for x in extra_rows if x.get("order_status") in ("SENT", "QUEUING", "PARTIAL") and not str(x.get("broker_order_no") or "").startswith("SIM_")]
+                dry_list = [x for x in extra_rows if x not in pending_list]
 
-                for d in dry_rows:
-                    sl_str = f"{float(d['initial_stop_loss']):.2f}" if d["initial_stop_loss"] is not None else "N/A"
-                    ts_str = f"{float(d['trailing_stop_loss']):.2f}" if d["trailing_stop_loss"] is not None else "-"
-                    pnl = float(d["pnl_pct"]) if d["pnl_pct"] is not None else 0.0
-                    sym_link = f"<a href='https://www.settrade.com/th/equities/quote/{d['symbol']}/overview'><b>{d['symbol']}</b></a>"
-                    item = (
-                        f"\n🤖 {sym_link} ({d['current_volume']:,} หุ้น)\n"
-                        f"• ทุนจำลอง: {float(d['entry_price']):.2f} | ตลาด: {float(d['market_price']):.2f}\n"
-                        f"• กำไร/ขาดทุน: {pnl:+.2f}%\n"
-                        f"• Initial SL: {sl_str} | Trailing SL: {ts_str}\n"
-                    )
-                    if items_in_batch >= 15 or (len(current_msg) + len(item) > 3500):
+                if pending_list:
+                    p_intro = "\n------------------------------------\n⏳ <b>คำสั่งซื้อรอจับคู่ในตลาด (Pending Buy Orders):</b>\n"
+                    if len(current_msg) + len(p_intro) > 3800:
                         messages_to_send.append(current_msg)
-                        current_msg = f"🧪 <b>ไม้จำลองที่บอทถืออยู่ (ต่อ):</b>\n" + item
-                        items_in_batch = 1
+                        current_msg = p_intro
+                        items_in_batch = 0
                     else:
-                        current_msg += item
-                        items_in_batch += 1
+                        current_msg += p_intro
+
+                    for d in pending_list:
+                        sym_link = f"<a href='https://www.settrade.com/th/equities/quote/{d['symbol']}/overview'><b>{d['symbol']}</b></a>"
+                        item = (
+                            f"\n⏳ <b>{sym_link}</b> ({d['current_volume']:,} หุ้น) [สถานะ: {d.get('order_status')}]\n"
+                            f"• ราคาเสนอซื้อ: {float(d['entry_price']):.2f} | ตลาด: {float(d['market_price']):.2f}\n"
+                        )
+                        if items_in_batch >= 15 or (len(current_msg) + len(item) > 3500):
+                            messages_to_send.append(current_msg)
+                            current_msg = f"⏳ <b>คำสั่งซื้อรอจับคู่ (ต่อ):</b>\n" + item
+                            items_in_batch = 1
+                        else:
+                            current_msg += item
+                            items_in_batch += 1
+
+                if dry_list:
+                    dry_intro = "\n------------------------------------\n🧪 <b>ไม้จำลองที่บอทถืออยู่ (Dry-Run Positions):</b>\n"
+                    if len(current_msg) + len(dry_intro) > 3800:
+                        messages_to_send.append(current_msg)
+                        current_msg = dry_intro
+                        items_in_batch = 0
+                    else:
+                        current_msg += dry_intro
+
+                    for d in dry_list:
+                        sl_str = f"{float(d['initial_stop_loss']):.2f}" if d["initial_stop_loss"] is not None else "N/A"
+                        ts_str = f"{float(d['trailing_stop_loss']):.2f}" if d["trailing_stop_loss"] is not None else "-"
+                        pnl = float(d["pnl_pct"]) if d["pnl_pct"] is not None else 0.0
+                        sym_link = f"<a href='https://www.settrade.com/th/equities/quote/{d['symbol']}/overview'><b>{d['symbol']}</b></a>"
+                        item = (
+                            f"\n🤖 {sym_link} ({d['current_volume']:,} หุ้น)\n"
+                            f"• ทุนจำลอง: {float(d['entry_price']):.2f} | ตลาด: {float(d['market_price']):.2f}\n"
+                            f"• กำไร/ขาดทุน: {pnl:+.2f}%\n"
+                            f"• Initial SL: {sl_str} | Trailing SL: {ts_str}\n"
+                        )
+                        if items_in_batch >= 15 or (len(current_msg) + len(item) > 3500):
+                            messages_to_send.append(current_msg)
+                            current_msg = f"🧪 <b>ไม้จำลองที่บอทถืออยู่ (ต่อ):</b>\n" + item
+                            items_in_batch = 1
+                        else:
+                            current_msg += item
+                            items_in_batch += 1
 
             if current_msg.strip():
                 messages_to_send.append(current_msg)

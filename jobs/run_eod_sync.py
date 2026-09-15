@@ -43,6 +43,13 @@ async def sync_eod_portfolio():
     bot = Bot(token=TOKEN, request=HTTPXRequest(connect_timeout=20.0, read_timeout=60.0))
 
     try:
+        # ซิงค์สถานะ Order และ Reconcile Position สิ้นวันก่อนคำนวณ Trailing Stop และออกรายงาน
+        try:
+            from jobs.sync_order_status import sync_live_orders
+            await sync_live_orders(bot=bot)
+        except Exception as sync_err:
+            print(f"⚠️ ซิงค์สถานะ Order สิ้นวันไม่สำเร็จ: {sync_err}")
+
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             # 1. ดึง Position ที่เปิดอยู่ทั้งหมดมาเทียบกับ High และ Close ของวันนี้
             cur.execute("""
