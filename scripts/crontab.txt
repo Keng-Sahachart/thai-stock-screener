@@ -1,0 +1,35 @@
+# ==============================================================================
+# Thai Stock Screener - Crontab Schedule (Linux / Raspberry Pi)
+# Timezone: Asia/Bangkok
+# Edit via: crontab -e
+# ==============================================================================
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+# 1. สแกนกราฟหุ้นในพอร์ตตอนเช้า (09:00 น. วันจันทร์-ศุกร์) [Optional]
+00 09 * * 1-5 cd /home/keng/thai-stock-screener && /home/keng/thai-stock-screener/.venv/bin/python jobs/run_port_scanner.py >> logs/port_scanner.log 2>&1
+
+# 2. สแกนหาจังหวะซื้อและส่งการ์ด Approve เข้า Telegram (09:15 น. วันจันทร์-ศุกร์)
+15 09 * * 1-5 cd /home/keng/thai-stock-screener && /home/keng/thai-stock-screener/.venv/bin/python jobs/run_buy_scanner.py >> logs/buy_scanner.log 2>&1
+
+# 3. ตรวจจับสถานะ Order ในกระดาน ทุกๆ 5 นาที ระหว่างตลาดเปิดทำการ
+# ตลาดเช้า: 10:00 - 12:30 น.
+*/5 10-12 * * 1-5 cd /home/keng/thai-stock-screener && /home/keng/thai-stock-screener/.venv/bin/python jobs/sync_order_status.py >> logs/sync_orders.log 2>&1
+# ตลาดบ่าย: 14:30 - 16:30 น.
+30,35,40,45,50,55 14 * * 1-5 cd /home/keng/thai-stock-screener && /home/keng/thai-stock-screener/.venv/bin/python jobs/sync_order_status.py >> logs/sync_orders.log 2>&1
+*/5 15 * * 1-5 cd /home/keng/thai-stock-screener && /home/keng/thai-stock-screener/.venv/bin/python jobs/sync_order_status.py >> logs/sync_orders.log 2>&1
+00,05,10,15,20,25,30 16 * * 1-5 cd /home/keng/thai-stock-screener && /home/keng/thai-stock-screener/.venv/bin/python jobs/sync_order_status.py >> logs/sync_orders.log 2>&1
+
+# 4. เฝ้าระวัง Stop Loss และ Cut Loss ทุกๆ 10 นาที ระหว่างตลาดเปิดทำการ
+# ตลาดเช้า: 10:00 - 12:30 น.
+*/10 10-12 * * 1-5 cd /home/keng/thai-stock-screener && /home/keng/thai-stock-screener/.venv/bin/python jobs/run_sell_monitor.py >> logs/sell_monitor.log 2>&1
+# ตลาดบ่าย: 14:30 - 16:30 น.
+30,40,50 14 * * 1-5 cd /home/keng/thai-stock-screener && /home/keng/thai-stock-screener/.venv/bin/python jobs/run_sell_monitor.py >> logs/sell_monitor.log 2>&1
+*/10 15 * * 1-5 cd /home/keng/thai-stock-screener && /home/keng/thai-stock-screener/.venv/bin/python jobs/run_sell_monitor.py >> logs/sell_monitor.log 2>&1
+00,10,20,30 16 * * 1-5 cd /home/keng/thai-stock-screener && /home/keng/thai-stock-screener/.venv/bin/python jobs/run_sell_monitor.py >> logs/sell_monitor.log 2>&1
+
+# 5. ซิงค์สถานะ Order รอบปิดตลาด (16:40 น. วันจันทร์-ศุกร์)
+40 16 * * 1-5 cd /home/keng/thai-stock-screener && /home/keng/thai-stock-screener/.venv/bin/python jobs/sync_order_status.py >> logs/sync_orders.log 2>&1
+
+# 6. รัน Master Data Update สิ้นวัน (19:15 น. วันจันทร์-ศุกร์)
+15 19 * * 1-5 cd /home/keng/thai-stock-screener && /home/keng/thai-stock-screener/.venv/bin/python taskUpdate.py >> logs/taskUpdate.log 2>&1

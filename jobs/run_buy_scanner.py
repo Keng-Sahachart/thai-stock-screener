@@ -23,8 +23,10 @@ from pathlib import Path
 # ถอยกลับไป 1 โฟลเดอร์เพื่อชี้ไปที่ root (thai-stock-screener)
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
+import time
 from core.signals.aggregator import run_signal_aggregator
 from bot.chart_generator import generate_stock_chart
+from core.job_notifier import notify_job_start, notify_job_finish
 
 load_dotenv()
 
@@ -40,7 +42,19 @@ def get_db_connection():
         password=os.getenv("posql_password", "postgres")
     )
 
-def build_trade_keyboard(signal_id: int, current_shares: int, price: float):
+def build_trade_keyboard(signal_id: int, current_shares: int, price: float, pending_order: dict = None):
+    if pending_order:
+        order_ref = pending_order.get('broker_order_no') or f"#{pending_order.get('order_id')}"
+        keyboard = [
+            [
+                InlineKeyboardButton(f"🔒 มี Order #{order_ref} แล้ว ({pending_order['status']})", callback_data=f"has_pending:{signal_id}")
+            ],
+            [
+                InlineKeyboardButton("❌ ปิดการ์ดนี้", callback_data=f"rej:{signal_id}")
+            ]
+        ]
+        return InlineKeyboardMarkup(keyboard)
+
     cost = current_shares * price * 1.0025
     keyboard = [
         [
@@ -56,6 +70,8 @@ def build_trade_keyboard(signal_id: int, current_shares: int, price: float):
     return InlineKeyboardMarkup(keyboard)
 
 async def scan_and_notify():
+    start_t = time.time()
+    await notify_job_start("Run Buy Scanner", "สแกนหาจังหวะซื้อและสร้างการ์ดขออนุมัติ")
     print("🔍 กำลังรัน Aggregator...")
     run_signal_aggregator()
 
@@ -83,6 +99,7 @@ async def scan_and_notify():
                     text="🛡️ <b>ผลการสแกนประจำวัน</b>\nไม่พบสัญญาณซื้อใหม่ที่ผ่านเกณฑ์ในขณะนี้",
                     parse_mode="HTML"
                 )
+                await notify_job_finish("Run Buy Scanner", elapsed_seconds=time.time() - start_t, summary="ไม่พบสัญญาณซื้อใหม่ที่ผ่านเกณฑ์")
                 return
 
             for sig in signals:
@@ -92,17 +109,41 @@ async def scan_and_notify():
                 line_avail = float(sig["line_available"] or 0)
                 cost = shares * p * 1.0025
 
+                # ตรวจสอบว่ามีคำสั่งซื้อของวันนี้ หรือรอคิวอยู่ในตลาดแล้วหรือไม่
+                cur.execute("""
+                    SELECT order_id, broker_order_no, status, volume, target_price 
+                    FROM public.bot_orders 
+                    WHERE symbol = %s AND side = 'BUY' 
+                      AND (status IN ('SENT', 'QUEUING', 'PARTIAL') OR created_at::date = CURRENT_DATE)
+                    ORDER BY order_id DESC LIMIT 1;
+                """, (sym,))
+                pending_order = cur.fetchone()
+
+                pending_note = ""
+                if pending_order:
+                    p_ref = pending_order['broker_order_no'] or f"#{pending_order['order_id']}"
+                    p_st = pending_order['status']
+                    p_vol = pending_order['volume']
+                    p_prc = float(pending_order['target_price'])
+                    pending_note = (
+                        f"\n\n⚠️ <b>[แจ้งเตือน: หุ้นตัวนี้มีคำสั่งซื้อของวันนี้แล้ว]</b>\n"
+                        f"• Order No: <code>{p_ref}</code> ({p_st})\n"
+                        f"• จำนวน: <code>{p_vol:,}</code> หุ้น @ <code>{p_prc:.2f}</code> THB\n"
+                        f"🔒 <i>(ปิดปุ่ม Approve เพื่อป้องกันการส่งคำสั่งซื้อซ้ำ)</i>"
+                    )
+
                 caption = (
                     f"🚨 <b>ตรวจพบสัญญาณซื้อ: {sym}</b>\n"
                     f"• ราคาปิด: <code>{p:.2f}</code> THB | SL Plan: <code>{float(sig['stop_loss_plan']):.2f}</code> THB\n"
                     f"• แหล่งสัญญาณ: <code>{sig['signal_source']}</code>\n"
                     f"• ประมาณการใช้เงิน: <code>{cost:,.2f}</code> THB\n"
                     f"• อำนาจซื้อคงเหลือ: <code>{line_avail:,.2f}</code> THB\n"
-                    f"• สัญญาณ: {sig['reason']}\n\n"
-                    f"<i>กดปุ่ม ➖ / ➕ เพื่อปรับจำนวนหุ้นก่อนกด Approve</i>"
+                    f"• สัญญาณ: {sig['reason']}"
+                    f"{pending_note}\n\n"
+                    + ("<i>กดปุ่ม ➖ / ➕ เพื่อปรับจำนวนหุ้นก่อนกด Approve</i>" if not pending_order else "<i>หุ้นนี้มีคำสั่งซื้อในระบบแล้ว</i>")
                 )
 
-                reply_markup = build_trade_keyboard(sig["id"], shares, p)
+                reply_markup = build_trade_keyboard(sig["id"], shares, p, pending_order=pending_order)
                 chart_buf = generate_stock_chart(sym)
 
                 try:
@@ -121,6 +162,10 @@ async def scan_and_notify():
                 f"<i>(สามารถกด Approve หรือปรับจำนวนหุ้นผ่านการ์ดด้านบน หรือพิมพ์ /port เพื่อดูยอดเงิน)</i>"
             )
             await bot.send_message(chat_id=CHAT_ID, text=summary_msg, parse_mode="HTML")
+            await notify_job_finish("Run Buy Scanner", elapsed_seconds=time.time() - start_t, summary=f"ตรวจพบสัญญาณซื้อ {len(signals)} รายการ")
+    except Exception as e:
+        await notify_job_finish("Run Buy Scanner", elapsed_seconds=time.time() - start_t, success=False, error=str(e))
+        raise e
     finally:
         conn.close()
 

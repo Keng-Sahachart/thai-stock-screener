@@ -1,0 +1,22 @@
+[Unit]
+Description=Thai Stock Screener - Master Automation Scheduler Service
+After=network.target network-online.target time-sync.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=keng
+WorkingDirectory=/home/keng/thai-stock-screener
+ExecStart=/home/keng/thai-stock-screener/.venv/bin/python master_scheduler.py
+Restart=always
+RestartSec=10
+KillMode=mixed
+TimeoutStopSec=30
+StandardOutput=append:/home/keng/thai-stock-screener/logs/master_scheduler_service.log
+StandardError=append:/home/keng/thai-stock-screener/logs/master_scheduler_service.log
+
+# ตัวแปรระบบเพิ่มเติม (ถ้ามี)
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

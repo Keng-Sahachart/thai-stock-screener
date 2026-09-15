@@ -1,0 +1,108 @@
+[2026-09-11 20:11:40] [INFO] 🛡️ ระบบ Master Scheduler กำลังเริ่มต้นการทำงาน (กด Ctrl+C เพื่อหยุด)...
+[2026-09-11 20:11:40] [INFO] 🤖 Telegram Bot Supervisor เริ่มต้นการทำงาน...
+[2026-09-11 20:11:40] [INFO] ⏰ Scheduler Engine เริ่มต้นระบบจับเวลา...
+[2026-09-11 20:11:40] [INFO] 🔌 กำลังสตาร์ท Telegram Bot Service...
+[2026-09-14 12:07:07] [INFO] 🛡️ ระบบ Master Scheduler กำลังเริ่มต้นการทำงาน (กด Ctrl+C เพื่อหยุด)...
+[2026-09-14 12:07:07] [INFO] ⏰ Scheduler Engine เริ่มต้นระบบจับเวลา...
+[2026-09-14 12:07:07] [INFO] 🤖 Telegram Bot Supervisor เริ่มต้นการทำงาน...
+[2026-09-14 12:07:07] [INFO] 🔌 กำลังสตาร์ท Telegram Bot Service...
+[2026-09-14 12:10:02] [INFO] 🚀 เริ่มรันงาน: [sync_orders] -> jobs\sync_order_status.py
+[2026-09-14 12:10:02] [INFO] 🚀 เริ่มรันงาน: [sell_monitor] -> jobs\run_sell_monitor.py
+[2026-09-14 12:10:11] [INFO] ✅ งาน [sync_orders] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 12:10:15] [INFO] ✅ งาน [sell_monitor] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 12:15:03] [INFO] 🚀 เริ่มรันงาน: [sync_orders] -> jobs\sync_order_status.py
+[2026-09-14 12:15:10] [INFO] ✅ งาน [sync_orders] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 12:20:03] [INFO] 🚀 เริ่มรันงาน: [sync_orders] -> jobs\sync_order_status.py
+[2026-09-14 12:20:03] [INFO] 🚀 เริ่มรันงาน: [sell_monitor] -> jobs\run_sell_monitor.py
+[2026-09-14 12:20:10] [INFO] ✅ งาน [sync_orders] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 12:20:13] [INFO] ✅ งาน [sell_monitor] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 12:25:03] [INFO] 🚀 เริ่มรันงาน: [sync_orders] -> jobs\sync_order_status.py
+[2026-09-14 12:25:10] [INFO] ✅ งาน [sync_orders] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 14:30:01] [INFO] 🚀 เริ่มรันงาน: [sync_orders] -> jobs\sync_order_status.py
+[2026-09-14 14:30:01] [INFO] 🚀 เริ่มรันงาน: [sell_monitor] -> jobs\run_sell_monitor.py
+[2026-09-14 14:30:10] [INFO] ✅ งาน [sync_orders] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 14:30:18] [INFO] ✅ งาน [sell_monitor] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 14:35:01] [INFO] 🚀 เริ่มรันงาน: [sync_orders] -> jobs\sync_order_status.py
+[2026-09-14 14:35:09] [INFO] ✅ งาน [sync_orders] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 14:40:01] [INFO] 🚀 เริ่มรันงาน: [sync_orders] -> jobs\sync_order_status.py
+[2026-09-14 14:40:01] [INFO] 🚀 เริ่มรันงาน: [sell_monitor] -> jobs\run_sell_monitor.py
+[2026-09-14 14:40:09] [INFO] ✅ งาน [sync_orders] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 14:40:11] [INFO] ✅ งาน [sell_monitor] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 14:45:01] [INFO] 🚀 เริ่มรันงาน: [sync_orders] -> jobs\sync_order_status.py
+[2026-09-14 14:45:09] [INFO] ✅ งาน [sync_orders] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 14:50:01] [INFO] 🚀 เริ่มรันงาน: [sync_orders] -> jobs\sync_order_status.py
+[2026-09-14 14:50:01] [INFO] 🚀 เริ่มรันงาน: [sell_monitor] -> jobs\run_sell_monitor.py
+[2026-09-14 14:50:09] [INFO] ✅ งาน [sync_orders] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 14:50:12] [INFO] ✅ งาน [sell_monitor] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 14:55:01] [INFO] 🚀 เริ่มรันงาน: [sync_orders] -> jobs\sync_order_status.py
+[2026-09-14 14:55:10] [INFO] ✅ งาน [sync_orders] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 15:00:02] [INFO] 🚀 เริ่มรันงาน: [sync_orders] -> jobs\sync_order_status.py
+[2026-09-14 15:00:02] [INFO] 🚀 เริ่มรันงาน: [sell_monitor] -> jobs\run_sell_monitor.py
+[2026-09-14 15:00:15] [INFO] ✅ งาน [sync_orders] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 15:00:20] [INFO] ✅ งาน [sell_monitor] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 15:05:02] [INFO] 🚀 เริ่มรันงาน: [sync_orders] -> jobs\sync_order_status.py
+[2026-09-14 15:05:09] [INFO] ✅ งาน [sync_orders] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 15:10:02] [INFO] 🚀 เริ่มรันงาน: [sync_orders] -> jobs\sync_order_status.py
+[2026-09-14 15:10:02] [INFO] 🚀 เริ่มรันงาน: [sell_monitor] -> jobs\run_sell_monitor.py
+[2026-09-14 15:10:10] [INFO] ✅ งาน [sync_orders] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 15:10:12] [INFO] ✅ งาน [sell_monitor] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 15:15:02] [INFO] 🚀 เริ่มรันงาน: [sync_orders] -> jobs\sync_order_status.py
+[2026-09-14 15:15:10] [INFO] ✅ งาน [sync_orders] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 15:20:02] [INFO] 🚀 เริ่มรันงาน: [sync_orders] -> jobs\sync_order_status.py
+[2026-09-14 15:20:02] [INFO] 🚀 เริ่มรันงาน: [sell_monitor] -> jobs\run_sell_monitor.py
+[2026-09-14 15:20:10] [INFO] ✅ งาน [sync_orders] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 15:20:13] [INFO] ✅ งาน [sell_monitor] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 15:22:01] [INFO] 🛡️ ระบบ Master Scheduler กำลังเริ่มต้นการทำงาน (กด Ctrl+C เพื่อหยุด)...
+[2026-09-14 15:22:01] [INFO] 🤖 Telegram Bot Supervisor เริ่มต้นการทำงาน...
+[2026-09-14 15:22:01] [INFO] 🔌 กำลังสตาร์ท Telegram Bot Service...
+[2026-09-14 15:22:01] [INFO] ⏰ Scheduler Engine เริ่มต้นระบบจับเวลา...
+[2026-09-14 15:25:01] [INFO] 🚀 เริ่มรันงาน: [sync_orders] -> jobs\sync_order_status.py
+[2026-09-14 15:25:08] [INFO] ✅ งาน [sync_orders] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 15:30:01] [INFO] 🚀 เริ่มรันงาน: [sync_orders] -> jobs\sync_order_status.py
+[2026-09-14 15:30:01] [INFO] 🚀 เริ่มรันงาน: [sell_monitor] -> jobs\run_sell_monitor.py
+[2026-09-14 15:30:08] [INFO] ✅ งาน [sync_orders] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 15:30:10] [INFO] ✅ งาน [sell_monitor] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 15:35:01] [INFO] 🚀 เริ่มรันงาน: [sync_orders] -> jobs\sync_order_status.py
+[2026-09-14 15:35:08] [INFO] ✅ งาน [sync_orders] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 15:40:01] [INFO] 🚀 เริ่มรันงาน: [sync_orders] -> jobs\sync_order_status.py
+[2026-09-14 15:40:01] [INFO] 🚀 เริ่มรันงาน: [sell_monitor] -> jobs\run_sell_monitor.py
+[2026-09-14 15:40:09] [INFO] ✅ งาน [sync_orders] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 15:40:11] [INFO] ✅ งาน [sell_monitor] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 15:45:01] [INFO] 🚀 เริ่มรันงาน: [sync_orders] -> jobs\sync_order_status.py
+[2026-09-14 15:45:09] [INFO] ✅ งาน [sync_orders] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 15:50:02] [INFO] 🚀 เริ่มรันงาน: [sync_orders] -> jobs\sync_order_status.py
+[2026-09-14 15:50:02] [INFO] 🚀 เริ่มรันงาน: [sell_monitor] -> jobs\run_sell_monitor.py
+[2026-09-14 15:50:09] [INFO] ✅ งาน [sync_orders] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 15:50:11] [INFO] ✅ งาน [sell_monitor] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 15:55:02] [INFO] 🚀 เริ่มรันงาน: [sync_orders] -> jobs\sync_order_status.py
+[2026-09-14 15:55:09] [INFO] ✅ งาน [sync_orders] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 16:00:02] [INFO] 🚀 เริ่มรันงาน: [sync_orders] -> jobs\sync_order_status.py
+[2026-09-14 16:00:02] [INFO] 🚀 เริ่มรันงาน: [sell_monitor] -> jobs\run_sell_monitor.py
+[2026-09-14 16:00:09] [INFO] ✅ งาน [sync_orders] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 16:00:11] [INFO] ✅ งาน [sell_monitor] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 16:05:02] [INFO] 🚀 เริ่มรันงาน: [sync_orders] -> jobs\sync_order_status.py
+[2026-09-14 16:05:09] [INFO] ✅ งาน [sync_orders] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 16:10:02] [INFO] 🚀 เริ่มรันงาน: [sync_orders] -> jobs\sync_order_status.py
+[2026-09-14 16:10:02] [INFO] 🚀 เริ่มรันงาน: [sell_monitor] -> jobs\run_sell_monitor.py
+[2026-09-14 16:10:10] [INFO] ✅ งาน [sync_orders] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 16:10:12] [INFO] ✅ งาน [sell_monitor] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 16:15:02] [INFO] 🚀 เริ่มรันงาน: [sync_orders] -> jobs\sync_order_status.py
+[2026-09-14 16:15:10] [INFO] ✅ งาน [sync_orders] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 16:20:03] [INFO] 🚀 เริ่มรันงาน: [sync_orders] -> jobs\sync_order_status.py
+[2026-09-14 16:20:03] [INFO] 🚀 เริ่มรันงาน: [sell_monitor] -> jobs\run_sell_monitor.py
+[2026-09-14 16:20:11] [INFO] ✅ งาน [sync_orders] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 16:20:23] [INFO] ✅ งาน [sell_monitor] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 16:25:03] [INFO] 🚀 เริ่มรันงาน: [sync_orders] -> jobs\sync_order_status.py
+[2026-09-14 16:25:10] [INFO] ✅ งาน [sync_orders] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 16:40:03] [INFO] 🚀 เริ่มรันงาน: [sync_orders] -> jobs\sync_order_status.py
+[2026-09-14 16:40:11] [INFO] ✅ งาน [sync_orders] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-14 19:15:03] [INFO] 🚀 เริ่มรันงาน: [task_update] -> taskUpdate.py
+[2026-09-14 19:31:13] [INFO] ✅ งาน [task_update] เสร็จสมบูรณ์ (Exit Code 0)
+[2026-09-15 08:07:48] [INFO] 🛡️ ระบบ Master Scheduler กำลังเริ่มต้นการทำงาน (กด Ctrl+C เพื่อหยุด)...
+[2026-09-15 08:07:48] [INFO] 🤖 Telegram Bot Supervisor เริ่มต้นการทำงาน...
+[2026-09-15 08:07:48] [INFO] ⏰ Scheduler Engine เริ่มต้นระบบจับเวลา...
+[2026-09-15 08:07:48] [INFO] 🔌 กำลังสตาร์ท Telegram Bot Service...
+[2026-09-15 08:08:51] [INFO] 🛡️ ระบบ Master Scheduler กำลังเริ่มต้นการทำงาน (กด Ctrl+C เพื่อหยุด)...
+[2026-09-15 08:08:51] [INFO] 🤖 Telegram Bot Supervisor เริ่มต้นการทำงาน...
+[2026-09-15 08:08:51] [INFO] 🔌 กำลังสตาร์ท Telegram Bot Service...
+[2026-09-15 08:08:51] [INFO] ⏰ Scheduler Engine เริ่มต้นระบบจับเวลา...

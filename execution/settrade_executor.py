@@ -180,6 +180,14 @@ def execute_real_buy(signal_id: int, symbol: str, volume: int, target_price: flo
 
             conn.commit()
 
+            # ซิงค์ยอดเงินล่าสุดหลังส่งคำสั่งซื้อสำเร็จ เพื่ออัปเดต Line Available ใน account_info_history ทันที
+            try:
+                post_acc_info = equity.get_account_info()
+                uport_info.save_account_info(ACCOUNT_NO, post_acc_info)
+                print(f"[SETTRADE BUY] อัปเดตยอดเงินคงเหลือล่าสุดหลังสั่งซื้อสำเร็จ (Line: {float(post_acc_info.get('lineAvailable', 0)):,.2f} THB)")
+            except Exception as a_err:
+                print(f"[SETTRADE BUY ACCOUNT SYNC WARNING] {a_err}")
+
         return {
             "success": True,
             "order_id": order_id,

@@ -1,0 +1,300 @@
+
+======================================================================
+[START] sync_orders at 2026-09-14 12:10:02
+======================================================================
+0.28s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+🔄 กำลังซิงค์สถานะคำสั่งซื้อขายจริงจาก Settrade...
+❌ ดึงข้อมูล Order #65PD8B1ED5 ไม่สำเร็จ: Order not found
+✅ ซิงค์สถานะ Order กับ Settrade เรียบร้อย
+✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว
+
+[FINISH] sync_orders exited with code 0 at 2026-09-14 12:10:11
+
+======================================================================
+[START] sync_orders at 2026-09-14 12:15:03
+======================================================================
+0.25s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+🔄 กำลังซิงค์สถานะคำสั่งซื้อขายจริงจาก Settrade...
+❌ ดึงข้อมูล Order #65PD8B1ED5 ไม่สำเร็จ: Order not found
+✅ ซิงค์สถานะ Order กับ Settrade เรียบร้อย
+✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว
+
+[FINISH] sync_orders exited with code 0 at 2026-09-14 12:15:10
+
+======================================================================
+[START] sync_orders at 2026-09-14 12:20:03
+======================================================================
+0.24s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+🔄 กำลังซิงค์สถานะคำสั่งซื้อขายจริงจาก Settrade...
+❌ ดึงข้อมูล Order #65PD8B1ED5 ไม่สำเร็จ: Order not found
+✅ ซิงค์สถานะ Order กับ Settrade เรียบร้อย
+✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว
+
+[FINISH] sync_orders exited with code 0 at 2026-09-14 12:20:10
+
+======================================================================
+[START] sync_orders at 2026-09-14 12:25:03
+======================================================================
+0.25s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+🔄 กำลังซิงค์สถานะคำสั่งซื้อขายจริงจาก Settrade...
+❌ ดึงข้อมูล Order #65PD8B1ED5 ไม่สำเร็จ: Order not found
+✅ ซิงค์สถานะ Order กับ Settrade เรียบร้อย
+✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว
+
+[FINISH] sync_orders exited with code 0 at 2026-09-14 12:25:10
+
+======================================================================
+[START] sync_orders at 2026-09-14 14:30:01
+======================================================================
+0.30s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+🔄 กำลังซิงค์สถานะคำสั่งซื้อขายจริงจาก Settrade...
+❌ ดึงข้อมูล Order #65PD8B1ED5 ไม่สำเร็จ: Order not found
+✅ ซิงค์สถานะ Order กับ Settrade เรียบร้อย
+✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว
+
+[FINISH] sync_orders exited with code 0 at 2026-09-14 14:30:10
+
+======================================================================
+[START] sync_orders at 2026-09-14 14:35:01
+======================================================================
+0.25s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+🔄 กำลังซิงค์สถานะคำสั่งซื้อขายจริงจาก Settrade...
+❌ ดึงข้อมูล Order #65PD8B1ED5 ไม่สำเร็จ: Order not found
+✅ ซิงค์สถานะ Order กับ Settrade เรียบร้อย
+✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว
+
+[FINISH] sync_orders exited with code 0 at 2026-09-14 14:35:09
+
+======================================================================
+[START] sync_orders at 2026-09-14 14:40:01
+======================================================================
+0.24s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+🔄 กำลังซิงค์สถานะคำสั่งซื้อขายจริงจาก Settrade...
+❌ ดึงข้อมูล Order #65PD8B1ED5 ไม่สำเร็จ: Order not found
+✅ ซิงค์สถานะ Order กับ Settrade เรียบร้อย
+✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว
+
+[FINISH] sync_orders exited with code 0 at 2026-09-14 14:40:09
+
+======================================================================
+[START] sync_orders at 2026-09-14 14:45:01
+======================================================================
+0.25s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+🔄 กำลังซิงค์สถานะคำสั่งซื้อขายจริงจาก Settrade...
+❌ ดึงข้อมูล Order #65PD8B1ED5 ไม่สำเร็จ: Order not found
+✅ ซิงค์สถานะ Order กับ Settrade เรียบร้อย
+✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว
+
+[FINISH] sync_orders exited with code 0 at 2026-09-14 14:45:09
+
+======================================================================
+[START] sync_orders at 2026-09-14 14:50:01
+======================================================================
+0.24s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+🔄 กำลังซิงค์สถานะคำสั่งซื้อขายจริงจาก Settrade...
+❌ ดึงข้อมูล Order #65PD8B1ED5 ไม่สำเร็จ: Order not found
+✅ ซิงค์สถานะ Order กับ Settrade เรียบร้อย
+✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว
+
+[FINISH] sync_orders exited with code 0 at 2026-09-14 14:50:09
+
+======================================================================
+[START] sync_orders at 2026-09-14 14:55:01
+======================================================================
+0.27s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+🔄 กำลังซิงค์สถานะคำสั่งซื้อขายจริงจาก Settrade...
+❌ ดึงข้อมูล Order #65PD8B1ED5 ไม่สำเร็จ: Order not found
+✅ ซิงค์สถานะ Order กับ Settrade เรียบร้อย
+✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว
+
+[FINISH] sync_orders exited with code 0 at 2026-09-14 14:55:10
+
+======================================================================
+[START] sync_orders at 2026-09-14 15:00:02
+======================================================================
+0.29s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+🔄 กำลังซิงค์สถานะคำสั่งซื้อขายจริงจาก Settrade...
+✅ ซิงค์สถานะ Order กับ Settrade เรียบร้อย
+✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว
+
+[FINISH] sync_orders exited with code 0 at 2026-09-14 15:00:15
+
+======================================================================
+[START] sync_orders at 2026-09-14 15:05:02
+======================================================================
+0.25s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+🔄 กำลังซิงค์สถานะคำสั่งซื้อขายจริงจาก Settrade...
+✅ ซิงค์สถานะ Order กับ Settrade เรียบร้อย
+✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว
+
+[FINISH] sync_orders exited with code 0 at 2026-09-14 15:05:09
+
+======================================================================
+[START] sync_orders at 2026-09-14 15:10:02
+======================================================================
+0.25s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+🔄 กำลังซิงค์สถานะคำสั่งซื้อขายจริงจาก Settrade...
+✅ ซิงค์สถานะ Order กับ Settrade เรียบร้อย
+✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว
+
+[FINISH] sync_orders exited with code 0 at 2026-09-14 15:10:10
+
+======================================================================
+[START] sync_orders at 2026-09-14 15:15:02
+======================================================================
+0.25s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+🔄 กำลังซิงค์สถานะคำสั่งซื้อขายจริงจาก Settrade...
+✅ ซิงค์สถานะ Order กับ Settrade เรียบร้อย
+✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว
+
+[FINISH] sync_orders exited with code 0 at 2026-09-14 15:15:10
+
+======================================================================
+[START] sync_orders at 2026-09-14 15:20:02
+======================================================================
+0.25s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+🔄 กำลังซิงค์สถานะคำสั่งซื้อขายจริงจาก Settrade...
+✅ ซิงค์สถานะ Order กับ Settrade เรียบร้อย
+✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว
+
+[FINISH] sync_orders exited with code 0 at 2026-09-14 15:20:10
+
+======================================================================
+[START] sync_orders at 2026-09-14 15:25:01
+======================================================================
+0.24s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+🔄 กำลังซิงค์สถานะคำสั่งซื้อขายจริงจาก Settrade...
+✅ ซิงค์สถานะ Order กับ Settrade เรียบร้อย
+✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว
+
+[FINISH] sync_orders exited with code 0 at 2026-09-14 15:25:08
+
+======================================================================
+[START] sync_orders at 2026-09-14 15:30:01
+======================================================================
+0.25s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+🔄 กำลังซิงค์สถานะคำสั่งซื้อขายจริงจาก Settrade...
+✅ ซิงค์สถานะ Order กับ Settrade เรียบร้อย
+✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว
+
+[FINISH] sync_orders exited with code 0 at 2026-09-14 15:30:08
+
+======================================================================
+[START] sync_orders at 2026-09-14 15:35:01
+======================================================================
+0.24s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+🔄 กำลังซิงค์สถานะคำสั่งซื้อขายจริงจาก Settrade...
+✅ ซิงค์สถานะ Order กับ Settrade เรียบร้อย
+✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว
+
+[FINISH] sync_orders exited with code 0 at 2026-09-14 15:35:08
+
+======================================================================
+[START] sync_orders at 2026-09-14 15:40:01
+======================================================================
+0.29s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+🔄 กำลังซิงค์สถานะคำสั่งซื้อขายจริงจาก Settrade...
+✅ ซิงค์สถานะ Order กับ Settrade เรียบร้อย
+✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว
+
+[FINISH] sync_orders exited with code 0 at 2026-09-14 15:40:09
+
+======================================================================
+[START] sync_orders at 2026-09-14 15:45:01
+======================================================================
+0.26s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+🔄 กำลังซิงค์สถานะคำสั่งซื้อขายจริงจาก Settrade...
+✅ ซิงค์สถานะ Order กับ Settrade เรียบร้อย
+✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว
+
+[FINISH] sync_orders exited with code 0 at 2026-09-14 15:45:09
+
+======================================================================
+[START] sync_orders at 2026-09-14 15:50:02
+======================================================================
+0.24s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+🔄 กำลังซิงค์สถานะคำสั่งซื้อขายจริงจาก Settrade...
+✅ ซิงค์สถานะ Order กับ Settrade เรียบร้อย
+✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว
+
+[FINISH] sync_orders exited with code 0 at 2026-09-14 15:50:09
+
+======================================================================
+[START] sync_orders at 2026-09-14 15:55:02
+======================================================================
+0.25s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+🔄 กำลังซิงค์สถานะคำสั่งซื้อขายจริงจาก Settrade...
+✅ ซิงค์สถานะ Order กับ Settrade เรียบร้อย
+✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว
+
+[FINISH] sync_orders exited with code 0 at 2026-09-14 15:55:09
+
+======================================================================
+[START] sync_orders at 2026-09-14 16:00:02
+======================================================================
+0.23s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+🔄 กำลังซิงค์สถานะคำสั่งซื้อขายจริงจาก Settrade...
+✅ ซิงค์สถานะ Order กับ Settrade เรียบร้อย
+✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว
+
+[FINISH] sync_orders exited with code 0 at 2026-09-14 16:00:09
+
+======================================================================
+[START] sync_orders at 2026-09-14 16:05:02
+======================================================================
+0.24s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+🔄 กำลังซิงค์สถานะคำสั่งซื้อขายจริงจาก Settrade...
+✅ ซิงค์สถานะ Order กับ Settrade เรียบร้อย
+✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว
+
+[FINISH] sync_orders exited with code 0 at 2026-09-14 16:05:09
+
+======================================================================
+[START] sync_orders at 2026-09-14 16:10:02
+======================================================================
+0.23s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+🔄 กำลังซิงค์สถานะคำสั่งซื้อขายจริงจาก Settrade...
+✅ ซิงค์สถานะ Order กับ Settrade เรียบร้อย
+✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว
+
+[FINISH] sync_orders exited with code 0 at 2026-09-14 16:10:10
+
+======================================================================
+[START] sync_orders at 2026-09-14 16:15:02
+======================================================================
+0.24s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+🔄 กำลังซิงค์สถานะคำสั่งซื้อขายจริงจาก Settrade...
+✅ ซิงค์สถานะ Order กับ Settrade เรียบร้อย
+✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว
+
+[FINISH] sync_orders exited with code 0 at 2026-09-14 16:15:10
+
+======================================================================
+[START] sync_orders at 2026-09-14 16:20:03
+======================================================================
+0.23s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+🔄 กำลังซิงค์สถานะคำสั่งซื้อขายจริงจาก Settrade...
+✅ ซิงค์สถานะ Order กับ Settrade เรียบร้อย
+✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว
+
+[FINISH] sync_orders exited with code 0 at 2026-09-14 16:20:11
+
+======================================================================
+[START] sync_orders at 2026-09-14 16:25:03
+======================================================================
+0.24s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+🔄 กำลังซิงค์สถานะคำสั่งซื้อขายจริงจาก Settrade...
+✅ ซิงค์สถานะ Order กับ Settrade เรียบร้อย
+✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว
+
+[FINISH] sync_orders exited with code 0 at 2026-09-14 16:25:10
+
+======================================================================
+[START] sync_orders at 2026-09-14 16:40:03
+======================================================================
+0.25s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+🔄 กำลังซิงค์สถานะคำสั่งซื้อขายจริงจาก Settrade...
+✅ ซิงค์สถานะ Order กับ Settrade เรียบร้อย
+✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว
+
+[FINISH] sync_orders exited with code 0 at 2026-09-14 16:40:11

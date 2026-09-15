@@ -1,0 +1,245 @@
+
+======================================================================
+[START] sell_monitor at 2026-09-14 12:10:02
+======================================================================
+0.28s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+⚠️ พบ 11 หุ้นที่หลุดเกณฑ์ความปลอดภัย กำลังดำเนินการตัดขาย...
+⏭️ ข้ามการขาย 3BBIF: มีคำสั่งขายรออยู่ในตลาดแล้ว (Ref: 65PD8B1ED5, สถานะ: QUEUING)
+⏭️ ข้ามหุ้น TEAM: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น QH: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น PIN: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น KIAT: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น SIAM: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น SENA: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น CHG: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น TPIPP: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น TPLAS: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น SMD100: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+
+[FINISH] sell_monitor exited with code 0 at 2026-09-14 12:10:15
+
+======================================================================
+[START] sell_monitor at 2026-09-14 12:20:03
+======================================================================
+0.24s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+⚠️ พบ 11 หุ้นที่หลุดเกณฑ์ความปลอดภัย กำลังดำเนินการตัดขาย...
+⏭️ ข้ามการขาย 3BBIF: มีคำสั่งขายรออยู่ในตลาดแล้ว (Ref: 65PD8B1ED5, สถานะ: QUEUING)
+⏭️ ข้ามหุ้น TEAM: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น QH: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น PIN: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น KIAT: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น SIAM: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น SENA: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น CHG: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น TPIPP: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น TPLAS: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น SMD100: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+
+[FINISH] sell_monitor exited with code 0 at 2026-09-14 12:20:13
+
+======================================================================
+[START] sell_monitor at 2026-09-14 14:30:01
+======================================================================
+0.30s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+⚠️ พบ 11 หุ้นที่หลุดเกณฑ์ความปลอดภัย กำลังดำเนินการตัดขาย...
+⏭️ ข้ามการขาย 3BBIF: มีคำสั่งขายรออยู่ในตลาดแล้ว (Ref: 65PD8B1ED5, สถานะ: QUEUING)
+⏭️ ข้ามหุ้น TEAM: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น QH: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น PIN: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น KIAT: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น SIAM: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+[ORDER MGR] Processing SELL order for SENA in LIVE mode (HARD_CUT_LOSS)
+[SETTRADE SELL] SENA 100 หุ้น @ 1.69 THB (Order #65T6LI7IK1)
+Data copied to 'portfolio_stock' successfully.
+[SETTRADE SELL] อัปเดตข้อมูลพอร์ตในฐานข้อมูลเรียบร้อยแล้ว
+ℹ️ [AUDIT:INFO] [ORDER_SELL] [SENA] ส่งคำสั่งขาย SENA สำเร็จ [LIVE] 100 หุ้น @ 1.69 THB (HARD_CUT_LOSS)
+✅ สั่งขาย SENA สำเร็จเนื่องจาก HARD_CUT_LOSS
+⏭️ ข้ามหุ้น CHG: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+[ORDER MGR] Processing SELL order for TPIPP in LIVE mode (HARD_CUT_LOSS)
+[SETTRADE SELL] TPIPP 100 หุ้น @ 1.76 THB (Order #65T6LJMVBL)
+Data copied to 'portfolio_stock' successfully.
+[SETTRADE SELL] อัปเดตข้อมูลพอร์ตในฐานข้อมูลเรียบร้อยแล้ว
+ℹ️ [AUDIT:INFO] [ORDER_SELL] [TPIPP] ส่งคำสั่งขาย TPIPP สำเร็จ [LIVE] 100 หุ้น @ 1.76 THB (HARD_CUT_LOSS)
+✅ สั่งขาย TPIPP สำเร็จเนื่องจาก HARD_CUT_LOSS
+[ORDER MGR] Processing SELL order for TPLAS in LIVE mode (HARD_CUT_LOSS)
+[SETTRADE SELL] TPLAS 100 หุ้น @ 1.13 THB (Order #65T6LKOVDL)
+Data copied to 'portfolio_stock' successfully.
+[SETTRADE SELL] อัปเดตข้อมูลพอร์ตในฐานข้อมูลเรียบร้อยแล้ว
+ℹ️ [AUDIT:INFO] [ORDER_SELL] [TPLAS] ส่งคำสั่งขาย TPLAS สำเร็จ [LIVE] 100 หุ้น @ 1.13 THB (HARD_CUT_LOSS)
+✅ สั่งขาย TPLAS สำเร็จเนื่องจาก HARD_CUT_LOSS
+⏭️ ข้ามหุ้น SMD100: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+
+[FINISH] sell_monitor exited with code 0 at 2026-09-14 14:30:18
+
+======================================================================
+[START] sell_monitor at 2026-09-14 14:40:01
+======================================================================
+0.26s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+⚠️ พบ 8 หุ้นที่หลุดเกณฑ์ความปลอดภัย กำลังดำเนินการตัดขาย...
+⏭️ ข้ามการขาย 3BBIF: มีคำสั่งขายรออยู่ในตลาดแล้ว (Ref: 65PD8B1ED5, สถานะ: QUEUING)
+⏭️ ข้ามหุ้น TEAM: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น QH: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น PIN: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น KIAT: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น SIAM: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น CHG: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น SMD100: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+
+[FINISH] sell_monitor exited with code 0 at 2026-09-14 14:40:11
+
+======================================================================
+[START] sell_monitor at 2026-09-14 14:50:01
+======================================================================
+0.24s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+⚠️ พบ 8 หุ้นที่หลุดเกณฑ์ความปลอดภัย กำลังดำเนินการตัดขาย...
+⏭️ ข้ามการขาย 3BBIF: มีคำสั่งขายรออยู่ในตลาดแล้ว (Ref: 65PD8B1ED5, สถานะ: QUEUING)
+⏭️ ข้ามหุ้น TEAM: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น QH: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น PIN: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น KIAT: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น SIAM: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น CHG: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น SMD100: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+
+[FINISH] sell_monitor exited with code 0 at 2026-09-14 14:50:12
+
+======================================================================
+[START] sell_monitor at 2026-09-14 15:00:02
+======================================================================
+0.30s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+⚠️ พบ 8 หุ้นที่หลุดเกณฑ์ความปลอดภัย กำลังดำเนินการตัดขาย...
+[ORDER MGR] Processing SELL order for 3BBIF in LIVE mode (HARD_CUT_LOSS)
+[SETTRADE SELL] 3BBIF 300 หุ้น @ 6.45 THB (Order #65T7FABBMP)
+Data copied to 'portfolio_stock' successfully.
+[SETTRADE SELL] อัปเดตข้อมูลพอร์ตในฐานข้อมูลเรียบร้อยแล้ว
+ℹ️ [AUDIT:INFO] [ORDER_SELL] [3BBIF] ส่งคำสั่งขาย 3BBIF สำเร็จ [LIVE] 300 หุ้น @ 6.45 THB (HARD_CUT_LOSS)
+✅ สั่งขาย 3BBIF สำเร็จเนื่องจาก HARD_CUT_LOSS
+⏭️ ข้ามหุ้น TEAM: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น QH: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น PIN: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น KIAT: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น SIAM: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น CHG: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น SMD100: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+
+[FINISH] sell_monitor exited with code 0 at 2026-09-14 15:00:20
+
+======================================================================
+[START] sell_monitor at 2026-09-14 15:10:02
+======================================================================
+0.25s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+⚠️ พบ 7 หุ้นที่หลุดเกณฑ์ความปลอดภัย กำลังดำเนินการตัดขาย...
+⏭️ ข้ามหุ้น TEAM: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น QH: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น PIN: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น KIAT: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น SIAM: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น CHG: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น SMD100: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+
+[FINISH] sell_monitor exited with code 0 at 2026-09-14 15:10:12
+
+======================================================================
+[START] sell_monitor at 2026-09-14 15:20:02
+======================================================================
+0.27s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+⚠️ พบ 7 หุ้นที่หลุดเกณฑ์ความปลอดภัย กำลังดำเนินการตัดขาย...
+⏭️ ข้ามหุ้น TEAM: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น QH: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น PIN: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น KIAT: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น SIAM: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น CHG: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น SMD100: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+
+[FINISH] sell_monitor exited with code 0 at 2026-09-14 15:20:13
+
+======================================================================
+[START] sell_monitor at 2026-09-14 15:30:01
+======================================================================
+0.25s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+⚠️ พบ 7 หุ้นที่หลุดเกณฑ์ความปลอดภัย กำลังดำเนินการตัดขาย...
+⏭️ ข้ามหุ้น TEAM: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น QH: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น PIN: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น KIAT: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น SIAM: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น CHG: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น SMD100: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+
+[FINISH] sell_monitor exited with code 0 at 2026-09-14 15:30:10
+
+======================================================================
+[START] sell_monitor at 2026-09-14 15:40:01
+======================================================================
+0.29s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+⚠️ พบ 7 หุ้นที่หลุดเกณฑ์ความปลอดภัย กำลังดำเนินการตัดขาย...
+⏭️ ข้ามหุ้น TEAM: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น QH: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น PIN: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น KIAT: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น SIAM: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น CHG: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น SMD100: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+
+[FINISH] sell_monitor exited with code 0 at 2026-09-14 15:40:11
+
+======================================================================
+[START] sell_monitor at 2026-09-14 15:50:02
+======================================================================
+0.24s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+⚠️ พบ 7 หุ้นที่หลุดเกณฑ์ความปลอดภัย กำลังดำเนินการตัดขาย...
+⏭️ ข้ามหุ้น TEAM: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น QH: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น PIN: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น KIAT: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น SIAM: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น CHG: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น SMD100: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+
+[FINISH] sell_monitor exited with code 0 at 2026-09-14 15:50:11
+
+======================================================================
+[START] sell_monitor at 2026-09-14 16:00:02
+======================================================================
+0.23s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+⚠️ พบ 7 หุ้นที่หลุดเกณฑ์ความปลอดภัย กำลังดำเนินการตัดขาย...
+⏭️ ข้ามหุ้น TEAM: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น QH: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น PIN: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น KIAT: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น SIAM: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น CHG: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น SMD100: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+
+[FINISH] sell_monitor exited with code 0 at 2026-09-14 16:00:11
+
+======================================================================
+[START] sell_monitor at 2026-09-14 16:10:02
+======================================================================
+0.23s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+⚠️ พบ 7 หุ้นที่หลุดเกณฑ์ความปลอดภัย กำลังดำเนินการตัดขาย...
+⏭️ ข้ามหุ้น TEAM: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น QH: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น PIN: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น KIAT: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น SIAM: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น CHG: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น SMD100: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+
+[FINISH] sell_monitor exited with code 0 at 2026-09-14 16:10:12
+
+======================================================================
+[START] sell_monitor at 2026-09-14 16:20:03
+======================================================================
+0.23s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+⚠️ พบ 7 หุ้นที่หลุดเกณฑ์ความปลอดภัย กำลังดำเนินการตัดขาย...
+⏭️ ข้ามหุ้น TEAM: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น QH: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น PIN: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น KIAT: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น SIAM: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น CHG: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น SMD100: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+
+[FINISH] sell_monitor exited with code 0 at 2026-09-14 16:20:23

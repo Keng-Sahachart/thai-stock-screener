@@ -17,7 +17,13 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from telegram import Bot
 from telegram.request import HTTPXRequest
+import time
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+
 from dotenv import load_dotenv
+from core.job_notifier import notify_job_start, notify_job_finish
 
 load_dotenv()
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -59,14 +65,14 @@ async def sync_eod_portfolio():
 
             for pos in positions:
                 pos_id = pos["id"]
-                high = float(pos["today_high"] or 0)
+                close_p = float(pos["today_close"] or 0)
                 curr_max = float(pos["max_price_reached"])
                 init_sl = float(pos["initial_stop_loss"])
                 prev_trailing = float(pos["trailing_stop_loss"]) if pos["trailing_stop_loss"] else None
                 atr = float(pos["atr14"]) if pos["atr14"] else None
 
-                # ขยับ Max Price Reached หากทำ New High
-                new_max = max(curr_max, high)
+                # ขยับ Max Price Reached ตามราคาปิดสูงสุด (Highest Close) เพื่อตัด Noise จากไส้เทียนบน
+                new_max = max(curr_max, close_p)
                 new_trailing = prev_trailing
 
                 # ถ้ามีกำไรและมี ATR ให้คำนวณ Trailing Stop ใหม่
@@ -136,5 +142,15 @@ async def sync_eod_portfolio():
     finally:
         conn.close()
 
+async def main():
+    start_t = time.time()
+    await notify_job_start("Run EOD Sync", "ซิงค์ Trailing Stop สิ้นวันและสรุปพอร์ต PnL")
+    try:
+        await sync_eod_portfolio()
+        await notify_job_finish("Run EOD Sync", elapsed_seconds=time.time() - start_t, summary="ส่งรายงานสรุปพอร์ตสิ้นวันเรียบร้อย")
+    except Exception as e:
+        await notify_job_finish("Run EOD Sync", elapsed_seconds=time.time() - start_t, success=False, error=str(e))
+        raise e
+
 if __name__ == "__main__":
-    asyncio.run(sync_eod_portfolio())
+    asyncio.run(main())

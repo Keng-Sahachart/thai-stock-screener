@@ -11,6 +11,7 @@ DESCRIPTION : และดักฟัง Event จากปุ่มกด ,ร
               /scan        - สั่งสแกนหาจังหวะซื้อและส่งกราฟขออนุมัติใหม่
               /buy <SYM> [VOL] [PRICE] - คำสั่งซื้อหุ้นแบบกำหนดเองพร้อมปุ่มปรับราคา/โวลุ่ม
               /order       - แสดงรายการคำสั่งซื้อขายวันนี้ทั้งหมด
+              /sync_order  - ซิงค์สถานะ Order ล่าสุดจาก Settrade ทันที
               /cancel <ID> - ขอยกเลิกคำสั่งซื้อขายที่ค้างในตลาด
               /close_pos <SYM> - สั่งขายปิดสถานะหุ้นรายตัวทันที
               /panic_close_all - [Emergency] ขายล้างทุกไม้ที่บอทดูแลทันที
@@ -20,13 +21,15 @@ DESCRIPTION : และดักฟัง Event จากปุ่มกด ,ร
 """
 
 import os
+import sys
+import time
+import asyncio
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, LinkPreviewOptions
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 from dotenv import load_dotenv
 
-import sys
 from pathlib import Path
 # ถอยกลับไป 1 โฟลเดอร์เพื่อชี้ไปที่ root (thai-stock-screener)
 sys.path.append(str(Path(__file__).resolve().parent.parent))
@@ -37,6 +40,7 @@ from core.tick_utils import adjust_price_by_ticks
 import update.update_Port_info as uport_info
 import update.updatePort as update_port
 from jobs.run_buy_scanner import scan_and_notify
+from jobs.sync_order_status import sync_live_orders
 
 load_dotenv()
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -111,13 +115,30 @@ async def cmd_buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     sl = recalculate_stop_loss(target_price)
     cost = round(shares * target_price * 1.0025, 2)
 
-    # 3. ดึงยอด Line Available ล่าสุด
+    # 3. ดึงยอด Line Available ล่าสุด และตรวจสอบคำสั่งซื้อค้างรอคิว
     conn = get_db_connection()
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute("SELECT line_available FROM public.account_info_history WHERE is_disabled = FALSE ORDER BY import_date DESC LIMIT 1;")
         acc = cur.fetchone()
         line_avail = float(acc["line_available"]) if acc else 0.0
+
+        cur.execute("""
+            SELECT order_id, broker_order_no, status, volume, target_price 
+            FROM public.bot_orders 
+            WHERE symbol = %s AND side = 'BUY' AND status IN ('SENT', 'QUEUING', 'PARTIAL')
+            ORDER BY order_id DESC;
+        """, (sym,))
+        pending_orders = cur.fetchall()
     conn.close()
+
+    pending_warning = ""
+    if pending_orders:
+        p_lines = "\n".join([f"  • Ref: <code>{o['broker_order_no'] or o['order_id']}</code> ({o['volume']:,} หุ้น @ <code>{float(o['target_price']):.2f}</code> THB [{o['status']}])" for o in pending_orders])
+        pending_warning = (
+            f"\n\n⚠️ <b>คำเตือน: มีคำสั่งซื้อ {sym} ค้างรออยู่ในตลาดแล้ว {len(pending_orders)} รายการ:</b>\n"
+            f"{p_lines}\n"
+            f"👉 <i>หากต้องการส่งคำสั่งนี้เป็น <b>ไม้เพิ่ม</b> ให้กดปุ่มยืนยันซื้อด้านล่าง</i>"
+        )
 
     caption = (
         f"🛒 <b>เตรียมส่งคำสั่งซื้อแบบกำหนดเอง: {sym}</b>\n"
@@ -125,7 +146,8 @@ async def cmd_buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"• ราคาเสนอซื้อ: <code>{target_price:.2f}</code> THB\n"
         f"• Initial SL Plan: <code>{sl:.2f}</code> THB\n"
         f"• ยอดเงินที่ต้องใช้: <code>{cost:,.2f}</code> THB\n"
-        f"• อำนาจซื้อคงเหลือ: <code>{line_avail:,.2f}</code> THB\n\n"
+        f"• อำนาจซื้อคงเหลือ: <code>{line_avail:,.2f}</code> THB"
+        f"{pending_warning}\n\n"
         f"<i>ปรับราคาหรือจำนวนหุ้นด้านล่างก่อนกดยืนยัน:</i>"
     )
 
@@ -138,15 +160,21 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "<b>📊 ข้อมูลพอร์ตและคำสั่ง:</b>\n"
         "• /status - แสดงสถานะบอทและสวิตช์ความปลอดภัย\n"
         "• /port - ดูพอร์ตโฟลิโอและยอดเงินสดคงเหลือ\n"
+        "• /scan_port [SYM] - 📈 สแกนรายงานสัญญาณกราฟหุ้นในพอร์ต\n"
         "• /update_port - ซิงค์ยอดเงินสดจาก Settrade ล่าสุด\n"
-        "• /order - ตรวจสอบสถานะคำสั่งซื้อขายวันนี้ทั้งหมด\n\n"
+        "• /order - ตรวจสอบสถานะคำสั่งซื้อขายวันนี้ทั้งหมด\n"
+        "• /sync_order - ซิงค์สถานะ Order ล่าสุดจาก Settrade ทันที\n\n"
         "<b>🛒 การส่งและจัดการคำสั่ง:</b>\n"
         "• /scan - สั่งสแกนหาจังหวะซื้อและส่งกราฟใหม่\n"
         "• /buy &lt;SYM&gt; [VOL] [PRICE] - สั่งซื้อหุ้นแบบกำหนดเอง\n"
+        "• /sell_monitor - 🔍 ตรวจสอบเงื่อนไขขายและ Stop Loss ทันที\n"
+        "• /task_update - 🔄 รันอัปเดตราคา, Indicators และพอร์ตสิ้นวัน\n"
         "• /cancel &lt;ID&gt; - ขอยกเลิกคำสั่งที่รอคิวในตลาด\n\n"
-        "<b>🛡️ การควบคุมความปลอดภัย:</b>\n"
+        "<b>🛡️ การควบคุมความปลอดภัยและการตั้งค่า:</b>\n"
         "• /close_pos &lt;SYM&gt; - ปิดสถานะหุ้นตัวที่ระบุทันที\n"
         "• /panic_close_all - 🚨 สั่งขายล้างทุกไม้ที่บอทถือทันที\n"
+        "• /exclude [add|del|list] &lt;SYM&gt; - 🔒 จัดการหุ้นที่ได้รับการยกเว้น\n"
+        "• /notify_job [on|off] - 🔔 เปิด/ปิดแจ้งเตือน Background Jobs (Crontab)\n"
         "• /help - ดูคู่มือการใช้งานคำสั่งทั้งหมดอย่างละเอียด\n",
         parse_mode="HTML"
     )
@@ -157,16 +185,22 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "📖 <b>คู่มือการใช้งาน Stock Trading Bot</b>\n\n"
         "📊 <b>ข้อมูลพอร์ตและการเงิน:</b>\n"
         "• /port - ดูพอร์ตจริง, พอร์ตจำลอง, กำไร/ขาดทุน และเงินสดคงเหลือ\n"
+        "• /scan_port [SYM] - รายงานสัญญาณกราฟเทคนิคอลและสถานะหุ้นในพอร์ต (ระบุ SYM ได้)\n"
         "• /update_port - ซิงค์ยอดเงินสดล่าสุดจาก Settrade API\n"
         "• /status - ตรวจสอบโหมดเทรด (DRY_RUN/LIVE) และสวิตช์ความปลอดภัย\n"
-        "• /order - ตรวจสอบรายการและสถานะคำสั่งซื้อขายของวันนี้ทั้งหมด\n\n"
+        "• /order - ตรวจสอบรายการและสถานะคำสั่งซื้อขายของวันนี้ทั้งหมด\n"
+        "• /sync_order - ซิงค์สถานะ Order กับ Settrade ทันที (ตรวจผลจับคู่/ยกเลิก)\n\n"
         "🛒 <b>การส่งและจัดการคำสั่ง:</b>\n"
         "• /scan - สั่งสแกนหาจังหวะซื้อและส่งกราฟขออนุมัติ\n"
         "• /buy &lt;SYM&gt; [VOL] [PRICE] - ส่งคำสั่งซื้อหุ้นแบบกำหนดเอง\n"
+        "• /sell_monitor [force] - ตรวจสอบเงื่อนไขขายและ Stop Loss ของพอร์ตทันที\n"
+        "• /task_update [force] - รันงานอัปเดตราคา Indicators สิ้นวัน และซิงค์ Trailing Stop\n"
         "• /cancel &lt;ORDER_ID&gt; - ขอยกเลิกคำสั่งซื้อขายที่รอคิวในตลาด\n\n"
-        "🛡️ <b>การควบคุมความปลอดภัย:</b>\n"
+        "🛡️ <b>การควบคุมความปลอดภัยและการตั้งค่า:</b>\n"
         "• /close_pos &lt;SYM&gt; - สั่งขายปิดสถานะหุ้นรายตัวทันที\n"
         "• /panic_close_all - 🚨 ขายล้างทุกไม้ที่บอทดูแลทันที\n"
+        "• /exclude [add|del|list] &lt;SYM&gt; - เพิ่ม/ลบ/ดูหุ้นที่ยกเว้นใน config\n"
+        "• /notify_job [on|off] - เปิด/ปิดการแจ้งเตือนรอบรัน Background Jobs (Crontab)\n"
     )
     await update.message.reply_text(msg, parse_mode="HTML")
 
@@ -284,12 +318,39 @@ async def cmd_update_port(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await update.message.reply_text(f"❌ เกิดข้อผิดพลาดในการดึงข้อมูล: {e}")
 
+async def cmd_sync_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/sync_order หรือ /sync_orders - ซิงค์สถานะ Order ล่าสุดจาก Settrade ทันที"""
+    await update.message.reply_text("⏳ กำลังเชื่อมต่อ Settrade API เพื่อซิงค์สถานะ Order ล่าสุด...")
+    try:
+        count = await sync_live_orders(bot=context.bot)
+        if count == 0:
+            await update.message.reply_text("ℹ️ ไม่มี Order ค้างที่ต้องตรวจสอบสถานะ (ทุกคำสั่งอยู่ในสถานะสิ้นสุดแล้ว)")
+        else:
+            await update.message.reply_text(f"✅ ซิงค์สถานะ {count} รายการกับ Settrade เรียบร้อยแล้ว")
+        await cmd_order(update, context)
+    except Exception as e:
+        await update.message.reply_text(f"❌ เกิดข้อผิดพลาดในการซิงค์สถานะ Order: {e}")
+
 async def cmd_scan(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🔍 กำลังเริ่มกระบวนการสแกนและสร้างกราฟแจ้งเตือน...")
     try:
         await scan_and_notify()
     except Exception as e:
         await update.message.reply_text(f"❌ เกิดข้อผิดพลาดในการสแกน: {e}")
+
+async def cmd_scan_port(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/scan_port [SYM] - รายงานสัญญาณกราฟเทคนิคอลของหุ้นในพอร์ตเข้า Telegram"""
+    sym = context.args[0].upper().strip() if context.args else None
+    if sym:
+        await update.message.reply_text(f"🔍 กำลังสร้างกราฟและวิเคราะห์สัญญาณเทคนิคอลของ <b>{sym}</b> ในพอร์ต...", parse_mode="HTML")
+    else:
+        await update.message.reply_text("🔍 กำลังเริ่มกระบวนการสแกนสัญญาณกราฟหุ้นทั้งหมดในพอร์ต...", parse_mode="HTML")
+
+    try:
+        from jobs.run_port_scanner import scan_portfolio_and_notify
+        await scan_portfolio_and_notify(symbol=sym, bot=context.bot, chat_id=update.effective_chat.id)
+    except Exception as e:
+        await update.message.reply_text(f"❌ เกิดข้อผิดพลาดในการสแกนหุ้นในพอร์ต: {e}")
 
 async def cmd_port(update: Update, context: ContextTypes.DEFAULT_TYPE):
     '''/port - แสดงสถานะหุ้นในพอร์ต, เงินสด, และอำนาจซื้อ'''
@@ -307,10 +368,10 @@ async def cmd_port(update: Update, context: ContextTypes.DEFAULT_TYPE):
             line_avail = float(acc["line_available"]) if acc else 0.0
             cash_bal = float(acc["cash_balance"]) if acc else 0.0
 
-            # 2. ดึงพอร์ตจริงทั้งหมด (มี percent_profit และ stop loss)
+            # 2. ดึงพอร์ตจริงทั้งหมด (มี percent_profit, stop loss, และ trailing stop)
             cur.execute("""
                 SELECT symbol, current_volume, average_price, market_price, 
-                       percent_profit, initial_stop_loss, is_managed_by_bot
+                       percent_profit, initial_stop_loss, trailing_stop_loss, is_managed_by_bot
                 FROM public.v_portfolio_with_signals
                 WHERE current_volume > 0
                 ORDER BY percent_profit DESC;
@@ -319,10 +380,9 @@ async def cmd_port(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             # 3. ดึงไม้จำลอง (DRY-RUN) ที่บอทถืออยู่แต่ยังไม่มีในพอร์ตจริง
             cur.execute("""
-                SELECT b.symbol, b.current_volume, b.entry_price, b.initial_stop_loss,
+                SELECT b.symbol, b.current_volume, b.entry_price, b.initial_stop_loss, b.trailing_stop_loss,
                        COALESCE(p.close, b.entry_price) AS market_price,
                        ROUND(((COALESCE(p.close, b.entry_price) - b.entry_price) / b.entry_price * 100)::numeric, 2) AS pnl_pct
-                       --,b.is_managed_by_bot
                 FROM public.bot_active_positions b
                 LEFT JOIN (
                     SELECT symbol, close FROM public.stock_price_history
@@ -337,44 +397,79 @@ async def cmd_port(update: Update, context: ContextTypes.DEFAULT_TYPE):
             """)
             dry_rows = cur.fetchall()
 
-            msg = (
+            header = (
                 f"💼 <b>ภาพรวมสถานะการเงิน</b>\n"
-                f"• อำนาจซื้อ (Line Available): <code>{line_avail:,.2f}</code> THB\n"
-                f"• เงินสดคงเหลือ (Cash): <code>{cash_bal:,.2f}</code> THB\n"
+                f"• อำนาจซื้อ (Line Available): <b>{line_avail:,.2f}</b> THB\n"
+                f"• เงินสดคงเหลือ (Cash): <b>{cash_bal:,.2f}</b> THB\n"
                 f"------------------------------------\n"
                 f"📊 <b>พอร์ตจริงในบัญชี (Real Portfolio): {len(real_rows)}</b>\n"
             )
 
-            if not real_rows:
-                msg += "<i>ไม่มีหุ้นถือครองในพอร์ตจริง</i>\n"
-            else:
-                num = 1
-                for r in real_rows:
-                  tag = "🤖 [BOT]" if r["is_managed_by_bot"] else "👤 [MANUAL]"
-                  sl_str = f"{float(r['initial_stop_loss']):.2f}" if r["initial_stop_loss"] else "N/A"
-                  pnl = float(r["percent_profit"]) if r["percent_profit"] is not None else 0.0
-                  msg += (
-                      f"\nNo.{num}: {tag} <b>{r['symbol']}</b> ({r['current_volume']:,} หุ้น)\n"
-                      f"• ทุน: <code>{float(r['average_price']):.2f}</code> | ตลาด: <code>{float(r['market_price']):.2f}</code>\n"
-                      f"• กำไร/ขาดทุน: <code>{pnl:+.2f}%</code>\n"
-                      # f"• กำไร/ขาดทุน: <code>{float(r['percent_profit']):+.2f}%</code>\n"
-                      f"• Initial SL: <code>{sl_str}</code> THB\n"
-                      # f"• ทุน: <code>{float(r['entry_price']):.2f}</code> | ตลาด: <code>{float(r['market_price']):.2f}</code>\n"
-                      # f"• PnL: <code>{float(r['pnl_pct']):+.2f}%</code> | SL: <code>{float(r['initial_stop_loss']):.2f}</code>\n\n"
-                  )
-                  num += 1
-            if dry_rows:
-                msg += "\n------------------------------------\n"
-                msg += "🧪 <b>ไม้จำลองที่บอทถืออยู่ (Dry-Run Positions):</b>\n"
-                for d in dry_rows:
-                    msg += (
-                        f"\n🤖 <b>{d['symbol']}</b> ({d['current_volume']:,} หุ้น)\n"
-                        f"• ทุนจำลอง: <code>{float(d['entry_price']):.2f}</code> | ตลาด: <code>{float(d['market_price']):.2f}</code>\n"
-                        f"• กำไร/ขาดทุน: <code>{float(d['pnl_pct']):+.2f}%</code>\n"
-                        f"• Initial SL: <code>{float(d['initial_stop_loss']):.2f}</code> THB\n"
-                    )
+            messages_to_send = []
+            current_msg = header
 
-            await update.message.reply_text(msg, parse_mode="HTML")
+            if not real_rows:
+                current_msg += "<i>ไม่มีหุ้นถือครองในพอร์ตจริง</i>\n"
+            else:
+                items_in_batch = 0
+                for num, r in enumerate(real_rows, 1):
+                    tag = "🤖 [BOT]" if r["is_managed_by_bot"] else "👤 [MANUAL]"
+                    sl_str = f"{float(r['initial_stop_loss']):.2f}" if r["initial_stop_loss"] is not None else "N/A"
+                    ts_str = f"{float(r['trailing_stop_loss']):.2f}" if r["trailing_stop_loss"] is not None else "-"
+                    pnl = float(r["percent_profit"]) if r["percent_profit"] is not None else 0.0
+                    sym_link = f"<a href='https://www.settrade.com/th/equities/quote/{r['symbol']}/overview'><b>{r['symbol']}</b></a>"
+                    item = (
+                        f"\nNo.{num}: {tag} {sym_link} ({r['current_volume']:,} หุ้น)\n"
+                        f"• ทุน: {float(r['average_price']):.2f} | ตลาด: {float(r['market_price']):.2f}\n"
+                        f"• กำไร/ขาดทุน: {pnl:+.2f}%\n"
+                        f"• Initial SL: {sl_str} | Trailing SL: {ts_str}\n"
+                    )
+                    # ป้องกันข้อความยาวเกินลิมิต 4,096 ตัวอักษร หรือเกิน 100 formatting entities ของ Telegram (แบ่งเป็นข้อความละไม่เกิน 15 หุ้น)
+                    if items_in_batch >= 15 or (len(current_msg) + len(item) > 3500):
+                        messages_to_send.append(current_msg)
+                        current_msg = f"📊 <b>พอร์ตจริงในบัญชี (ต่อ):</b>\n" + item
+                        items_in_batch = 1
+                    else:
+                        current_msg += item
+                        items_in_batch += 1
+
+            if dry_rows:
+                dry_intro = "\n------------------------------------\n🧪 <b>ไม้จำลองที่บอทถืออยู่ (Dry-Run Positions):</b>\n"
+                if len(current_msg) + len(dry_intro) > 3800:
+                    messages_to_send.append(current_msg)
+                    current_msg = dry_intro
+                    items_in_batch = 0
+                else:
+                    current_msg += dry_intro
+
+                for d in dry_rows:
+                    sl_str = f"{float(d['initial_stop_loss']):.2f}" if d["initial_stop_loss"] is not None else "N/A"
+                    ts_str = f"{float(d['trailing_stop_loss']):.2f}" if d["trailing_stop_loss"] is not None else "-"
+                    pnl = float(d["pnl_pct"]) if d["pnl_pct"] is not None else 0.0
+                    sym_link = f"<a href='https://www.settrade.com/th/equities/quote/{d['symbol']}/overview'><b>{d['symbol']}</b></a>"
+                    item = (
+                        f"\n🤖 {sym_link} ({d['current_volume']:,} หุ้น)\n"
+                        f"• ทุนจำลอง: {float(d['entry_price']):.2f} | ตลาด: {float(d['market_price']):.2f}\n"
+                        f"• กำไร/ขาดทุน: {pnl:+.2f}%\n"
+                        f"• Initial SL: {sl_str} | Trailing SL: {ts_str}\n"
+                    )
+                    if items_in_batch >= 15 or (len(current_msg) + len(item) > 3500):
+                        messages_to_send.append(current_msg)
+                        current_msg = f"🧪 <b>ไม้จำลองที่บอทถืออยู่ (ต่อ):</b>\n" + item
+                        items_in_batch = 1
+                    else:
+                        current_msg += item
+                        items_in_batch += 1
+
+            if current_msg.strip():
+                messages_to_send.append(current_msg)
+
+            for m in messages_to_send:
+                await update.message.reply_text(
+                    m,
+                    parse_mode="HTML",
+                    link_preview_options=LinkPreviewOptions(is_disabled=True)
+                )
     finally:
         conn.close()
 
@@ -433,9 +528,268 @@ async def cmd_panic_close_all(update: Update, context: ContextTypes.DEFAULT_TYPE
         conn.close()
 
 
+async def cmd_sell_monitor(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/sell_monitor [force] - เรียก run_sell_monitor.py ตรวจสอบเงื่อนไขขายและ Stop Loss ของพอร์ต"""
+    is_force = False
+    if context.args and context.args[0].lower().strip() in ("force", "all", "true", "1", "บังคับ"):
+        is_force = True
+
+    await update.message.reply_text("🔍 <b>กำลังตรวจสอบเงื่อนไขขายและ Stop Loss ของพอร์ต (Sell Monitor)...</b>", parse_mode="HTML")
+    try:
+        from jobs.run_sell_monitor import check_and_execute_sells
+        res = await check_and_execute_sells(ignore_market_hours=is_force)
+        
+        if not isinstance(res, dict):
+            await update.message.reply_text("✅ รัน Sell Monitor เรียบร้อยแล้ว")
+            return
+
+        status = res.get("status")
+        if status == "skipped":
+            reason = res.get("reason", "ตลาดปิดทำการ")
+            await update.message.reply_text(
+                f"⏰ <b>ข้ามการตรวจสอบ:</b> {reason}\n"
+                f"👉 <i>(หากต้องการบังคับตรวจสอบให้พิมพ์ <code>/sell_monitor force</code>)</i>",
+                parse_mode="HTML"
+            )
+        elif res.get("triggers_count", 0) == 0:
+            await update.message.reply_text(
+                "🛡️ <b>ผลการตรวจ Sell Monitor:</b> พอร์ตปลอดภัย\n"
+                "ไม่มีหุ้นใดที่หลุดเกณฑ์ความปลอดภัย หรือเข้าเงื่อนไข Stop Loss ในขณะนี้",
+                parse_mode="HTML"
+            )
+        else:
+            triggers_cnt = res.get("triggers_count", 0)
+            sold_cnt = res.get("sold_count", 0)
+            await update.message.reply_text(
+                f"🚨 <b>ผลการตรวจ Sell Monitor:</b>\n"
+                f"• พบหุ้นเข้าข่ายต้องขาย: <b>{triggers_cnt}</b> รายการ\n"
+                f"• ส่งคำสั่งขายสำเร็จ: <b>{sold_cnt}</b> รายการ\n"
+                f"<i>(ตรวจสอบรายละเอียดการสั่งขายในข้อความแจ้งเตือนด้านบน)</i>",
+                parse_mode="HTML"
+            )
+    except Exception as e:
+        await update.message.reply_text(f"❌ เกิดข้อผิดพลาดในการรัน Sell Monitor: {e}")
+
+
+# Concurrency guard for taskUpdate.py
+_is_task_update_running = False
+
+async def cmd_task_update(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/task_update [force] - เรียก taskUpdate.py อัปเดตราคา, Indicators, สัญญาณ และซิงค์พอร์ตสิ้นวัน"""
+    global _is_task_update_running
+
+    if _is_task_update_running:
+        await update.message.reply_text(
+            "⚠️ <b>taskUpdate.py กำลังทำงานอยู่ในเบื้องหลัง</b>\n"
+            "กรุณารอให้รอบปัจจุบันทำงานเสร็จสิ้นก่อนครับ",
+            parse_mode="HTML"
+        )
+        return
+
+    is_force = False
+    if context.args and context.args[0].lower().strip() in ("force", "true", "1", "บังคับ"):
+        is_force = True
+
+    chat_id = update.effective_chat.id
+
+    async def _run_task_update_bg(c_id: int, force_run: bool):
+        global _is_task_update_running
+        _is_task_update_running = True
+        try:
+            import taskUpdate
+            start_time = time.time()
+            res = await asyncio.to_thread(taskUpdate.main, force=force_run)
+            elapsed = time.time() - start_time
+            mins, secs = divmod(int(elapsed), 60)
+            time_str = f"{mins} นาที {secs} วินาที" if mins > 0 else f"{secs} วินาที"
+
+            if isinstance(res, dict) and res.get("status") == "skipped":
+                reason = res.get("reason", "ข้ามการทำงาน")
+                await context.bot.send_message(
+                    chat_id=c_id,
+                    text=f"ℹ️ <b>taskUpdate.py:</b> {reason}\n"
+                         f"👉 <i>หากต้องการบังคับให้อัปเดต ให้พิมพ์ <code>/task_update force</code></i>",
+                    parse_mode="HTML"
+                )
+            else:
+                await context.bot.send_message(
+                    chat_id=c_id,
+                    text=f"✅ <b>taskUpdate.py ประมวลผลเสร็จสิ้นเรียบร้อยแล้ว!</b>\n"
+                         f"• เวลาที่ใช้: <code>{time_str}</code>\n"
+                         f"• อัปเดตราคา, Indicators v5, สัญญาณ และซิงค์พอร์ต EOD เรียบร้อย\n\n"
+                         f"👉 พิมพ์ /scan เพื่อสแกนหาหุ้นรอบใหม่ หรือ /port เพื่อดูพอร์ตล่าสุด",
+                    parse_mode="HTML"
+                )
+        except Exception as err:
+            await context.bot.send_message(
+                chat_id=c_id,
+                text=f"❌ <b>taskUpdate.py เกิดข้อผิดพลาด:</b>\n<code>{err}</code>",
+                parse_mode="HTML"
+            )
+        finally:
+            _is_task_update_running = False
+
+    await update.message.reply_text(
+        "⏳ <b>เริ่มประมวลผล taskUpdate.py ในเบื้องหลังแล้ว</b>\n"
+        "• ดึงและอัปเดตราคาหุ้นล่าสุด\n"
+        "• คำนวณ Indicators & Signals (v5)\n"
+        "• ซิงค์พอร์ตและคำนวณ Trailing Stop สิ้นวัน\n\n"
+        "<i>(ระบบจะแจ้งเตือนเมื่อเสร็จสิ้น และคุณยังสามารถสั่งงานบอทคำสั่งอื่นต่อได้ตามปกติ)</i>",
+        parse_mode="HTML"
+    )
+
+    asyncio.create_task(_run_task_update_bg(chat_id, is_force))
+
+
+async def cmd_exclude(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/exclude [add|del|list] [SYM] - จัดการรายชื่อหุ้นที่ได้รับการยกเว้นใน config/bot_config.json"""
+    from core.config_manager import (
+        get_excluded_symbols,
+        add_excluded_symbols,
+        remove_excluded_symbols
+    )
+
+    args = [a.strip() for a in context.args if a.strip()]
+
+    # กรณีไม่มี argument หรือพิมพ์ /exclude list
+    if not args or (len(args) == 1 and args[0].lower() in ("list", "show", "ดู")):
+        symbols = get_excluded_symbols()
+        sym_str = ", ".join(symbols) if symbols else "(ไม่มีหุ้นที่ได้รับการยกเว้น)"
+        msg = (
+            f"🔒 <b>รายชื่อหุ้นที่ได้รับการยกเว้น (Excluded Symbols):</b>\n"
+            f"• ทั้งหมด: <b>{len(symbols)}</b> ตัว\n"
+            f"• รายชื่อ: <code>{sym_str}</code>\n\n"
+            f"<i>หุ้นในกลุ่มนี้ ระบบจะไม่สร้างสัญญาณซื้อ และจะไม่สั่งขายอัตโนมัติ</i>\n\n"
+            f"<b>วิธีใช้งานคำสั่ง:</b>\n"
+            f"• เพิ่มหุ้น: <code>/exclude add &lt;SYM&gt;</code> (เช่น <code>/exclude add PTT</code>)\n"
+            f"• ลบหุ้น: <code>/exclude del &lt;SYM&gt;</code> (เช่น <code>/exclude del PTT</code>)"
+        )
+        await update.message.reply_text(msg, parse_mode="HTML")
+        return
+
+    subcmd = args[0].lower()
+
+    # กรณีเพิ่มหุ้น: /exclude add SYM1 SYM2 ... หรือ /exclude + SYM
+    if subcmd in ("add", "+", "เพิ่ม"):
+        target_syms = args[1:]
+        if not target_syms:
+            await update.message.reply_text("⚠️ กรุณาระบุชื่อหุ้นที่ต้องการเพิ่ม เช่น <code>/exclude add PTT</code>", parse_mode="HTML")
+            return
+
+        added, already_in, full_list = add_excluded_symbols(target_syms)
+        reply_lines = []
+        if added:
+            reply_lines.append(f"✅ <b>เพิ่มหุ้นเข้า Excluded Symbols สำเร็จ:</b> <code>{', '.join(added)}</code>")
+        if already_in:
+            reply_lines.append(f"ℹ️ หุ้นที่อยู่ในรายชื่ออยู่แล้ว: <code>{', '.join(already_in)}</code>")
+        reply_lines.append(f"\n🔒 <b>รายชื่อปัจจุบัน ({len(full_list)} ตัว):</b>\n<code>{', '.join(full_list)}</code>")
+        await update.message.reply_text("\n".join(reply_lines), parse_mode="HTML")
+        return
+
+    # กรณีลบหุ้น: /exclude del SYM1 SYM2 ... หรือ /exclude remove หรือ /exclude - SYM
+    if subcmd in ("del", "delete", "remove", "rm", "-", "ลบ"):
+        target_syms = args[1:]
+        if not target_syms:
+            await update.message.reply_text("⚠️ กรุณาระบุชื่อหุ้นที่ต้องการลบ เช่น <code>/exclude del PTT</code>", parse_mode="HTML")
+            return
+
+        removed, not_found, full_list = remove_excluded_symbols(target_syms)
+        reply_lines = []
+        if removed:
+            reply_lines.append(f"🗑️ <b>นำหุ้นออกจาก Excluded Symbols สำเร็จ:</b> <code>{', '.join(removed)}</code>")
+        if not_found:
+            reply_lines.append(f"⚠️ ไม่พบหุ้นในรายชื่อ: <code>{', '.join(not_found)}</code>")
+        reply_lines.append(f"\n🔒 <b>รายชื่อคงเหลือ ({len(full_list)} ตัว):</b>\n<code>{', '.join(full_list)}</code>")
+        await update.message.reply_text("\n".join(reply_lines), parse_mode="HTML")
+        return
+
+    # กรณีผู้ใช้พิมพ์ /exclude SYM โดยตรง
+    candidate_sym = args[0].upper()
+    current_symbols = get_excluded_symbols()
+    current_set = set(s.upper() for s in current_symbols)
+
+    if candidate_sym in current_set:
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton(f"🗑️ กดเพื่อนำ {candidate_sym} ออกจาก Excluded", callback_data=f"exclude_del:{candidate_sym}")]
+        ])
+        msg = (
+            f"🔒 หุ้น <b>{candidate_sym}</b> อยู่ในรายชื่อ Excluded Symbols อยู่แล้ว\n\n"
+            f"👉 กดปุ่มด้านล่างเพื่อนำออก หรือพิมพ์ <code>/exclude del {candidate_sym}</code>"
+        )
+        await update.message.reply_text(msg, parse_mode="HTML", reply_markup=keyboard)
+    else:
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton(f"➕ กดเพื่อเพิ่ม {candidate_sym} เข้า Excluded", callback_data=f"exclude_add:{candidate_sym}")]
+        ])
+        msg = (
+            f"ℹ️ หุ้น <b>{candidate_sym}</b> ยังไม่อยู่ในรายชื่อ Excluded Symbols\n\n"
+            f"👉 กดปุ่มด้านล่างเพื่อเพิ่มเข้า หรือพิมพ์ <code>/exclude add {candidate_sym}</code>"
+        )
+        await update.message.reply_text(msg, parse_mode="HTML", reply_markup=keyboard)
+
+
+async def cmd_exclude_add(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/exclude_add <SYM> - คำสั่งลัดเพิ่มหุ้นเข้า Excluded Symbols"""
+    context.args = ["add"] + (context.args or [])
+    await cmd_exclude(update, context)
+
+
+async def cmd_exclude_del(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/exclude_del <SYM> - คำสั่งลัดนำหุ้นออกจาก Excluded Symbols"""
+    context.args = ["del"] + (context.args or [])
+    await cmd_exclude(update, context)
+
+
+async def cmd_notify_job(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/notify_job [on|off] - เปิดหรือปิดการแจ้งเตือนสถานะเริ่มและสิ้นสุดของ Background Jobs"""
+    from core.job_notifier import is_job_notification_enabled, set_job_notification_enabled
+
+    if context.args:
+        arg = context.args[0].lower().strip()
+        if arg in ("on", "true", "1", "enable", "เปิด"):
+            set_job_notification_enabled(True)
+            await update.message.reply_text(
+                "🔔 <b>เปิดการแจ้งเตือน Background Jobs เรียบร้อยแล้ว</b>\n"
+                "(ระบบจะส่งข้อความแจ้งเตือนเมื่อ Job เริ่มทำงานและทำงานเสร็จสิ้น)",
+                parse_mode="HTML"
+            )
+            return
+        elif arg in ("off", "false", "0", "disable", "ปิด"):
+            set_job_notification_enabled(False)
+            await update.message.reply_text(
+                "🔕 <b>ปิดการแจ้งเตือน Background Jobs เรียบร้อยแล้ว</b>\n"
+                "(Jobs จะทำงานเงียบๆ ในเบื้องหลังโดยไม่ส่งข้อความแจ้งเตือน)",
+                parse_mode="HTML"
+            )
+            return
+
+    current_status = is_job_notification_enabled()
+    st_text = "🟢 เปิดใช้งานอยู่ (ON)" if current_status else "🔴 ปิดใช้งานอยู่ (OFF)"
+    next_action = "off" if current_status else "on"
+    btn_text = "🔕 กดเพื่อปิดการแจ้งเตือน" if current_status else "🔔 กดเพื่อเปิดการแจ้งเตือน"
+
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton(btn_text, callback_data=f"toggle_job_notify:{next_action}")]
+    ])
+
+    msg = (
+        f"📢 <b>การตั้งค่าแจ้งเตือน Background Jobs (Crontab)</b>\n"
+        f"• สถานะปัจจุบัน: <b>{st_text}</b>\n\n"
+        f"<i>เมื่อเปิดใช้งาน ระบบจะแจ้งเตือนความคืบหน้าของ Job ทุกตัว:\n"
+        f"• run_buy_scanner.py (สแกนหาจังหวะซื้อ)\n"
+        f"• run_sell_monitor.py (ตรวจสอบเงื่อนไขขาย)\n"
+        f"• sync_order_status.py (ซิงค์สถานะ Order กับ Settrade)\n"
+        f"• taskUpdate.py (อัปเดตราคาและ Indicators สิ้นวัน)\n"
+        f"• run_eod_sync.py (สรุปพอร์ตสิ้นวัน)</i>\n\n"
+        f"👉 กดปุ่มด้านล่าง หรือพิมพ์ <code>/notify_job on</code> / <code>/notify_job off</code>"
+    )
+    await update.message.reply_text(msg, parse_mode="HTML", reply_markup=keyboard)
+
+
 async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     '''/status - แสดงสถานะการทำงานของบอทและสวิตช์ควบคุมความปลอดภัย'''
     from bot.callback_handlers import load_config
+    from core.job_notifier import is_job_notification_enabled
     config = load_config()
     
     t_mode = config.get("trading_mode", {})
@@ -447,11 +801,17 @@ async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     trail_str = "🟢 เปิด (ON)" if ctrl.get("enable_auto_trailing_stop") else "🔴 ปิด (OFF)"
     tech_str = "🟢 เปิด (ON)" if ctrl.get("enable_auto_technical_sell") else "🔴 ปิด (OFF)"
 
+    job_notify_on = is_job_notification_enabled()
+    job_notify_str = "🟢 เปิด (ON)" if job_notify_on else "🔴 ปิด (OFF)"
+    next_action = "off" if job_notify_on else "on"
+    btn_text = "🔕 ปิดแจ้งเตือน Jobs" if job_notify_on else "🔔 เปิดแจ้งเตือน Jobs"
+
     excluded_list = config.get("excluded_symbols", [])
 
     msg = (
         f"⚙️ <b>สถานะการทำงานของระบบบอท</b>\n"
         f"• โหมดเทรดปัจจุบัน: <b>{mode_str}</b>\n"
+        f"• แจ้งเตือน Background Jobs: <b>{job_notify_str}</b>\n"
         f"------------------------------------\n"
         f"🛡️ <b>สถานะสวิตช์ขายอัตโนมัติ:</b>\n"
         f"• Hard Cut Loss (-10%): {cut_loss_str}\n"
@@ -460,9 +820,13 @@ async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"• Technical Sell Signal: {tech_str}\n"
         f"------------------------------------\n"
         f"🔒 <b>หุ้นที่ได้รับการยกเว้น ({len(excluded_list)} ตัว):</b>\n"
-        f"<code>{', '.join(excluded_list)}</code>"
+        f"<code>{', '.join(excluded_list)}</code>\n\n"
+        f"👉 ปรับการแจ้งเตือน Jobs พิมพ์: <code>/notify_job [on|off]</code>"
     )
-    await update.message.reply_text(msg, parse_mode="HTML")
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton(btn_text, callback_data=f"toggle_job_notify:{next_action}")]
+    ])
+    await update.message.reply_text(msg, parse_mode="HTML", reply_markup=keyboard)
 
 async def post_init(application):
     """ส่งข้อความแจ้งเตือนเมื่อบอทเริ่มทำงานใหม่"""
@@ -485,13 +849,39 @@ def main():
     app.add_handler(CommandHandler("port", cmd_port))
     app.add_handler(CommandHandler("update_port", cmd_update_port))
     app.add_handler(CommandHandler("scan", cmd_scan))
+
+    app.add_handler(CommandHandler("scan_port", cmd_scan_port))
+    app.add_handler(CommandHandler("port_scan", cmd_scan_port))
+    app.add_handler(CommandHandler("port_chart", cmd_scan_port))
+    app.add_handler(CommandHandler("chart_port", cmd_scan_port))
+    app.add_handler(CommandHandler("scanport", cmd_scan_port))
+
     app.add_handler(CommandHandler("buy", cmd_buy))
     app.add_handler(CommandHandler("order", cmd_order))
     app.add_handler(CommandHandler("orders", cmd_order))
+
+    app.add_handler(CommandHandler("sync_order", cmd_sync_orders))
+    app.add_handler(CommandHandler("sync_orders", cmd_sync_orders))
+    app.add_handler(CommandHandler("update_order", cmd_sync_orders))
+    app.add_handler(CommandHandler("update_orders", cmd_sync_orders))
+    
     app.add_handler(CommandHandler("cancel", cmd_cancel))
     app.add_handler(CommandHandler("close_pos", cmd_close_pos))
     app.add_handler(CommandHandler("panic_close_all", cmd_panic_close_all))
     app.add_handler(CommandHandler("status", cmd_status))
+    app.add_handler(CommandHandler("notify_job", cmd_notify_job))
+    app.add_handler(CommandHandler("job_notify", cmd_notify_job))
+    app.add_handler(CommandHandler("sell_monitor", cmd_sell_monitor))
+    app.add_handler(CommandHandler("check_sell", cmd_sell_monitor))
+    app.add_handler(CommandHandler("monitor_sell", cmd_sell_monitor))
+    app.add_handler(CommandHandler("task_update", cmd_task_update))
+    app.add_handler(CommandHandler("update_data", cmd_task_update))
+    app.add_handler(CommandHandler("run_task_update", cmd_task_update))
+    app.add_handler(CommandHandler("exclude", cmd_exclude))
+    app.add_handler(CommandHandler("exclude_sym", cmd_exclude))
+    app.add_handler(CommandHandler("excluded_symbols", cmd_exclude))
+    app.add_handler(CommandHandler("exclude_add", cmd_exclude_add))
+    app.add_handler(CommandHandler("exclude_del", cmd_exclude_del))
     app.add_handler(CallbackQueryHandler(handle_signal_callback)) # ดักฟังปุ่ม Inline Keyboard ของสัญญาณซื้อ
 
     print("🚀 Telegram Bot Service is running with Safety Controls...")

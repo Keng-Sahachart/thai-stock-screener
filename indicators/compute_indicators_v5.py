@@ -277,6 +277,7 @@ def call_function_recreate_view():
         # cur.execute("drop view if exists v_stock_indicators; SELECT public.refresh_indicator_view();")
         cur.execute("SELECT public.refresh_indicator_view();")
         cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY mv_stock_indicators;")
+        cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY mv_macd_advanced_analysis;")
         conn.commit()
 
 if __name__ == "__main__":

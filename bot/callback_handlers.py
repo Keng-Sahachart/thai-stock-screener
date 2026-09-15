@@ -23,7 +23,7 @@ import os
 import json
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from dotenv import load_dotenv
 
@@ -62,6 +62,81 @@ async def handle_signal_callback(update: Update, context: ContextTypes.DEFAULT_T
         await query.answer()
         return
 
+    if action == "has_pending":
+        await query.answer("⚠️ หุ้นตัวนี้มีคำสั่งซื้อของวันนี้หรือรอคิวในตลาดแล้ว (ปิดปุ่ม Approve)", show_alert=True)
+        return
+
+    if action == "toggle_job_notify":
+        from core.job_notifier import set_job_notification_enabled
+        target_state = (data[1] == "on")
+        set_job_notification_enabled(target_state)
+
+        st_text = "🟢 เปิดใช้งานอยู่ (ON)" if target_state else "🔴 ปิดใช้งานอยู่ (OFF)"
+        next_action = "off" if target_state else "on"
+        btn_text = "🔕 กดเพื่อปิดการแจ้งเตือน" if target_state else "🔔 กดเพื่อเปิดการแจ้งเตือน"
+
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton(btn_text, callback_data=f"toggle_job_notify:{next_action}")]
+        ])
+
+        alert_msg = "🔔 เปิดการแจ้งเตือน Background Jobs แล้ว" if target_state else "🔕 ปิดการแจ้งเตือน Background Jobs แล้ว"
+        await query.answer(alert_msg)
+
+        msg = (
+            f"📢 <b>การตั้งค่าแจ้งเตือน Background Jobs (Crontab)</b>\n"
+            f"• สถานะปัจจุบัน: <b>{st_text}</b>\n\n"
+            f"<i>เมื่อเปิดใช้งาน ระบบจะแจ้งเตือนความคืบหน้าของ Job ทุกตัว:\n"
+            f"• run_buy_scanner.py (สแกนหาจังหวะซื้อ)\n"
+            f"• run_sell_monitor.py (ตรวจสอบเงื่อนไขขาย)\n"
+            f"• sync_order_status.py (ซิงค์สถานะ Order กับ Settrade)\n"
+            f"• taskUpdate.py (อัปเดตราคาและ Indicators สิ้นวัน)\n"
+            f"• run_eod_sync.py (สรุปพอร์ตสิ้นวัน)</i>\n\n"
+            f"👉 กดปุ่มด้านล่าง หรือพิมพ์ <code>/notify_job on</code> / <code>/notify_job off</code>"
+        )
+        try:
+            await query.edit_message_text(msg, parse_mode="HTML", reply_markup=keyboard)
+        except Exception:
+            pass
+        return
+
+    if action == "exclude_del":
+        from core.config_manager import remove_excluded_symbols
+        sym = data[1].upper()
+        removed, not_found, full_list = remove_excluded_symbols([sym])
+        await query.answer(f"นำ {sym} ออกจาก Excluded Symbols แล้ว", show_alert=True)
+        sym_list_str = ", ".join(full_list) if full_list else "(ไม่มี)"
+        new_msg = (
+            f"🗑️ <b>นำหุ้น {sym} ออกจาก Excluded Symbols เรียบร้อยแล้ว</b>\n\n"
+            f"🔒 <b>รายชื่อหุ้นที่ได้รับการยกเว้นปัจจุบัน ({len(full_list)} ตัว):</b>\n"
+            f"<code>{sym_list_str}</code>\n\n"
+            f"👉 เพิ่มหุ้น: <code>/exclude add &lt;SYM&gt;</code>\n"
+            f"👉 ลบหุ้น: <code>/exclude del &lt;SYM&gt;</code>"
+        )
+        try:
+            await query.edit_message_text(new_msg, parse_mode="HTML")
+        except Exception:
+            pass
+        return
+
+    if action == "exclude_add":
+        from core.config_manager import add_excluded_symbols
+        sym = data[1].upper()
+        added, already_in, full_list = add_excluded_symbols([sym])
+        await query.answer(f"เพิ่ม {sym} เข้า Excluded Symbols แล้ว", show_alert=True)
+        sym_list_str = ", ".join(full_list) if full_list else "(ไม่มี)"
+        new_msg = (
+            f"✅ <b>เพิ่มหุ้น {sym} เข้าสู่ Excluded Symbols เรียบร้อยแล้ว</b>\n\n"
+            f"🔒 <b>รายชื่อหุ้นที่ได้รับการยกเว้นปัจจุบัน ({len(full_list)} ตัว):</b>\n"
+            f"<code>{sym_list_str}</code>\n\n"
+            f"👉 เพิ่มหุ้น: <code>/exclude add &lt;SYM&gt;</code>\n"
+            f"👉 ลบหุ้น: <code>/exclude del &lt;SYM&gt;</code>"
+        )
+        try:
+            await query.edit_message_text(new_msg, parse_mode="HTML")
+        except Exception:
+            pass
+        return
+
     # =========================================================================
     # ส่วนที่ 1: ระบบสั่งซื้อแบบกำหนดเองผ่านคำสั่ง /buy (Manual Buy)
     # =========================================================================
@@ -93,14 +168,32 @@ async def handle_signal_callback(update: Update, context: ContextTypes.DEFAULT_T
                 cur.execute("SELECT line_available FROM public.account_info_history WHERE is_disabled = FALSE ORDER BY import_date DESC LIMIT 1;")
                 acc = cur.fetchone()
                 line_avail = float(acc["line_available"]) if acc else 0.0
+
+                cur.execute("""
+                    SELECT order_id, broker_order_no, status, volume, target_price 
+                    FROM public.bot_orders 
+                    WHERE symbol = %s AND side = 'BUY' AND status IN ('SENT', 'QUEUING', 'PARTIAL')
+                    ORDER BY order_id DESC;
+                """, (sym,))
+                pending_orders = cur.fetchall()
             conn.close()
+
+            pending_warning = ""
+            if pending_orders:
+                p_lines = "\n".join([f"  • Ref: <code>{o['broker_order_no'] or o['order_id']}</code> ({o['volume']:,} หุ้น @ <code>{float(o['target_price']):.2f}</code> THB [{o['status']}])" for o in pending_orders])
+                pending_warning = (
+                    f"\n\n⚠️ <b>คำเตือน: มีคำสั่งซื้อ {sym} ค้างรออยู่ในตลาดแล้ว {len(pending_orders)} รายการ:</b>\n"
+                    f"{p_lines}\n"
+                    f"👉 <i>หากต้องการส่งคำสั่งนี้เป็น <b>ไม้เพิ่ม</b> ให้กดปุ่มยืนยันซื้อด้านล่าง</i>"
+                )
 
             new_caption = (
                 f"🛒 <b>เตรียมส่งคำสั่งซื้อแบบกำหนดเอง: {sym}</b>\n"
                 f"• ราคาเสนอซื้อ: <code>{price:.2f}</code> THB\n"
                 f"• Initial SL Plan: <code>{sl:.2f}</code> THB\n"
                 f"• ยอดเงินที่ต้องใช้: <code>{cost:,.2f}</code> THB\n"
-                f"• อำนาจซื้อคงเหลือ: <code>{line_avail:,.2f}</code> THB\n\n"
+                f"• อำนาจซื้อคงเหลือ: <code>{line_avail:,.2f}</code> THB"
+                f"{pending_warning}\n\n"
                 f"<i>ปรับราคาหรือจำนวนหุ้นด้านล่างก่อนกดยืนยัน:</i>"
             )
             new_kbd = build_manual_buy_keyboard(sym, shares, price)
@@ -242,6 +335,17 @@ async def handle_signal_callback(update: Update, context: ContextTypes.DEFAULT_T
                         level="WARNING"
                     )
                     await query.answer(err_msg, show_alert=True)
+                    return
+
+                # กฎความปลอดภัย 3: ตรวจสอบคำสั่งซื้อค้างรอคิวอยู่ในตลาด (Duplicate Pending Buy Protection)
+                cur.execute("""
+                    SELECT order_id, broker_order_no, status 
+                    FROM public.bot_orders 
+                    WHERE symbol = %s AND side = 'BUY' AND status IN ('SENT', 'QUEUING', 'PARTIAL');
+                """, (sym,))
+                pending_buy = cur.fetchone()
+                if pending_buy:
+                    await query.answer(f"⚠️ มีคำสั่งซื้อ {sym} ค้างรอในตลาดแล้ว (#{pending_buy['broker_order_no']})", show_alert=True)
                     return
 
                 # ส่งคำสั่งผ่าน Order Manager (Dry-run หรือ Real Trade ตาม Config)

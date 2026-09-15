@@ -22,7 +22,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 import initialApp as cfg
 
-API_RATE_LIMIT_ = 5  # จำนวนครั้งสูงสุดที่เรียก API ต่อวินาที (Settrade API rate limit)
+API_RATE_LIMIT_ = 6  # จำนวนครั้งสูงสุดที่เรียก API ต่อวินาที (Settrade API rate limit)
 
 def get_last_stock_date(conn, symbol):
     """หาวันล่าสุดที่มีข้อมูลในตาราง stock_price_history ของหุ้นตัวนั้นๆ"""

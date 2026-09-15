@@ -1,0 +1,16 @@
+[Unit]
+Description=Thai Stock Screener - Telegram Bot Service
+After=network.target
+
+[Service]
+Type=simple
+User=keng
+WorkingDirectory=/home/keng/thai-stock-screener
+ExecStart=/home/keng/thai-stock-screener/.venv/bin/python bot/telegram_app.py
+Restart=always
+RestartSec=10
+StandardOutput=append:/home/keng/thai-stock-screener/logs/telegram_bot.log
+StandardError=append:/home/keng/thai-stock-screener/logs/telegram_bot.log
+
+[Install]
+WantedBy=multi-user.target

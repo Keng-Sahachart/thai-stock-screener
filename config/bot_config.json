@@ -6,9 +6,13 @@
     "auto_sell_controls": {
         "enable_auto_cut_loss": true,
         "enable_auto_stop_loss": true,
-        "enable_auto_trailing_stop": true,
+        "enable_auto_trailing_stop": false,
         "enable_auto_technical_sell": false,
         "description": "สวิตช์ควบคุม: ถ้า false ระบบจะแค่แจ้งเตือนเข้า Telegram แต่ไม่ส่งคำสั่งขาย"
+    },
+    "job_notifications": {
+        "enabled": true,
+        "description": "true = ส่งข้อความแจ้งเตือนเข้า Telegram เมื่อ Background Jobs (Cron) เริ่มและสิ้นสุดการทำงาน, false = ปิดการแจ้งเตือน"
     },
     "tick_execution": {
         "buy_ticks": -1,
@@ -30,7 +34,7 @@
             "min_stop_pct": 4.0,
             "max_stop_pct": 8.0
         },
-        "max_position_pct": 0.20,
+        "max_position_pct": 0.2,
         "default_shares_per_trade": 100,
         "atr_multiplier": {
             "EQUITY": 2.0,
@@ -45,16 +49,9 @@
         "PIN",
         "KIAT",
         "SIAM",
-        "SENA",
-        "TPIPP",
         "CHG",
-        "TPLAS",
         "SMD100",
         "NOBLE-W3"
     ],
-    "//": "จำนวนหุ้นต่อไม้เทรด / ใส่ 0 เพื่อให้คำนวณตาม Position Sizing",
-    "//": "test comment :  ",
-    "//": "test comment :  ",
-    "//": "test comment :  ",
     "//": "test comment :  "
 }

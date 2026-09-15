@@ -37,7 +37,9 @@ if sys.platform == "win32":
 # ถอยกลับไป 1 โฟลเดอร์เพื่อชี้ไปที่ root (thai-stock-screener)
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
+import time
 import initialApp as cfg
+from core.job_notifier import notify_job_start, notify_job_finish
 load_dotenv()
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", "bot_config.json")
 ACCOUNT_NO = os.getenv("account_no")
@@ -53,17 +55,30 @@ def get_db_connection():
         password=os.getenv("posql_password", "postgres")
     )
 
-async def sync_live_orders():
+async def sync_live_orders(bot=None) -> int:
     conn = get_db_connection()
-    bot = Bot(token=TOKEN, request=HTTPXRequest(connect_timeout=20.0, read_timeout=60.0))
+    if bot is None:
+        bot = Bot(token=TOKEN, request=HTTPXRequest(connect_timeout=20.0, read_timeout=60.0))
     investor = Investor(**cfg.args_Investor)
     equity = investor.Equity(account_no=ACCOUNT_NO)
 
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # 0. เคลียร์คำสั่งข้ามวันที่ค้างในสถานะรอคิว (คำสั่ง SET เป็น Day Order หมดอายุสิ้นวันเสมอ)
+            cur.execute("""
+                UPDATE public.bot_orders
+                SET status = 'EXPIRED',
+                    error_message = COALESCE(error_message, 'Day order expired at end of trade date')
+                WHERE status IN ('SENT', 'QUEUING')
+                  AND created_at::date < CURRENT_DATE;
+            """)
+            if cur.rowcount > 0:
+                print(f"🧹 เคลียร์คำสั่งข้ามวันที่หมดอายุไปแล้ว {cur.rowcount} รายการ -> EXPIRED")
+            conn.commit()
+
             # ดึงคำสั่งเทรดจริงที่ยังไม่อยู่ในสถานะสิ้นสุด (Terminal State)
             cur.execute("""
-                SELECT order_id, broker_order_no, symbol, side, volume, target_price
+                SELECT order_id, broker_order_no, symbol, side, volume, target_price, created_at
                 FROM public.bot_orders 
                 WHERE status IN ('SENT', 'QUEUING', 'PARTIAL') 
                   AND broker_order_no IS NOT NULL 
@@ -73,7 +88,7 @@ async def sync_live_orders():
 
             if not active_orders:
                 print("ℹ️ ไม่มี Order ค้างที่ต้องตรวจสอบสถานะ")
-                return
+                return 0
 
             for ord_row in active_orders:
                 b_order_no = ord_row["broker_order_no"]
@@ -84,6 +99,14 @@ async def sync_live_orders():
                     order_info = equity.get_order(order_no=b_order_no)
                 except Exception as ex:
                     print(f"❌ ดึงข้อมูล Order #{b_order_no} ไม่สำเร็จ: {ex}")
+                    # หากเกิด Order not found และเป็นคำสั่งเก่า ให้ปรับเป็น EXPIRED
+                    if "not found" in str(ex).lower():
+                        cur.execute("""
+                            UPDATE public.bot_orders 
+                            SET status = 'EXPIRED', error_message = %s 
+                            WHERE order_id = %s;
+                        """, (f"Settrade: {ex}", ord_row["order_id"]))
+                        conn.commit()
                     continue
 
                 if not order_info:
@@ -198,14 +221,23 @@ async def sync_live_orders():
                         )
             conn.commit()
             print("✅ ซิงค์สถานะ Order กับ Settrade เรียบร้อย")
+            return len(active_orders)
 
     finally:
         conn.close()
 
 async def main():
+    start_t = time.time()
+    await notify_job_start("Sync Order Status", "ซิงค์สถานะคำสั่งซื้อขายจริงกับ Settrade API")
     print("🔄 กำลังซิงค์สถานะคำสั่งซื้อขายจริงจาก Settrade...")
-    await sync_live_orders()
-    print("✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว")
+    try:
+        count = await sync_live_orders()
+        summary = f"ซิงค์สถานะเรียบร้อย ({count} คำสั่ง)" if count > 0 else "ไม่มี Order ค้างที่ต้องตรวจสอบ"
+        await notify_job_finish("Sync Order Status", elapsed_seconds=time.time() - start_t, summary=summary)
+        print("✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว")
+    except Exception as e:
+        await notify_job_finish("Sync Order Status", elapsed_seconds=time.time() - start_t, success=False, error=str(e))
+        raise e
 
 if __name__ == "__main__":
      asyncio.run(main())

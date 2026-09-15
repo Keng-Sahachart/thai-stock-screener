@@ -107,8 +107,8 @@ def sync_active_positions():
                     new_trailing = prev_trailing
 
                     # หากราคาทำ New High และมี ATR ให้คำนวณ Trailing Stop ใหม่
-                    if atr and new_max > prev_max:
-                        potential_trailing = new_max - (atr * 2.0)
+                    if atr and new_max > float(row["average_price"]):
+                        potential_trailing = round(new_max - (atr * 2.0), 4)
                         # Trailing Stop ต้องขยับขึ้นได้อย่างเดียว และต้องไม่ต่ำกว่า Initial SL
                         if potential_trailing > initial_sl:
                             new_trailing = max(prev_trailing or 0.0, potential_trailing)

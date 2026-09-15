@@ -1,0 +1,224 @@
+﻿========================================================================================
+📖 THAI STOCK SCREENER - AUTOMATION & SCHEDULING SETUP GUIDE
+คู่มือการติดตั้งและตั้งเวลาการทำงานของระบบอัตโนมัติ (Automation Scheduling)
+รองรับทั้ง Linux (Raspberry Pi / Ubuntu Server) และ Windows
+========================================================================================
+
+สารบัญ:
+  [ส่วนที่ 1] สรุปตารางรอบเวลาการทำงานของระบบ (Scheduling Matrix)
+  [ส่วนที่ 2] ทางเลือกที่ 1 (แนะนำ - ง่ายที่สุด): All-in-One Master Scheduler
+              2.1 การติดตั้งบน Linux ให้รัน 24 ชม. และ Auto-start on Reboot (Systemd)
+              2.2 การรันบน Windows
+  [ส่วนที่ 3] ทางเลือกที่ 2 (รันแยกไฟล์อิสระ): บน Linux ด้วย Systemd + Crontab
+              3.1 ติดตั้ง Telegram Bot Service (24 ชม.)
+              3.2 ตั้งเวลา Crontab ตามรอบเวลาตลาด
+  [ส่วนที่ 4] ทางเลือกที่ 3 (รันแยกไฟล์อิสระ): บน Windows ด้วย Task Scheduler + NSSM
+              4.1 ติดตั้งอัตโนมัติด้วย PowerShell Script (1 คลิก)
+              4.2 การตั้งค่าผ่านหน้าจอ Task Scheduler GUI ด้วยตนเอง
+              4.3 การรัน Telegram Bot ตลอดเวลาบน Windows ด้วย NSSM
+  [ส่วนที่ 5] ตำแหน่งไฟล์ Logs และการตรวจสอบการทำงาน
+
+========================================================================================
+[ส่วนที่ 1] สรุปตารางรอบเวลาการทำงานของระบบ (SCHEDULING MATRIX)
+========================================================================================
+ระบบเทรดหุ้นไทยจะทำงานเฉพาะวันจันทร์ - ศุกร์ (วันทำการ) ตามรอบเวลาดังนี้:
+
+| ลำดับ | ช่วงเวลา (Time)    | สคริปต์ที่ต้องรัน (Script)         | ความถี่ / รูปแบบ     | หน้าที่การทำงาน                                                        |
+| :---: | :----------------- | :--------------------------------- | :-------------------- | :--------------------------------------------------------------------- |
+|   0   | ตลอด 24 ชม.         | bot/telegram_app.py                | Background Service    | รอดักฟังคำสั่งแชท (/port, /order, ฯลฯ) และปุ่มกด Approve ซื้อ/ขายหุ้น   |
+|   1   | 09:00 น.           | jobs/run_port_scanner.py           | One-shot (วันทำการ)   | [Optional] สแกนหุ้นในพอร์ต วาดกราฟและสรุปกำไร/ขาดทุนส่งเข้า Telegram   |
+|   2   | 09:15 น.           | jobs/run_buy_scanner.py            | One-shot (วันทำการ)   | สแกนหาหุ้นที่เข้าเกณฑ์ซื้อ วาดกราฟแท่งเทียนแล้วยิงการ์ดขอ Approve      |
+|   3   | 10:00 - 12:30 น.   | jobs/run_sell_monitor.py           | ทุก 10 นาที (ตลาดเช้า) | เฝ้าระวัง Stop Loss, Trailing Stop และ Hard Cut Loss (-10%)            |
+|   4   | 10:00 - 12:30 น.   | jobs/sync_order_status.py          | ทุก 5 นาที (ตลาดเช้า)  | ตรวจสอบผลการจับคู่คำสั่ง (FILLED, QUEUING, CANCELLED) และซิงค์ต้นทุน   |
+|   5   | 14:30 - 16:30 น.   | jobs/run_sell_monitor.py           | ทุก 10 นาที (ตลาดบ่าย) | เฝ้าระวังพอร์ตช่วงตลาดบ่ายต่อเนื่อง ตัดขายอัตโนมัติเมื่อหลุดแนวรับ     |
+|   6   | 14:30 - 16:30 น.   | jobs/sync_order_status.py          | ทุก 5 นาที (ตลาดบ่าย)  | ตรวจสอบสถานะคำสั่งซื้อ/ขายในกระดานช่วงบ่ายต่อเนื่อง                    |
+|   7   | 16:40 น.           | jobs/sync_order_status.py          | One-shot (หลังปิดตลาด) | ซิงค์สถานะ Order รอบปิดตลาด เคลียร์คำสั่งที่ Expired หรือยกเลิก        |
+|   8   | 19:15 น.           | taskUpdate.py                      | One-shot (วันทำการ)   | ดึงราคา EOD, อัปเดตงบ/พอร์ต, คำนวณ Indicators, ซิงค์ Trailing สิ้นวัน   |
+
+*หมายเหตุ: taskUpdate.py ต้องรันหลัง 19:00 น. เพื่อให้ได้แท่งเทียนราคาของวันปัจจุบันครบถ้วน*
+
+
+========================================================================================
+[ส่วนที่ 2] ทางเลือกที่ 1 (แนะนำ - ง่ายที่สุด): ALL-IN-ONE MASTER SCHEDULER
+========================================================================================
+รันไฟล์เดียวจบ: `master_scheduler.py` ตัวนี้จะคอยดูแลทั้ง:
+  1. Telegram Bot (มี Supervisor คอย Auto-restart ให้ทันทีถ้าบอทหลุด)
+  2. ตัวจับเวลารันงานตามตารางด้านบนอัตโนมัติ (ไม่ชนกัน มีล็อค และบันทึก Logs แยกงาน)
+
+----------------------------------------------------------------------------------------
+2.1 การติดตั้งบน LINUX (ให้รันเป็น Systemd Service: รัน 24 ชม. และ Auto-start on Reboot)
+----------------------------------------------------------------------------------------
+
+⚠️ สิ่งสำคัญที่ต้องตรวจสอบและแก้ไขก่อนเริ่ม:
+  เปิดไฟล์ `scripts/master-scheduler.service` และตรวจสอบ 3 จุดนี้ให้ตรงกับเครื่องของคุณ:
+    - User=<ชื่อ_user_linux>                (เช่น keng หรือ ubuntu หรือ pi)
+    - WorkingDirectory=<path_โฟลเดอร์_โปรเจกต์> (เช่น /home/keng/thai-stock-screener)
+    - ExecStart=<path_python_venv>          (เช่น /home/keng/thai-stock-screener/.venv/bin/python)
+
+คำสั่งติดตั้งแบบพร้อม Copy-Paste:
+----------------------------------------------------------------------------------------
+# 1. เข้าไปยังโฟลเดอร์โปรเจกต์
+cd /home/keng/thai-stock-screener
+
+# 2. ปรับ Timezone เครื่อง Linux ให้เป็นประเทศไทย
+sudo timedatectl set-timezone Asia/Bangkok
+
+# 3. แก้ไขไฟล์ service ให้ตรงกับ path ในเครื่อง (ถ้ายังไม่ได้แก้)
+nano scripts/master-scheduler.service
+
+# 4. คัดลอกไฟล์ service ไปยังโฟลเดอร์ของระบบ
+sudo cp scripts/master-scheduler.service /etc/systemd/system/master-scheduler.service
+
+# 5. สั่งให้ systemd โหลดไฟล์ใหม่
+sudo systemctl daemon-reload
+
+# 6. เปิดใช้งาน service ทันที และตั้งให้เปิดเองอัตโนมัติตอนเปิดเครื่อง (Auto-start on boot)
+sudo systemctl enable --now master-scheduler.service
+
+# 7. ตรวจสอบสถานะการทำงาน (ต้องขึ้นสีเขียว active running)
+sudo systemctl status master-scheduler.service
+----------------------------------------------------------------------------------------
+
+คำสั่งควบคุม Master Scheduler Service บน Linux ที่ใช้บ่อย:
+  - ดู log สดแบบเรียลไทม์ : journalctl -u master-scheduler.service -f
+  - สั่งรีสตาร์ทระบบ     : sudo systemctl restart master-scheduler.service
+  - สั่งหยุดการทำงาน     : sudo systemctl stop master-scheduler.service
+  - สั่งเริ่มทำงานใหม่   : sudo systemctl start master-scheduler.service
+
+
+----------------------------------------------------------------------------------------
+2.2 การรันบน WINDOWS
+----------------------------------------------------------------------------------------
+เปิด PowerShell หรือ Command Prompt ที่โฟลเดอร์โปรเจกต์ แล้วรัน:
+
+  # รันระบบทั้งหมดทันที (เปิดหน้าจอทิ้งไว้)
+  python master_scheduler.py
+
+  # ตรวจสอบสถานะการตั้งเวลา
+  python master_scheduler.py --status
+
+  # สั่งทดสอบรันเฉพาะงานที่ต้องการ 1 ครั้งทันที (Manual Test)
+  python master_scheduler.py --run buy_scanner
+  python master_scheduler.py --run sell_monitor
+  python master_scheduler.py --run sync_orders
+  python master_scheduler.py --run task_update
+
+
+========================================================================================
+[ส่วนที่ 3] ทางเลือกที่ 2 (รันแยกไฟล์อิสระ): บน LINUX ด้วย SYSTEMD + CRONTAB
+========================================================================================
+วิธีนี้จะแยกหน้าที่:
+  - ให้ Systemd ดูแล Telegram Bot ตลอด 24 ชม.
+  - ให้ Crontab ของ Linux เป็นตัวยิงสคริปต์ตามตารางเวลา
+
+----------------------------------------------------------------------------------------
+3.1 ติดตั้ง Telegram Bot Service (24 ชม.)
+----------------------------------------------------------------------------------------
+⚠️ ตรวจสอบไฟล์ `scripts/telegram-bot.service` แก้ User และ Path ให้ตรงกับเครื่องของคุณก่อน:
+
+คำสั่งติดตั้ง:
+  sudo cp scripts/telegram-bot.service /etc/systemd/system/telegram-bot.service
+  sudo systemctl daemon-reload
+  sudo systemctl enable --now telegram-bot.service
+  sudo systemctl status telegram-bot.service
+
+----------------------------------------------------------------------------------------
+3.2 ตั้งเวลา CRONTAB ตามรอบเวลาตลาด
+----------------------------------------------------------------------------------------
+เปิด Crontab ของ User ด้วยคำสั่ง:
+  crontab -e
+
+⚠️ ข้อควรระวังในการ Copy ไปวาง:
+  - ต้องเปลี่ยน `/home/keng/thai-stock-screener` ให้เป็น Path โปรเจกต์จริงบนเครื่องของคุณ
+  - ต้องเปลี่ยน `.venv/bin/python` ให้ตรงกับ Path Python Virtual Environment ของคุณ
+
+คัดลอกข้อความด้านล่างนี้ (จากไฟล์ scripts/crontab.txt) ไปวางใน crontab:
+----------------------------------------------------------------------------------------
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+# 1. สแกนกราฟหุ้นในพอร์ตตอนเช้า (09:00 น. วันจันทร์-ศุกร์)
+00 09 * * 1-5 cd /home/keng/thai-stock-screener && .venv/bin/python jobs/run_port_scanner.py >> logs/port_scanner.log 2>&1
+
+# 2. สแกนหาจังหวะซื้อและส่งการ์ดขอ Approve เข้า Telegram (09:15 น. วันจันทร์-ศุกร์)
+15 09 * * 1-5 cd /home/keng/thai-stock-screener && .venv/bin/python jobs/run_buy_scanner.py >> logs/buy_scanner.log 2>&1
+
+# 3. ซิงค์สถานะ Order ในกระดาน ทุกๆ 5 นาที (ตลาดเช้า 10:00-12:30 น. และตลาดบ่าย 14:30-16:30 น.)
+*/5 10-12 * * 1-5 cd /home/keng/thai-stock-screener && .venv/bin/python jobs/sync_order_status.py >> logs/sync_orders.log 2>&1
+30,35,40,45,50,55 14 * * 1-5 cd /home/keng/thai-stock-screener && .venv/bin/python jobs/sync_order_status.py >> logs/sync_orders.log 2>&1
+*/5 15 * * 1-5 cd /home/keng/thai-stock-screener && .venv/bin/python jobs/sync_order_status.py >> logs/sync_orders.log 2>&1
+00,05,10,15,20,25,30 16 * * 1-5 cd /home/keng/thai-stock-screener && .venv/bin/python jobs/sync_order_status.py >> logs/sync_orders.log 2>&1
+
+# 4. เฝ้าระวัง Stop Loss และ Cut Loss ทุกๆ 10 นาที (ตลาดเช้า 10:00-12:30 น. และตลาดบ่าย 14:30-16:30 น.)
+*/10 10-12 * * 1-5 cd /home/keng/thai-stock-screener && .venv/bin/python jobs/run_sell_monitor.py >> logs/sell_monitor.log 2>&1
+30,40,50 14 * * 1-5 cd /home/keng/thai-stock-screener && .venv/bin/python jobs/run_sell_monitor.py >> logs/sell_monitor.log 2>&1
+*/10 15 * * 1-5 cd /home/keng/thai-stock-screener && .venv/bin/python jobs/run_sell_monitor.py >> logs/sell_monitor.log 2>&1
+00,10,20,30 16 * * 1-5 cd /home/keng/thai-stock-screener && .venv/bin/python jobs/run_sell_monitor.py >> logs/sell_monitor.log 2>&1
+
+# 5. ซิงค์สถานะ Order รอบปิดตลาด (16:40 น. วันจันทร์-ศุกร์)
+40 16 * * 1-5 cd /home/keng/thai-stock-screener && .venv/bin/python jobs/sync_order_status.py >> logs/sync_orders.log 2>&1
+
+# 6. ดึงราคา EOD, อัปเดต Indicators และซิงค์ Trailing Stop สิ้นวัน (19:15 น. วันจันทร์-ศุกร์)
+15 19 * * 1-5 cd /home/keng/thai-stock-screener && .venv/bin/python taskUpdate.py >> logs/taskUpdate.log 2>&1
+----------------------------------------------------------------------------------------
+
+
+========================================================================================
+[ส่วนที่ 4] ทางเลือกที่ 3 (รันแยกไฟล์อิสระ): บน WINDOWS ด้วย TASK SCHEDULER + NSSM
+========================================================================================
+
+----------------------------------------------------------------------------------------
+4.1 ติดตั้งอัตโนมัติด้วย PowerShell Script (แนะนำ - 1 คำสั่งเสร็จ)
+----------------------------------------------------------------------------------------
+เปิด PowerShell (Run as Administrator) แล้วรันคำสั่ง:
+
+  # คำสั่งติดตั้งงานทั้งหมดลงใน Windows Task Scheduler อัตโนมัติ:
+  powershell -ExecutionPolicy Bypass -File .\scripts\setup_windows_tasks.ps1
+
+  # หากต้องการลบงานทั้งหมดออกในภายหลัง:
+  powershell -ExecutionPolicy Bypass -File .\scripts\setup_windows_tasks.ps1 -Uninstall
+
+*สคริปต์จะค้นหา path ของ python venv ในโฟลเดอร์โปรเจกต์ให้อัตโนมัติ และสร้าง Task ไว้ที่โฟลเดอร์ \ThaiStockScreener ใน Task Scheduler*
+
+----------------------------------------------------------------------------------------
+4.2 การตั้งค่าผ่านหน้าจอ Task Scheduler GUI ด้วยตนเอง
+----------------------------------------------------------------------------------------
+หากต้องการเพิ่มงานด้วยตนเองผ่าน `taskschd.msc`:
+  1. กดปุ่ม Windows + R พิมพ์ `taskschd.msc` แล้วกด Enter
+  2. คลิกขวาที่ Task Scheduler Library > New Folder ตั้งชื่อว่า `ThaiStockScreener`
+  3. คลิก Create Task... แล้วตั้งค่าแต่ละแท็บดังนี้:
+     - [General]: ตั้งชื่อ Task (เช่น ThaiStock_SellMonitor)
+     - [Triggers]: เลือก Weekly > ติ๊กวัน Monday - Friday > กำหนดเวลาเริ่ม
+       (หากต้องการให้รันซ้ำ: ติ๊ก Repeat task every 10 minutes for a duration of 2.5 hours)
+     - [Actions]: เลือก New...
+       * Program/script: C:\drv_D\GitRepo\thai-stock-screener\env\Scripts\python.exe
+       * Add arguments : jobs\run_sell_monitor.py
+       * Start in      : C:\drv_D\GitRepo\thai-stock-screener (⚠️ สำคัญมาก ต้องใส่ path นี้)
+
+----------------------------------------------------------------------------------------
+4.3 การรัน Telegram Bot ตลอดเวลาบน Windows ด้วย NSSM
+----------------------------------------------------------------------------------------
+เพื่อให้ Telegram Bot ทำงานเป็น Windows Service แท้จริง (ไม่ดับเมื่อปิดหน้าต่าง หรือเปิดเครื่องใหม่):
+  1. ดาวน์โหลด NSSM จาก https://nssm.cc แล้วแตกไฟล์
+  2. เปิด CMD / PowerShell (Admin) แล้วพิมพ์คำสั่ง:
+     nssm install ThaiStockBot "C:\drv_D\GitRepo\thai-stock-screener\env\Scripts\python.exe" "bot\telegram_app.py"
+     nssm set ThaiStockBot AppDirectory "C:\drv_D\GitRepo\thai-stock-screener"
+     nssm start ThaiStockBot
+
+
+========================================================================================
+[ส่วนที่ 5] ตำแหน่งไฟล์ LOGS และการตรวจสอบการทำงาน
+========================================================================================
+ไม่ว่าจะรันด้วยวิธีใด ผลการทำงานจะถูกบันทึกแยกไว้ในโฟลเดอร์ `logs/`:
+  - logs/master_scheduler.log : บันทึกการทำงานของตัวจัดการเวลาหลัก
+  - logs/telegram_bot.log     : บันทึกการรับส่งคำสั่งของ Telegram Bot
+  - logs/buy_scanner.log      : บันทึกผลการสแกนหาหุ้นซื้อช่วงเช้า
+  - logs/sell_monitor.log     : บันทึกผลการเฝ้าระวังและตัดขายอัตโนมัติ
+  - logs/sync_orders.log      : บันทึกสถานะการจับคู่คำสั่งซื้อขาย
+  - logs/taskUpdate.log       : บันทึกผลการอัปเดตราคา EOD และคำนวณ Indicators สิ้นวัน
+  - logs/port_scanner.log     : บันทึกผลการตรวจกราฟหุ้นในพอร์ต
+
+หากพบปัญหา ให้ตรวจสอบไฟล์ log ที่เกี่ยวข้อง หรือดู error ผ่านคำสั่ง:
+  tail -f logs/<ชื่องาน>.log  (บน Linux)
+  Get-Content .\logs\<ชื่องาน>.log -Wait -Tail 50 (บน Windows PowerShell)
+========================================================================================

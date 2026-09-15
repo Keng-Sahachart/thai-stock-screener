@@ -973,10 +973,10 @@ ALTER VIEW public.tablesize OWNER TO "AdminKeng";
 
 --
 -- TOC entry 259 (class 1259 OID 187878)
--- Name: v_macd_advanced_analysis; Type: VIEW; Schema: public; Owner: AdminKeng
+-- Name: mv_macd_advanced_analysis; Type: MATERIALIZED VIEW; Schema: public; Owner: AdminKeng
 --
 
-CREATE VIEW public.v_macd_advanced_analysis AS
+CREATE MATERIALIZED VIEW public.mv_macd_advanced_analysis AS
  WITH macd_raw AS (
          SELECT i.symbol,
             i.trade_date,
@@ -1150,9 +1150,14 @@ CREATE VIEW public.v_macd_advanced_analysis AS
             WHEN ((grouped_streaks.prev_hist_12 > (0)::numeric) AND (grouped_streaks.macd_12_26_9_hist > (0)::numeric) AND (grouped_streaks.macd_12_26_9_hist < grouped_streaks.prev_hist_12)) THEN 'HIST_PEAKING_OUT'::text
             ELSE 'NORMAL'::text
         END AS hist_reversal_signal
-   FROM grouped_streaks;
+    FROM grouped_streaks;
 
+ALTER MATERIALIZED VIEW public.mv_macd_advanced_analysis OWNER TO "AdminKeng";
 
+CREATE UNIQUE INDEX idx_mv_macd_adv_sym_date ON public.mv_macd_advanced_analysis USING btree (symbol, trade_date);
+CREATE INDEX idx_mv_macd_adv_trade_date ON public.mv_macd_advanced_analysis USING btree (trade_date);
+
+CREATE VIEW public.v_macd_advanced_analysis AS SELECT * FROM public.mv_macd_advanced_analysis;
 ALTER VIEW public.v_macd_advanced_analysis OWNER TO "AdminKeng";
 
 --
@@ -1189,8 +1194,8 @@ COMMENT ON COLUMN public.v_macd_advanced_analysis.hist_reversal_signal IS '(Hist
 
 CREATE VIEW public.v_bot_buy_opportunities AS
  WITH latest_date AS (
-         SELECT max(v_macd_advanced_analysis.trade_date) AS max_date
-           FROM public.v_macd_advanced_analysis
+         SELECT max(trade_date) AS max_date
+           FROM public.mv_stock_indicators
         ), macd_candidates AS (
          SELECT m.symbol,
             m.trade_date,
@@ -1781,10 +1786,8 @@ CREATE INDEX idx_stock_price_history_date ON public.stock_price_history USING bt
 
 --
 -- TOC entry 3436 (class 1259 OID 16544)
--- Name: idx_stock_price_history_sym_date; Type: INDEX; Schema: public; Owner: AdminKeng
---
-
-CREATE INDEX idx_stock_price_history_sym_date ON public.stock_price_history USING btree (symbol, date);
+-- Name: idx_stock_price_history_sym_date; Type: INDEX; Schema: public; Owner: AdminKeng (DROPPED: Redundant with stock_price_history_pkey)
+-- CREATE INDEX idx_stock_price_history_sym_date ON public.stock_price_history USING btree (symbol, date);
 
 
 --

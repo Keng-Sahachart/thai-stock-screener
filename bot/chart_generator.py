@@ -1,7 +1,7 @@
 '''
 โมดูลสร้างชาร์ตกราฟ (bot/chart_generator.py)
 ทำหน้าที่ดึงแท่งเทียนย้อนหลัง 60 วันจาก stock_price_history 
-และวาดแท่งเทียนคู่กับเส้น EMA 20/50, Dual MACD Histogram และแถบ Volume เป็นรูปภาพใน Memory Buffer โดยไม่ต้องเขียนไฟล์ลงดิสก์:
+และวาดแท่งเทียนคู่กับเส้น EMA 12/26, Dual MACD Histogram, RSI (14) และแถบ Volume เป็นรูปภาพใน Memory Buffer โดยไม่ต้องเขียนไฟล์ลงดิสก์:
 '''
 
 #!/usr/bin/env python3
@@ -36,7 +36,8 @@ def generate_stock_chart(symbol: str, lookback_days: int = 65) -> io.BytesIO:
                 --m.ema20, m.ema50,
                 m.ema12, m.ema26,
                 m.macd_12_26_9, m.macd_12_26_9_signal, m.macd_12_26_9_hist,
-                m.macd_19_39_9_hist
+                m.macd_19_39_9_hist,
+                m.rsi14
             FROM public.stock_price_history p
             LEFT JOIN public.mv_stock_indicators m 
                 ON p.symbol = m.symbol AND p.date = m.trade_date
@@ -53,9 +54,17 @@ def generate_stock_chart(symbol: str, lookback_days: int = 65) -> io.BytesIO:
         df.sort_index(inplace=True)
 
         for col in ["open", "high", "low", "close", "volume", "ema12", "ema26", 
-                    "macd_12_26_9", "macd_12_26_9_signal", "macd_12_26_9_hist", "macd_19_39_9_hist"]:
+                    "macd_12_26_9", "macd_12_26_9_signal", "macd_12_26_9_hist", "macd_19_39_9_hist", "rsi14"]:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors="coerce")
+
+        # Fallback คำนวณ RSI14 หากในฐานข้อมูลยังไม่มีค่า
+        if "rsi14" not in df.columns or df["rsi14"].isna().all():
+            delta = df["close"].diff()
+            gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+            rs = gain / loss.replace(0, 1e-9)
+            df["rsi14"] = 100 - (100 / (1 + rs))
 
         # กำหนดแถบและเส้น Indicators เพิ่มเติม
         added_plots = [
@@ -64,7 +73,12 @@ def generate_stock_chart(symbol: str, lookback_days: int = 65) -> io.BytesIO:
             # MACD 12/26/9
             mpf.make_addplot(df["macd_12_26_9"], color="#8e44ad", width=1.0, panel=2, ylabel="MACD"),
             mpf.make_addplot(df["macd_12_26_9_signal"], color="#e74c3c", width=0.8, panel=2),
-            mpf.make_addplot(df["macd_12_26_9_hist"], type="bar", color=["#2ecc71" if v >= 0 else "#e74c3c" for v in df["macd_12_26_9_hist"]], panel=2)
+            mpf.make_addplot(df["macd_12_26_9_hist"], type="bar", color=["#2ecc71" if v >= 0 else "#e74c3c" for v in df["macd_12_26_9_hist"]], panel=2),
+            # RSI 14
+            mpf.make_addplot(df["rsi14"], color="#16a085", width=1.2, panel=3, ylabel="RSI(14)", ylim=(0, 100), secondary_y=False),
+            mpf.make_addplot(pd.Series(70.0, index=df.index), color="#e74c3c", linestyle="--", width=0.8, panel=3, secondary_y=False),
+            mpf.make_addplot(pd.Series(30.0, index=df.index), color="#2ecc71", linestyle="--", width=0.8, panel=3, secondary_y=False),
+            mpf.make_addplot(pd.Series(50.0, index=df.index), color="#bdc3c7", linestyle=":", width=0.6, panel=3, secondary_y=False),
         ]
 
         mc = mpf.make_marketcolors(
@@ -90,9 +104,9 @@ def generate_stock_chart(symbol: str, lookback_days: int = 65) -> io.BytesIO:
             style=custom_style,
             addplot=added_plots,
             volume=True,
-            panel_ratios=(5, 1.5, 2.5),
-            figsize=(10, 6.5),
-            title=f"\n{symbol} Technical Context (EMA12/26, Volume, MACD)",
+            panel_ratios=(5, 1.2, 2.0, 1.5),
+            figsize=(10, 8.0),
+            title=f"\n{symbol} Technical Context (EMA12/26, Volume, MACD, RSI14)",
             returnfig=True
         )
         fig.savefig(buf, format="png", bbox_inches="tight", dpi=100)

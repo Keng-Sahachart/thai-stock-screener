@@ -91,7 +91,7 @@ def place_buy_order(signal_id: int, symbol: str, volume: int, target_price: floa
     if buy_ticks is None:
         buy_ticks = config.get("tick_execution", {}).get("buy_ticks", 0)
 
-    # 1. ตรวจสอบเพดานงบประมาณรายวันก่อนดำเนินการ
+    # 1. ตรวจสอบเพดานงบประมาณรายวัน และ ตรวจสอบคำสั่งซื้อค้างรอคิว
     conn = get_db_connection()
     try:
         ok, budget_err = check_daily_budget_limits(conn, symbol, volume, target_price, config)
@@ -105,6 +105,23 @@ def place_buy_order(signal_id: int, symbol: str, volume: int, target_price: floa
                 conn=conn
             )
             return {"success": False, "error": budget_err}
+
+        # 2.1 ถ้ามาจาก Scanner (is_fixed_price=False หรือมี signal_id): บล็อกไม่ให้ซื้อซ้ำ
+        is_scanner = (is_fixed_price is False) or (signal_id is not None)
+        if is_scanner:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("""
+                    SELECT order_id, broker_order_no, status, volume 
+                    FROM public.bot_orders 
+                    WHERE symbol = %s AND side = 'BUY' 
+                      AND status IN ('SENT', 'QUEUING', 'PARTIAL')
+                      AND created_at::date = CURRENT_DATE;
+                """, (symbol,))
+                pending_buy = cur.fetchone()
+                if pending_buy:
+                    err_msg = f"มีคำสั่งซื้อ {symbol} ค้างรออยู่ในตลาดแล้ว (Order #{pending_buy['broker_order_no']} สถานะ {pending_buy['status']})"
+                    print(f"[ORDER MGR REJECTED] {err_msg}")
+                    return {"success": False, "error": err_msg}
     finally:
         conn.close()
 
@@ -159,7 +176,9 @@ def place_sell_order(symbol: str, volume: int, exit_price: float, exit_reason: s
             cur.execute("""
                 SELECT order_id, broker_order_no, status, volume 
                 FROM public.bot_orders 
-                WHERE symbol = %s AND side = 'SELL' AND status IN ('SENT', 'QUEUING', 'PARTIAL');
+                WHERE symbol = %s AND side = 'SELL' 
+                  AND status IN ('SENT', 'QUEUING', 'PARTIAL')
+                  AND created_at::date = CURRENT_DATE;
             """, (symbol,))
             pending_sell = cur.fetchone()
             if pending_sell:
