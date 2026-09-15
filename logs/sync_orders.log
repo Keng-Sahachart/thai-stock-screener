@@ -298,3 +298,14 @@
 ✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว
 
 [FINISH] sync_orders exited with code 0 at 2026-09-14 16:40:11
+
+======================================================================
+[START] sync_orders at 2026-09-15 11:10:01
+======================================================================
+0.25s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+🔄 กำลังซิงค์สถานะคำสั่งซื้อขายจริงจาก Settrade...
+ℹ️ ไม่มี Order ค้างที่ต้องตรวจสอบสถานะกับ Settrade
+✅ ซิงค์สถานะ Order กับ Settrade เรียบร้อย (Actions: 0)
+✅ ซิงค์สถานะคำสั่งซื้อขายเรียบร้อยแล้ว
+
+[FINISH] sync_orders exited with code 0 at 2026-09-15 11:10:09

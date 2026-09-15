@@ -243,3 +243,20 @@ Data copied to 'portfolio_stock' successfully.
 ⏭️ ข้ามหุ้น SMD100: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
 
 [FINISH] sell_monitor exited with code 0 at 2026-09-14 16:20:23
+
+======================================================================
+[START] sell_monitor at 2026-09-15 11:10:01
+======================================================================
+0.25s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+⚠️ พบ 9 หุ้นที่หลุดเกณฑ์ความปลอดภัย กำลังดำเนินการตัดขาย...
+⏭️ ข้ามการขาย 3BBIF: มีคำสั่งขายรออยู่ในตลาดแล้ว (Ref: 65UB0TC1H5, สถานะ: SENT)
+⏭️ ข้ามหุ้น TEAM: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น QH: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น PIN: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น KIAT: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น SIAM: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามหุ้น CHG: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+⏭️ ข้ามการขาย TPIPP: มีคำสั่งขายรออยู่ในตลาดแล้ว (Ref: 65UB0UNSM1, สถานะ: SENT)
+⏭️ ข้ามหุ้น SMD100: อยู่ใน excluded_symbols (ยกเว้นการขายอัตโนมัติ)
+
+[FINISH] sell_monitor exited with code 0 at 2026-09-15 11:10:13
