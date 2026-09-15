@@ -7,4 +7,5 @@ _importCsvHistoryPrice/
 _notUse_backup/
 _testLab/
 env/ 
+logs/
 /*.txt 
