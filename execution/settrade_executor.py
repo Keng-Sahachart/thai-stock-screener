@@ -20,15 +20,34 @@ from psycopg2.extras import RealDictCursor
 from settrade_v2 import Investor
 from dotenv import load_dotenv
 
+ROOT_DIR = Path(__file__).resolve().parent.parent
+ENV_PATH = ROOT_DIR / ".env"
+load_dotenv(dotenv_path=ENV_PATH)
+
 import initialApp as cfg
 from core.tick_utils import adjust_price_by_ticks
 import update.update_Port_info as uport_info
 import update.updatePort as uport
 
-load_dotenv()
-ACCOUNT_NO = os.getenv("account_no")
-PIN_ACTION = os.getenv("pin")  # PIN ของบัญชี Settrade สำหรับการส่งคำสั่งซื้อขายจริง
-CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "bot_config.json"
+def get_pin() -> str:
+    """ดึงรหัส PIN อย่างยืดหยุ่น รองรับทั้งตัวพิมพ์เล็ก/ใหญ่ และโหลด .env อัตโนมัติหากยังไม่ได้โหลด"""
+    pin = os.getenv("pin") or os.getenv("PIN") or os.getenv("PIN_ACTION") or os.getenv("pin_action")
+    if not pin and ENV_PATH.exists():
+        load_dotenv(dotenv_path=ENV_PATH, override=True)
+        pin = os.getenv("pin") or os.getenv("PIN") or os.getenv("PIN_ACTION") or os.getenv("pin_action")
+    return str(pin).strip() if pin else ""
+
+def get_account_no() -> str:
+    """ดึงเลขบัญชีอย่างยืดหยุ่น รองรับทั้งตัวพิมพ์เล็ก/ใหญ่"""
+    acc = os.getenv("account_no") or os.getenv("ACCOUNT_NO")
+    if not acc and ENV_PATH.exists():
+        load_dotenv(dotenv_path=ENV_PATH, override=True)
+        acc = os.getenv("account_no") or os.getenv("ACCOUNT_NO")
+    return str(acc).strip() if acc else ""
+
+ACCOUNT_NO = get_account_no()
+PIN_ACTION = get_pin()  # PIN ของบัญชี Settrade สำหรับการส่งคำสั่งซื้อขายจริง
+CONFIG_PATH = ROOT_DIR / "config" / "bot_config.json"
 
 def load_config():
     try:
@@ -96,8 +115,19 @@ def execute_real_buy(signal_id: int, symbol: str, volume: int, target_price: flo
 
     conn = get_db_connection()
     try:
+        acc_no = get_account_no()
+        pin_to_use = get_pin()
+        if not pin_to_use:
+            err_msg = "ไม่พบรหัส PIN สำหรับส่งคำสั่งซื้อขาย (กรุณาระบุ pin='...' หรือ PIN='...' ในไฟล์ .env)"
+            print(f"[PRE-FLIGHT REJECTED] {err_msg}")
+            return {"success": False, "error": err_msg}
+        if not acc_no:
+            err_msg = "ไม่พบหมายเลขบัญชี account_no ในไฟล์ .env"
+            print(f"[PRE-FLIGHT REJECTED] {err_msg}")
+            return {"success": False, "error": err_msg}
+
         investor = Investor(**cfg.args_Investor)
-        equity = investor.Equity(account_no=ACCOUNT_NO)
+        equity = investor.Equity(account_no=acc_no)
 
         if is_fixed_price and target_price and float(target_price) > 0:
             # กรณีที่ 1: คำสั่ง Fix ราคาตามที่ผู้ใช้กำหนด (เช่น /buy etc 200 0.76)
@@ -115,7 +145,7 @@ def execute_real_buy(signal_id: int, symbol: str, volume: int, target_price: flo
         # 3. ดึงยอดเงินสด (Line Available) สดๆ จาก Settrade
         acc_info = equity.get_account_info()
         line_available = float(acc_info.get("lineAvailable", 0.0))
-        uport_info.save_account_info(ACCOUNT_NO, acc_info)  # บันทึกลงตารางทันที
+        uport_info.save_account_info(acc_no, acc_info)  # บันทึกลงตารางทันที
 
         # 4. Pre-flight Check เงินคงเหลือ vs ยอดซื้อ (รวม Buffer ค่าคอม 0.25%)
         estimated_cost = round(volume * buy_price * 1.0025, 2)
@@ -143,7 +173,7 @@ def execute_real_buy(signal_id: int, symbol: str, volume: int, target_price: flo
                             validity_type= "Day",
                             bypass_warning= True,
                             valid_till_date= current_date,
-                            pin= PIN_ACTION
+                            pin= pin_to_use
                             )
 
         broker_order_no = str(res.get("orderNo", ""))
@@ -179,11 +209,12 @@ def execute_real_buy(signal_id: int, symbol: str, volume: int, target_price: flo
             """, (symbol, buy_price, atr14, live_sl, buy_price, volume))
 
             conn.commit()
+            print(f"[SETTRADE BUY] {symbol} {volume:,} หุ้น @ {buy_price:.2f} THB | Order #{order_id} (Broker #{broker_order_no}) | Initial SL: {live_sl:.2f}")
 
             # ซิงค์ยอดเงินล่าสุดหลังส่งคำสั่งซื้อสำเร็จ เพื่ออัปเดต Line Available ใน account_info_history ทันที
             try:
                 post_acc_info = equity.get_account_info()
-                uport_info.save_account_info(ACCOUNT_NO, post_acc_info)
+                uport_info.save_account_info(acc_no, post_acc_info)
                 print(f"[SETTRADE BUY] อัปเดตยอดเงินคงเหลือล่าสุดหลังสั่งซื้อสำเร็จ (Line: {float(post_acc_info.get('lineAvailable', 0)):,.2f} THB)")
             except Exception as a_err:
                 print(f"[SETTRADE BUY ACCOUNT SYNC WARNING] {a_err}")
@@ -210,10 +241,21 @@ def execute_real_sell(symbol: str, volume: int, exit_price: float, exit_reason: 
         cfg_data = load_config()
         profit_ticks = cfg_data.get("tick_execution", {}).get("sell_profit_ticks", 1)
 
+    acc_no = get_account_no()
+    pin_to_use = get_pin()
+    if not pin_to_use:
+        err_msg = "ไม่พบรหัส PIN สำหรับส่งคำสั่งซื้อขาย (กรุณาระบุ pin='...' หรือ PIN='...' ในไฟล์ .env)"
+        print(f"[SETTRADE SELL REJECTED] {err_msg}")
+        return {"success": False, "error": err_msg}
+    if not acc_no:
+        err_msg = "ไม่พบหมายเลขบัญชี account_no ในไฟล์ .env"
+        print(f"[SETTRADE SELL REJECTED] {err_msg}")
+        return {"success": False, "error": err_msg}
+
     conn = get_db_connection()
     try:
         investor = Investor(**cfg.args_Investor)
-        equity = investor.Equity(account_no=ACCOUNT_NO)
+        equity = investor.Equity(account_no=acc_no)
 
         # 1. ดึงราคาตลาดสด ณ วินาทีที่จะสั่งขาย
         live_quote = get_realtime_quote(investor,symbol)
@@ -232,7 +274,7 @@ def execute_real_sell(symbol: str, volume: int, exit_price: float, exit_reason: 
         # 3. ยิงคำสั่ง Limit Sell เข้า Settrade
         current_date = datetime.now().strftime('%Y-%m-%d')
         res = equity.place_order(
-                            pin= PIN_ACTION,
+                            pin= pin_to_use,
                             side= "Sell",
                             symbol= symbol,
                             trustee_id_type= "Local",
@@ -241,7 +283,7 @@ def execute_real_sell(symbol: str, volume: int, exit_price: float, exit_reason: 
                             price= final_sell_price,
                             price_type= "Limit",
                             validity_type= "Day",
-                            bypass_warning= False,
+                            bypass_warning= True,
                             valid_till_date= current_date
                             )
 
@@ -301,9 +343,14 @@ def execute_real_sell(symbol: str, volume: int, exit_price: float, exit_reason: 
 def cancel_real_order(broker_order_no: str) -> dict:
     """ส่งคำสั่งยกเลิก Order จริงผ่าน Settrade Open API"""
     try:
+        acc_no = get_account_no()
+        pin_to_use = get_pin()
+        if not pin_to_use:
+            return {"success": False, "error": "ไม่พบรหัส PIN สำหรับยกเลิกคำสั่งซื้อขาย (กรุณาระบุ pin ใน .env)"}
+
         investor = Investor(**cfg.args_Investor)
-        equity = investor.Equity(account_no=ACCOUNT_NO)
-        res = equity.cancel_order(order_no=str(broker_order_no), pin=PIN_ACTION)
+        equity = investor.Equity(account_no=acc_no)
+        res = equity.cancel_order(order_no=str(broker_order_no), pin=pin_to_use)
         print(f"[SETTRADE CANCEL] ยกเลิก Order #{broker_order_no} สำเร็จ: {res}")
         return {"success": True, "result": res}
     except Exception as e:

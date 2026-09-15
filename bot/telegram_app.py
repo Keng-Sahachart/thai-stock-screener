@@ -27,12 +27,13 @@ import asyncio
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, LinkPreviewOptions
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
-from dotenv import load_dotenv
-
 from pathlib import Path
-# ถอยกลับไป 1 โฟลเดอร์เพื่อชี้ไปที่ root (thai-stock-screener)
-sys.path.append(str(Path(__file__).resolve().parent.parent))
+ROOT_DIR = Path(__file__).resolve().parent.parent
+sys.path.append(str(ROOT_DIR))
+
+from dotenv import load_dotenv
+load_dotenv(dotenv_path=ROOT_DIR / ".env")
+
 from bot.callback_handlers import handle_signal_callback
 from execution.order_manager import place_sell_order, cancel_order
 from execution.settrade_executor import get_realtime_quote, recalculate_stop_loss
@@ -42,7 +43,6 @@ import update.updatePort as update_port
 from jobs.run_buy_scanner import scan_and_notify
 from jobs.sync_order_status import sync_live_orders
 
-load_dotenv()
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
 def get_db_connection():

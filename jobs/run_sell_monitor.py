@@ -22,21 +22,22 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from telegram import Bot
 from telegram.request import HTTPXRequest
-from dotenv import load_dotenv
-
 import sys
 import time
 from pathlib import Path
-# ถอยกลับไป 1 โฟลเดอร์เพื่อชี้ไปที่ root (thai-stock-screener)
-sys.path.append(str(Path(__file__).resolve().parent.parent))
+ROOT_DIR = Path(__file__).resolve().parent.parent
+sys.path.append(str(ROOT_DIR))
+
+from dotenv import load_dotenv
+load_dotenv(dotenv_path=ROOT_DIR / ".env")
+
 from execution.order_manager import place_sell_order
 from risk_manager import is_market_trading_time
 from core.job_notifier import notify_job_start, notify_job_finish
 
-load_dotenv()
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", "bot_config.json")
+CONFIG_PATH = os.path.join(ROOT_DIR, "config", "bot_config.json")
 
 def load_config():
     with open(CONFIG_PATH, "r", encoding="utf-8") as f:
