@@ -27,6 +27,7 @@ import asyncio
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, LinkPreviewOptions
+from telegram.request import HTTPXRequest
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 from pathlib import Path
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -653,11 +654,14 @@ async def cmd_adopt(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"ℹ️ <i>บอทคุ้มครองความปลอดภัยรอบใหม่ให้ทันที และไม่นำผลขาดทุนเดิมมาตัดขาย\n"
                 f"👉 หากต้องการยกเลิกให้กลับเป็น Manual พิมพ์ <code>/release {sym}</code></i>"
             )
-            await update.message.reply_text(msg, parse_mode="HTML")
-    except Exception as e:
-        await update.message.reply_text(f"❌ เกิดข้อผิดพลาดในการ Adopt หุ้น {sym}: {e}")
-    finally:
         conn.close()
+        await update.message.reply_text(msg, parse_mode="HTML")
+    except Exception as e:
+        if conn and not conn.closed:
+            conn.close()
+        # ถ้าข้อความสำเร็จถูกส่งไปแล้ว หรือเกิด network timeout ให้ log แทน
+        print(f"[ADOPT ERROR] {sym}: {e}")
+        await update.message.reply_text(f"❌ เกิดข้อผิดพลาดในการ Adopt หุ้น {sym}: {e}")
 
 async def cmd_release(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """/release <SYM> - ปลดหุ้นจากการดูแลของบอท กลับไปเป็น [MANUAL]"""
@@ -707,11 +711,13 @@ async def cmd_release(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"<i>บอทจะไม่ส่งคำสั่งขาย ไม่คิด Trailing Stop และไม่คำนวณ Stop Loss สำหรับหุ้นตัวนี้อีกต่อไป</i>\n"
                 f"👉 หากต้องการให้บอทกลับมาดูแลใหม่ พิมพ์ <code>/adopt {sym}</code> ได้ตลอดเวลา"
             )
-            await update.message.reply_text(msg, parse_mode="HTML")
-    except Exception as e:
-        await update.message.reply_text(f"❌ เกิดข้อผิดพลาดในการปลดหุ้น {sym}: {e}")
-    finally:
         conn.close()
+        await update.message.reply_text(msg, parse_mode="HTML")
+    except Exception as e:
+        if conn and not conn.closed:
+            conn.close()
+        print(f"[RELEASE ERROR] {sym}: {e}")
+        await update.message.reply_text(f"❌ เกิดข้อผิดพลาดในการปลดหุ้น {sym}: {e}")
 
 async def cmd_close_pos(update: Update, context: ContextTypes.DEFAULT_TYPE):
     '''
@@ -1082,7 +1088,8 @@ async def post_init(application):
             print(f"[STARTUP NOTIFY ERROR] {e}")
 
 def main():
-    app = ApplicationBuilder().token(TOKEN).post_init(post_init).build()
+    req = HTTPXRequest(connect_timeout=20.0, read_timeout=60.0, write_timeout=20.0)
+    app = ApplicationBuilder().token(TOKEN).request(req).post_init(post_init).build()
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("help", cmd_help))
     app.add_handler(CommandHandler("usage", cmd_help))
