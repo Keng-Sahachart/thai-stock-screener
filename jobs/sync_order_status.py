@@ -55,6 +55,37 @@ def get_db_connection():
         password=os.getenv("posql_password", "postgres")
     )
 
+def revert_sell_position_to_open(cur, symbol: str, reason: str) -> bool:
+    """
+    คืนสถานะ Position ฝั่งขายที่ถูกปิด (CLOSED) ให้กลับเป็น OPEN อย่างปลอดภัย
+    โดยป้องกัน Duplicate Key ใน idx_bot_active_positions_open อย่างรัดกุม:
+    1. หากมีสถานะ OPEN อยู่แล้ว จะไม่ทำอะไร (เพื่อป้องกัน duplicate symbol ใน OPEN)
+    2. จะ Revert เฉพาะแถวที่เป็น MAX(id) ของ symbol นั้นเท่านั้น (ไม่ Revert ทุกแถว)
+    3. ตรวจสอบว่ายังมีหุ้นเหลืออยู่ใน portfolio_stock ล่าสุดจริง
+    """
+    cur.execute("""
+        UPDATE public.bot_active_positions
+        SET status = 'OPEN',
+            closed_date = NULL,
+            closed_price = NULL,
+            exit_reason = %s,
+            updated_at = timezone('Asia/Bangkok', now())
+        WHERE id = (
+            SELECT MAX(id) FROM public.bot_active_positions
+            WHERE symbol = %s AND status = 'CLOSED'
+        )
+        AND NOT EXISTS (
+            SELECT 1 FROM public.bot_active_positions
+            WHERE symbol = %s AND status = 'OPEN'
+        )
+        AND %s IN (
+            SELECT symbol FROM public.portfolio_stock
+            WHERE imported_at = (SELECT MAX(imported_at) FROM public.portfolio_stock)
+              AND current_volume > 0
+        );
+    """, (reason, symbol, symbol, symbol))
+    return cur.rowcount > 0
+
 async def reconcile_orphaned_positions(cur, bot=None) -> dict:
     """
     ตรวจสอบและกวาดล้าง Orphaned/Ghost Positions ใน bot_active_positions:
@@ -156,26 +187,19 @@ async def reconcile_orphaned_positions(cur, bot=None) -> dict:
         """, (sym,))
         last_sell = cur.fetchone()
         if last_sell and last_sell["status"] in ("EXPIRED", "CANCELLED", "REJECTED"):
-            cur.execute("""
-                UPDATE public.bot_active_positions
-                SET status = 'OPEN',
-                    closed_date = NULL,
-                    closed_price = NULL,
-                    exit_reason = 'ORDER_' || %s || '_REVERTED',
-                    updated_at = timezone('Asia/Bangkok', now())
-                WHERE id = %s;
-            """, (last_sell["status"], pos_id))
-            reverted_count += 1
-            print(f"🔄 [RECONCILE] คืนสถานะ {sym} เป็น OPEN (คำสั่งขายล่าสุด {last_sell['status']} แต่ยังมีหุ้นในพอร์ต)")
-            if bot:
-                try:
-                    await bot.send_message(
-                        chat_id=CHAT_ID,
-                        text=f"🔄 <b>[RECONCILE] คืนสถานะพอร์ตเฝ้าระวัง</b>\n• หุ้น: <b>{sym}</b> (กลับสู่สถานะ OPEN)\n• สาเหตุ: คำสั่งขายเดิม {last_sell['status']} แต่ยังมีหุ้นในพอร์ตจริง",
-                        parse_mode="HTML"
-                    )
-                except Exception as e:
-                    print(f"⚠️ ส่งแจ้งเตือน Reconcile คืนสถานะไม่สำเร็จ: {e}")
+            reverted = revert_sell_position_to_open(cur, sym, f"ORDER_{last_sell['status']}_REVERTED")
+            if reverted:
+                reverted_count += 1
+                print(f"🔄 [RECONCILE] คืนสถานะ {sym} เป็น OPEN (คำสั่งขายล่าสุด {last_sell['status']} แต่ยังมีหุ้นในพอร์ต)")
+                if bot:
+                    try:
+                        await bot.send_message(
+                            chat_id=CHAT_ID,
+                            text=f"🔄 <b>[RECONCILE] คืนสถานะพอร์ตเฝ้าระวัง</b>\n• หุ้น: <b>{sym}</b> (กลับสู่สถานะ OPEN)\n• สาเหตุ: คำสั่งขายเดิม {last_sell['status']} แต่ยังมีหุ้นในพอร์ตจริง",
+                            parse_mode="HTML"
+                        )
+                    except Exception as e:
+                        print(f"⚠️ ส่งแจ้งเตือน Reconcile คืนสถานะไม่สำเร็จ: {e}")
 
     return {"cleaned": cleaned_count, "reverted": reverted_count}
 
@@ -213,20 +237,9 @@ async def sync_live_orders(bot=None) -> int:
                             WHERE symbol = %s AND status = 'OPEN' AND current_volume <= %s;
                         """, (p_sym, p_vol))
                 elif p_side == "SELL":
-                    cur.execute("""
-                        UPDATE public.bot_active_positions
-                        SET status = 'OPEN',
-                            closed_date = NULL,
-                            closed_price = NULL,
-                            exit_reason = 'DAY_ORDER_EXPIRED_REVERTED',
-                            updated_at = timezone('Asia/Bangkok', now())
-                        WHERE symbol = %s AND status = 'CLOSED'
-                          AND symbol IN (
-                              SELECT symbol FROM public.portfolio_stock
-                              WHERE imported_at = (SELECT MAX(imported_at) FROM public.portfolio_stock)
-                                AND current_volume > 0
-                          );
-                    """, (p_sym,))
+                    reverted = revert_sell_position_to_open(cur, p_sym, "DAY_ORDER_EXPIRED_REVERTED")
+                    if reverted:
+                        print(f"🔄 [DAY_ORDER_EXPIRED] คืนสถานะ {p_sym} เป็น OPEN")
 
             if past_orders:
                 cur.execute("""
@@ -281,20 +294,7 @@ async def sync_live_orders(bot=None) -> int:
                                         WHERE symbol = %s AND status = 'OPEN' AND current_volume <= %s;
                                     """, (sym, ord_row["volume"]))
                             elif side == "SELL":
-                                cur.execute("""
-                                    UPDATE public.bot_active_positions
-                                    SET status = 'OPEN',
-                                        closed_date = NULL,
-                                        closed_price = NULL,
-                                        exit_reason = 'ORDER_NOT_FOUND_REVERTED',
-                                        updated_at = timezone('Asia/Bangkok', now())
-                                    WHERE symbol = %s AND status = 'CLOSED'
-                                      AND symbol IN (
-                                          SELECT symbol FROM public.portfolio_stock
-                                          WHERE imported_at = (SELECT MAX(imported_at) FROM public.portfolio_stock)
-                                            AND current_volume > 0
-                                      );
-                                """, (sym,))
+                                revert_sell_position_to_open(cur, sym, "ORDER_NOT_FOUND_REVERTED")
                             conn.commit()
                         continue
 
@@ -398,25 +398,13 @@ async def sync_live_orders(bot=None) -> int:
 
                     elif side == "SELL":
                         if new_status in ("EXPIRED", "CANCELLED", "REJECTED") and matched_vol == 0:
-                            cur.execute("""
-                                UPDATE public.bot_active_positions
-                                SET status = 'OPEN',
-                                    closed_date = NULL,
-                                    closed_price = NULL,
-                                    exit_reason = 'ORDER_' || %s || '_REVERTED',
-                                    updated_at = timezone('Asia/Bangkok', now())
-                                WHERE symbol = %s AND status = 'CLOSED'
-                                  AND symbol IN (
-                                      SELECT symbol FROM public.portfolio_stock
-                                      WHERE imported_at = (SELECT MAX(imported_at) FROM public.portfolio_stock)
-                                        AND current_volume > 0
-                                  );
-                            """, (new_status, sym))
-                            await bot.send_message(
-                                chat_id=CHAT_ID,
-                                text=f"🔄 <b>[SELL {new_status}] การขายไม่สำเร็จ</b>\n• หุ้น: <b>{sym}</b> ({new_status})\n<i>(ดึงหุ้นกลับมาเฝ้าระวังในพอร์ตสถานะ OPEN ตามเดิม)</i>",
-                                parse_mode="HTML"
-                            )
+                            reverted = revert_sell_position_to_open(cur, sym, f"ORDER_{new_status}_REVERTED")
+                            if bot and reverted:
+                                await bot.send_message(
+                                    chat_id=CHAT_ID,
+                                    text=f"🔄 <b>[SELL {new_status}] การขายไม่สำเร็จ</b>\n• หุ้น: <b>{sym}</b> ({new_status})\n<i>(ดึงหุ้นกลับมาเฝ้าระวังในพอร์ตสถานะ OPEN ตามเดิม)</i>",
+                                    parse_mode="HTML"
+                                )
 
             # รัน Reconcile Position เสมอ (ทั้งกรณีมีและไม่มี active_orders)
             reconcile_stats = await reconcile_orphaned_positions(cur, bot=bot)

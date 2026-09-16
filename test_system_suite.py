@@ -192,9 +192,14 @@ def test_chart_engine():
             password=os.getenv("posql_password", "postgres")
         )
         with conn.cursor() as cur:
-            cur.execute("SELECT symbol FROM public.stock_price_history ORDER BY date DESC LIMIT 1;")
+            cur.execute("""
+                SELECT symbol FROM public.stock_price_history 
+                GROUP BY symbol 
+                HAVING count(date) >= 30 
+                ORDER BY max(date) DESC LIMIT 1;
+            """)
             row = cur.fetchone()
-            sample_sym = row[0] if row else "TDEX"
+            sample_sym = row[0] if row else "ZIGA"
         conn.close()
 
         buf = generate_stock_chart(sample_sym, lookback_days=30)

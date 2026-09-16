@@ -134,7 +134,10 @@ def sync_active_positions():
                             %s, CURRENT_DATE, %s, %s,
                             %s, %s, %s,
                             TRUE, 'OPEN'
-                        );
+                        )
+                        ON CONFLICT (symbol) WHERE (status = 'OPEN') DO UPDATE
+                        SET current_volume = EXCLUDED.current_volume,
+                            updated_at = timezone('Asia/Bangkok', now());
                     """, (sym, avg_price, atr, init_sl, mkt_price, curr_vol))
                     print(f"Registered new bot position: {sym} @ {avg_price} (SL: {init_sl})")
 
