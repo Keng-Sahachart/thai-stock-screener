@@ -119,18 +119,20 @@ async def reconcile_orphaned_positions(cur, bot=None) -> dict:
         pos_id = unbacked["id"]
         vol = unbacked["current_volume"]
 
-        # ตรวจสอบว่ามีคำสั่งซื้อจริงที่กำลังรอคิวของวันนี้หรือไม่
+        # ตรวจสอบว่ามีคำสั่งซื้อจริงที่กำลังรอคิว หรือเพิ่ง Match สำเร็จ (FILLED) ในช่วง 48 ชม. หรือไม่
         cur.execute("""
             SELECT order_id, broker_order_no, status
             FROM public.bot_orders
             WHERE symbol = %s
               AND side = 'BUY'
-              AND status IN ('SENT', 'QUEUING', 'PARTIAL')
-              AND created_at::date = CURRENT_DATE;
+              AND (
+                  status IN ('SENT', 'QUEUING', 'PARTIAL')
+                  OR (status = 'FILLED' AND created_at >= (NOW() - INTERVAL '48 hours'))
+              );
         """, (sym,))
         today_active = cur.fetchall()
         if today_active:
-            continue  # มีคำสั่งรอ Match ในตลาดวันนี้ -> ข้าม ไม่ลบ
+            continue  # มีคำสั่งรอ Match หรือเพิ่ง Match สำเร็จ (รอรอบซิงค์พอร์ต) -> ข้าม ไม่ลบเด็ดขาด
 
         # ตรวจสอบว่าเป็นไม้จำลองแท้หรือไม่ (SIM_%)
         cur.execute("""
@@ -371,6 +373,30 @@ async def sync_live_orders(bot=None) -> int:
                                     updated_at = timezone('Asia/Bangkok', now())
                                 WHERE symbol = %s AND status = 'OPEN';
                             """, (executed_price, matched_vol, executed_price, sym))
+                            if cur.rowcount == 0:
+                                cur.execute("""
+                                    INSERT INTO public.bot_active_positions (
+                                        symbol, entry_date, entry_price, entry_atr14,
+                                        initial_stop_loss, max_price_reached, current_volume,
+                                        is_managed_by_bot, status
+                                    ) VALUES (
+                                        %s, CURRENT_DATE, %s, NULL,
+                                        %s, %s, %s,
+                                        TRUE, 'OPEN'
+                                    )
+                                    ON CONFLICT (symbol) WHERE (status = 'OPEN') DO UPDATE
+                                    SET entry_price = EXCLUDED.entry_price,
+                                        current_volume = EXCLUDED.current_volume,
+                                        max_price_reached = GREATEST(bot_active_positions.max_price_reached, EXCLUDED.max_price_reached),
+                                        updated_at = timezone('Asia/Bangkok', now());
+                                """, (sym, executed_price, round(executed_price * 0.92, 4), executed_price, matched_vol))
+
+                            try:
+                                import update.updatePort as uport
+                                uport.UpdatePortfolio()
+                            except Exception as up_err:
+                                print(f"⚠️ ซิงค์พอร์ตหลัง Match ไม่สำเร็จ: {up_err}")
+
                             await bot.send_message(
                                 chat_id=CHAT_ID,
                                 text=f"🎉 <b>[BUY MATCHED] จับคู่คำสั่งซื้อสำเร็จ</b>\n• หุ้น: <b>{sym}</b>\n• จำนวน: <code>{matched_vol:,}</code> หุ้น\n• ราคาจริง: <code>{executed_price:.2f}</code> THB\n• Order No: <code>{b_order_no}</code>",

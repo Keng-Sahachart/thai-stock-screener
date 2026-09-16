@@ -50,6 +50,13 @@ async def sync_eod_portfolio():
         except Exception as sync_err:
             print(f"⚠️ ซิงค์สถานะ Order สิ้นวันไม่สำเร็จ: {sync_err}")
 
+        # ซิงค์หุ้นที่ถือในพอร์ตจริงให้มี Position ติดตามความปลอดภัยครบถ้วน
+        try:
+            from core.position_tracker import sync_active_positions
+            sync_active_positions()
+        except Exception as pt_err:
+            print(f"⚠️ ซิงค์ Position พอร์ตสิ้นวันไม่สำเร็จ: {pt_err}")
+
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             # 1. ดึง Position ที่เปิดอยู่ทั้งหมดมาเทียบกับ High และ Close ของวันนี้
             cur.execute("""
