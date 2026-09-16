@@ -284,9 +284,9 @@ class SchedulerEngine(threading.Thread):
                             ).start()
 
                 # -------------------------------------------------------------
-                # 4. 16:40 น. -> Sync Orders รอบปิดตลาด (ตรวจ Order Expired)
+                # 4. 16:46 น. -> Sync Orders รอบปิดตลาด (ตรวจ Order Expired)
                 # -------------------------------------------------------------
-                if now.hour == 16 and now.minute == 40:
+                if now.hour == 16 and now.minute == 46:
                     if self.last_run_minute["sync_orders_close"] != current_minute_str:
                         self.last_run_minute["sync_orders_close"] = current_minute_str
                         threading.Thread(
@@ -296,9 +296,9 @@ class SchedulerEngine(threading.Thread):
                         ).start()
 
                 # -------------------------------------------------------------
-                # 5. 19:15 น. -> Task Update (ดึง EOD, คำนวณ Indicators, Trailing Stop)
+                # 5. 18:00 น. -> Task Update (ดึง EOD, คำนวณ Indicators, Trailing Stop)
                 # -------------------------------------------------------------
-                if now.hour == 19 and now.minute == 15:
+                if now.hour == 18 and now.minute == 00:
                     if self.last_run_minute["task_update"] != current_minute_str:
                         self.last_run_minute["task_update"] = current_minute_str
                         threading.Thread(
