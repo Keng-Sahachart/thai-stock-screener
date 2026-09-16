@@ -66,6 +66,7 @@ async def scan_portfolio_and_notify(symbol: str = None, bot: Bot = None, chat_id
                 SELECT 
                     p.symbol, p.current_volume, p.average_price, p.market_price, p.profit, p.percent_profit,
                     p.signal_type, p.signal_reason, p.trend_status, p.is_managed_by_bot,
+                    p.is_adopted, p.bot_entry_price,
                     p.initial_stop_loss, p.trailing_stop_loss,
                     m.rsi14, m.macd_12_26_9, m.macd_12_26_9_signal, m.macd_12_26_9_hist,
                     m.ema12, m.ema26,
@@ -105,7 +106,20 @@ async def scan_portfolio_and_notify(symbol: str = None, bot: Bot = None, chat_id
                 mkt_p = float(r["market_price"])
                 pnl_pct = float(r["percent_profit"] or 0.0)
                 profit = float(r["profit"] or 0.0)
-                tag = "🤖 [BOT]" if r["is_managed_by_bot"] else "👤 [MANUAL]"
+                
+                is_adopt = bool(r.get("is_adopted"))
+                if is_adopt:
+                    tag = "🛡️ [ADOPT]"
+                elif r.get("is_managed_by_bot"):
+                    tag = "🤖 [BOT]"
+                else:
+                    tag = "👤 [MANUAL]"
+
+                adopt_line = ""
+                if is_adopt and r.get("bot_entry_price"):
+                    adopt_base = float(r["bot_entry_price"])
+                    adopt_pnl = round(((mkt_p - adopt_base) / adopt_base) * 100, 2) if adopt_base > 0 else 0.0
+                    adopt_line = f"• ฐานรับเลี้ยง: <code>{adopt_base:.2f}</code> (รอบใหม่: <code>{adopt_pnl:+.2f}%</code>)\n"
 
                 # สัญญาณ
                 sig_type = (r["signal_type"] or "SIDEWAY").upper()
@@ -169,6 +183,7 @@ async def scan_portfolio_and_notify(symbol: str = None, bot: Bot = None, chat_id
                     f"• ประเภท: {tag} | ถือครอง: <code>{vol:,}</code> หุ้น\n"
                     f"• ทุน: <code>{avg_p:.2f}</code> | ตลาด: <code>{mkt_p:.2f}</code> THB\n"
                     f"• กำไร/ขาดทุน: <code>{pnl_pct:+.2f}%</code> (<code>{profit:+,.2f}</code> THB)\n"
+                    f"{adopt_line}"
                     f"------------------------------------\n"
                     f"• สัญญาณเทคนิคอล: <b>{sig_badge}</b>\n"
                     f"• แนวโน้มราคา: <b>{trend_str}</b>\n"
