@@ -300,13 +300,29 @@ def execute_real_sell(symbol: str, volume: int, exit_price: float, exit_reason: 
             """, (symbol, volume, final_sell_price, broker_order_no))
             order_id = cur.fetchone()["order_id"]
 
+            # ตรวจสอบจำนวนหุ้นใน position ถ้าขายบางส่วนให้ลดยอด ถ้าขายหมดให้ปิดสถานะ
             cur.execute("""
-                UPDATE public.bot_active_positions
-                SET status = 'CLOSED', closed_date = CURRENT_DATE,
-                    closed_price = %s, exit_reason = %s,
-                    updated_at = timezone('Asia/Bangkok', now())
-                WHERE symbol = %s AND status = 'OPEN';
-            """, (final_sell_price, exit_reason, symbol))
+                SELECT id, current_volume FROM public.bot_active_positions
+                WHERE symbol = %s AND status = 'OPEN'
+                ORDER BY id DESC LIMIT 1;
+            """, (symbol,))
+            pos = cur.fetchone()
+
+            if pos and pos.get("current_volume") and int(pos["current_volume"]) > volume:
+                cur.execute("""
+                    UPDATE public.bot_active_positions
+                    SET current_volume = current_volume - %s,
+                        updated_at = timezone('Asia/Bangkok', now())
+                    WHERE id = %s;
+                """, (volume, pos["id"]))
+            else:
+                cur.execute("""
+                    UPDATE public.bot_active_positions
+                    SET status = 'CLOSED', closed_date = CURRENT_DATE,
+                        closed_price = %s, exit_reason = %s,
+                        updated_at = timezone('Asia/Bangkok', now())
+                    WHERE symbol = %s AND status = 'OPEN';
+                """, (final_sell_price, exit_reason, symbol))
 
             #ถ้าไม่มีแถวที่ถูกอัปเดต (แปลว่าเป็นหุ้นพอร์ตเดิม/Manual) ให้ Insert แถวประวัติไว้
             if cur.rowcount == 0:

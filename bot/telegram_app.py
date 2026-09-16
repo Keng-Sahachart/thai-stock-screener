@@ -79,6 +79,77 @@ def build_manual_buy_keyboard(symbol: str, shares: int, price: float):
     ]
     return InlineKeyboardMarkup(keyboard)
 
+def get_tradingview_url(symbol: str) -> str:
+    """ดึงและสร้าง URL TradingView จาก config/bot_config.json"""
+    from bot.callback_handlers import load_config
+    cfg = load_config()
+    tmpl = cfg.get("tradingview_chart_url_template", "https://th.tradingview.com/chart/sYR6pQNG/?symbol=SET%3A{symbol}")
+    return tmpl.replace("{symbol}", symbol).replace("[symbol]", symbol)
+
+def build_port_card_keyboard(symbol: str, total_shares: int, mkt_price: float):
+    """สร้างคีย์บอร์ดเริ่มต้นใต้การ์ดกราฟหุ้นในพอร์ต (/scan_port)"""
+    tv_url = get_tradingview_url(symbol)
+    settrade_url = f"https://www.settrade.com/th/equities/quote/{symbol}/overview"
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(f"🌐 Settrade: {symbol}", url=settrade_url),
+            InlineKeyboardButton("📈 TradingView", url=tv_url)
+        ],
+        [
+            InlineKeyboardButton(f"🔴 สั่งขายหุ้นนี้ ({total_shares:,} หุ้น)", callback_data=f"msell_open:{symbol}:{total_shares}:{mkt_price:.2f}")
+        ]
+    ])
+
+def build_manual_sell_keyboard(symbol: str, shares: int, max_shares: int, price: float):
+    """สร้าง Inline Keyboard สำหรับปรับราคาและจำนวนหุ้นเพื่อส่งคำสั่งขาย"""
+    shares = max(100, min(shares, max_shares))
+    p_up = adjust_price_by_ticks(price, 1)
+    p_down = adjust_price_by_ticks(price, -1)
+    shares_down = max(100, shares - 100)
+    shares_up = min(max_shares, shares + 100)
+    est_proceeds = round(shares * price * (1.0 - 0.0025), 2)
+
+    # 50% shares: บังคับหารด้วย 100 ลงตัวเสมอตาม Board Lot
+    half_shares = max(100, (max_shares // 2 // 100) * 100)
+
+    tv_url = get_tradingview_url(symbol)
+    settrade_url = f"https://www.settrade.com/th/equities/quote/{symbol}/overview"
+
+    keyboard = [
+        [
+            InlineKeyboardButton(f"🌐 Settrade", url=settrade_url),
+            InlineKeyboardButton("📈 TradingView", url=tv_url)
+        ],
+        [
+            InlineKeyboardButton("🔻 ราคา", callback_data=f"msell_p:{symbol}:{shares}:{max_shares}:{p_down}"),
+            InlineKeyboardButton(f"💵 {price:.2f} บ.", callback_data="noop"),
+            InlineKeyboardButton("🔺 ราคา", callback_data=f"msell_p:{symbol}:{shares}:{max_shares}:{p_up}")
+        ],
+        [
+            InlineKeyboardButton("➖ 100", callback_data=f"msell_v:{symbol}:{shares_down}:{max_shares}:{price}"),
+            InlineKeyboardButton(f"📦 {shares:,} หุ้น", callback_data="noop"),
+            InlineKeyboardButton("➕ 100", callback_data=f"msell_v:{symbol}:{shares_up}:{max_shares}:{price}")
+        ]
+    ]
+
+    # ทางลัด 50% / 100% (50% แสดงเฉพาะเมื่อถือ >= 200 หุ้นและหาร 100 ลงตัว)
+    if max_shares >= 200 and half_shares < max_shares:
+        keyboard.append([
+            InlineKeyboardButton(f"🌗 50% ({half_shares:,})", callback_data=f"msell_pct:{symbol}:{half_shares}:{max_shares}:{price}"),
+            InlineKeyboardButton(f"🌕 100% ({max_shares:,})", callback_data=f"msell_pct:{symbol}:{max_shares}:{max_shares}:{price}")
+        ])
+    else:
+        keyboard.append([
+            InlineKeyboardButton(f"🌕 100% ({max_shares:,} หุ้น)", callback_data=f"msell_pct:{symbol}:{max_shares}:{max_shares}:{price}")
+        ])
+
+    keyboard.append([
+        InlineKeyboardButton(f"🚨 ยืนยันขาย (~{est_proceeds:,.0f} บ.)", callback_data=f"msell_conf:{symbol}:{shares}:{max_shares}:{price}"),
+        InlineKeyboardButton("❌ ยกเลิก", callback_data=f"msell_cancel:{symbol}:{max_shares}:{price}")
+    ])
+
+    return InlineKeyboardMarkup(keyboard)
+
 async def cmd_buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
         await update.message.reply_text(

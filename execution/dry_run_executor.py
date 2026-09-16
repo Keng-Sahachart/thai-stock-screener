@@ -172,17 +172,33 @@ def execute_dry_run_sell(symbol: str, volume: int, exit_price: float, exit_reaso
             """, (symbol, volume, final_sell_price, final_sell_price))
             order_res = cur.fetchone()
 
-            # 2. อัปเดตสถานะใน bot_active_positions เป็น CLOSED
+            # 2. ตรวจสอบจำนวนหุ้นใน position ถ้าขายบางส่วนให้ลดยอด ถ้าขายหมดให้ปิดสถานะ
             cur.execute("""
-                UPDATE public.bot_active_positions
-                SET status = 'CLOSED',
-                    closed_date = CURRENT_DATE,
-                    closed_price = %s,
-                    exit_reason = %s,
-                    updated_at = timezone('Asia/Bangkok', now())
+                SELECT id, current_volume FROM public.bot_active_positions
                 WHERE symbol = %s AND status = 'OPEN'
-                RETURNING id;
-            """, (final_sell_price, exit_reason, symbol))
+                ORDER BY id DESC LIMIT 1;
+            """, (symbol,))
+            pos = cur.fetchone()
+
+            if pos and pos.get("current_volume") and int(pos["current_volume"]) > volume:
+                # ขายบางส่วน (Partial sell) -> ลดยอดหุ้นคงเหลือ ยังคงสถานะ OPEN
+                cur.execute("""
+                    UPDATE public.bot_active_positions
+                    SET current_volume = current_volume - %s,
+                        updated_at = timezone('Asia/Bangkok', now())
+                    WHERE id = %s;
+                """, (volume, pos["id"]))
+            else:
+                # ขายหมด (Full sell) -> ปิดสถานะ
+                cur.execute("""
+                    UPDATE public.bot_active_positions
+                    SET status = 'CLOSED',
+                        closed_date = CURRENT_DATE,
+                        closed_price = %s,
+                        exit_reason = %s,
+                        updated_at = timezone('Asia/Bangkok', now())
+                    WHERE symbol = %s AND status = 'OPEN';
+                """, (final_sell_price, exit_reason, symbol))
 
             conn.commit()
             print(f"[DRY RUN SELL] {symbol} {volume:,} หุ้น @ {final_sell_price:.2f} THB ({exit_reason})")

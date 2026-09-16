@@ -53,5 +53,6 @@
         "SMD100",
         "NOBLE-W3"
     ],
+    "tradingview_chart_url_template": "https://th.tradingview.com/chart/sYR6pQNG/?symbol=SET%3A{symbol}",
     "//": "test comment :  "
 }

@@ -179,10 +179,8 @@ async def scan_portfolio_and_notify(symbol: str = None, bot: Bot = None, chat_id
                     f"{sell_warning}"
                 )
 
-                keyboard = [
-                    [InlineKeyboardButton(f"🌐 ข้อมูล Settrade: {sym}", url=sym_url)]
-                ]
-                reply_markup = InlineKeyboardMarkup(keyboard)
+                from bot.telegram_app import build_port_card_keyboard
+                reply_markup = build_port_card_keyboard(sym, vol, mkt_p)
 
                 # สร้างภาพกราฟ
                 chart_buf = generate_stock_chart(sym)

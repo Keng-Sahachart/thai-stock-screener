@@ -231,6 +231,99 @@ async def handle_signal_callback(update: Update, context: ContextTypes.DEFAULT_T
             return
 
     # =========================================================================
+    # ส่วนที่ 1.5: ระบบสั่งขายผ่านการ์ดสแกนพอร์ต (/scan_port) (Manual Sell Panel)
+    # =========================================================================
+    if action.startswith("msell_"):
+        from bot.telegram_app import build_manual_sell_keyboard, build_port_card_keyboard
+        from execution.order_manager import place_sell_order
+
+        if action == "msell_cancel":
+            sym = data[1]
+            max_shares = int(data[2])
+            price = float(data[3])
+            orig_kbd = build_port_card_keyboard(sym, max_shares, price)
+            await query.answer("ยกเลิกหน้าต่างขาย")
+            await query.edit_message_reply_markup(reply_markup=orig_kbd)
+            return
+
+        if action == "msell_open":
+            sym = data[1]
+            max_shares = int(data[2])
+            price = float(data[3])
+            sell_kbd = build_manual_sell_keyboard(sym, max_shares, max_shares, price)
+            await query.answer("เปิดหน้าต่างตั้งราคาขาย")
+            await query.edit_message_reply_markup(reply_markup=sell_kbd)
+            return
+
+        if action in ("msell_p", "msell_v", "msell_pct"):
+            sym = data[1]
+            shares = int(data[2])
+            max_shares = int(data[3])
+            price = float(data[4])
+
+            if shares < 100:
+                await query.answer("⚠️ จำนวนหุ้นขั้นต่ำคือ 100 หุ้น", show_alert=True)
+                return
+            if shares > max_shares:
+                await query.answer(f"⚠️ เกินจำนวนที่ถือครอง ({max_shares:,} หุ้น)", show_alert=True)
+                return
+            if price <= 0:
+                await query.answer("⚠️ ราคาไม่ถูกต้อง", show_alert=True)
+                return
+
+            sell_kbd = build_manual_sell_keyboard(sym, shares, max_shares, price)
+            await query.answer()
+            await query.edit_message_reply_markup(reply_markup=sell_kbd)
+            return
+
+        if action == "msell_conf":
+            sym = data[1]
+            shares = int(data[2])
+            max_shares = int(data[3])
+            price = float(data[4])
+
+            await query.answer("⏳ กำลังส่งคำสั่งขาย...")
+            exec_res = place_sell_order(
+                symbol=sym,
+                volume=shares,
+                exit_price=price,
+                exit_reason="MANUAL_CARD_SELL"
+            )
+
+            if exec_res.get("success"):
+                mode = "DRY_RUN" if "SIM_" in exec_res.get("broker_order_no", "") else "LIVE"
+                b_no = exec_res.get("broker_order_no", "-")
+                est_val = shares * price
+
+                caption_note = (
+                    f"\n\n🚨 <b>ส่งคำสั่งขายสำเร็จ [{mode}]</b>\n"
+                    f"• หุ้น: <b>{sym}</b>\n"
+                    f"• จำนวนขาย: <code>{shares:,}</code> หุ้น @ <code>{price:.2f}</code> THB (~{est_val:,.0f} บ.)\n"
+                    f"• Order No: <code>{b_no}</code>\n"
+                    f"<i>(คำสั่งถูกส่งเข้าตลาดและบันทึกสถานะเรียบร้อย)</i>"
+                )
+
+                rem_shares = max_shares - shares
+                if rem_shares >= 100:
+                    new_reply_kbd = build_port_card_keyboard(sym, rem_shares, price)
+                else:
+                    new_reply_kbd = None
+
+                try:
+                    if query.message.caption:
+                        new_caption = query.message.caption + caption_note
+                        await query.edit_message_caption(caption=new_caption, parse_mode="HTML", reply_markup=new_reply_kbd)
+                    else:
+                        new_text = (query.message.text or "") + caption_note
+                        await query.edit_message_text(text=new_text, parse_mode="HTML", reply_markup=new_reply_kbd)
+                except Exception as edit_err:
+                    print(f"⚠️ Edit message on msell_conf warning: {edit_err}")
+                    await query.message.reply_text(caption_note, parse_mode="HTML")
+            else:
+                await query.answer(f"❌ ส่งคำสั่งขายไม่สำเร็จ: {exec_res.get('error')}", show_alert=True)
+            return
+
+    # =========================================================================
     # ส่วนที่ 2: ระบบตรวจจับและอนุมัติของ Auto Scanner (สัญญาณประจำวัน)
     # =========================================================================
     conn = get_db_connection()
