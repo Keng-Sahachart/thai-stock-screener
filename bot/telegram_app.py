@@ -172,6 +172,8 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• /task_update - 🔄 รันอัปเดตราคา, Indicators และพอร์ตสิ้นวัน\n"
         "• /cancel &lt;ID&gt; - ขอยกเลิกคำสั่งที่รอคิวในตลาด\n\n"
         "<b>🛡️ การควบคุมความปลอดภัยและการตั้งค่า:</b>\n"
+        "• /adopt &lt;SYM&gt; - 🛡️ รับเลี้ยงหุ้น Manual เข้าสู่ระบบ Trailing Stop และความปลอดภัย\n"
+        "• /release &lt;SYM&gt; - 👤 ปลดการดูแลหุ้น กลับไปเป็น Manual ตามเดิม\n"
         "• /close_pos &lt;SYM&gt; - ปิดสถานะหุ้นตัวที่ระบุทันที\n"
         "• /panic_close_all - 🚨 สั่งขายล้างทุกไม้ที่บอทถือทันที\n"
         "• /exclude [add|del|list] &lt;SYM&gt; - 🔒 จัดการหุ้นที่ได้รับการยกเว้น\n"
@@ -198,6 +200,8 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• /task_update [force] - รันงานอัปเดตราคา Indicators สิ้นวัน และซิงค์ Trailing Stop\n"
         "• /cancel &lt;ORDER_ID&gt; - ขอยกเลิกคำสั่งซื้อขายที่รอคิวในตลาด\n\n"
         "🛡️ <b>การควบคุมความปลอดภัยและการตั้งค่า:</b>\n"
+        "• /adopt &lt;SYM&gt; - 🛡️ รับเลี้ยงหุ้น Manual เข้าสู่ระบบ Trailing Stop และคุ้มครองความปลอดภัยรอบใหม่\n"
+        "• /release &lt;SYM&gt; - 👤 ปลดการดูแลหุ้น กลับไปเป็น Manual ตามเดิมทันที\n"
         "• /close_pos &lt;SYM&gt; - สั่งขายปิดสถานะหุ้นรายตัวทันที\n"
         "• /panic_close_all - 🚨 ขายล้างทุกไม้ที่บอทดูแลทันที\n"
         "• /exclude [add|del|list] &lt;SYM&gt; - เพิ่ม/ลบ/ดูหุ้นที่ยกเว้นใน config\n"
@@ -372,7 +376,8 @@ async def cmd_port(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # 2. ดึงพอร์ตจริงทั้งหมด (มี percent_profit, stop loss, และ trailing stop)
             cur.execute("""
                 SELECT symbol, current_volume, average_price, market_price, 
-                       percent_profit, initial_stop_loss, trailing_stop_loss, is_managed_by_bot
+                       percent_profit, initial_stop_loss, trailing_stop_loss, is_managed_by_bot,
+                       is_adopted, bot_entry_price
                 FROM public.v_portfolio_with_signals
                 WHERE current_volume > 0
                 ORDER BY percent_profit DESC;
@@ -420,17 +425,36 @@ async def cmd_port(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 items_in_batch = 0
                 for num, r in enumerate(real_rows, 1):
-                    tag = "🤖 [BOT]" if r["is_managed_by_bot"] else "👤 [MANUAL]"
+                    is_adopt = bool(r.get("is_adopted"))
+                    if is_adopt:
+                        tag = "🛡️ [ADOPT]"
+                    elif r["is_managed_by_bot"]:
+                        tag = "🤖 [BOT]"
+                    else:
+                        tag = "👤 [MANUAL]"
+
                     sl_str = f"{float(r['initial_stop_loss']):.2f}" if r["initial_stop_loss"] is not None else "N/A"
                     ts_str = f"{float(r['trailing_stop_loss']):.2f}" if r["trailing_stop_loss"] is not None else "-"
                     pnl = float(r["percent_profit"]) if r["percent_profit"] is not None else 0.0
                     sym_link = f"<a href='https://www.settrade.com/th/equities/quote/{r['symbol']}/overview'><b>{r['symbol']}</b></a>"
-                    item = (
-                        f"\nNo.{num}: {tag} {sym_link} ({r['current_volume']:,} หุ้น)\n"
-                        f"• ทุน: {float(r['average_price']):.2f} | ตลาด: {float(r['market_price']):.2f}\n"
-                        f"• กำไร/ขาดทุน: {pnl:+.2f}%\n"
-                        f"• Initial SL: {sl_str} | Trailing SL: {ts_str}\n"
-                    )
+
+                    if is_adopt and r.get("bot_entry_price"):
+                        adopt_base = float(r["bot_entry_price"])
+                        mkt_p = float(r["market_price"])
+                        adopt_pnl = round(((mkt_p - adopt_base) / adopt_base) * 100, 2) if adopt_base > 0 else 0.0
+                        item = (
+                            f"\nNo.{num}: {tag} {sym_link} ({r['current_volume']:,} หุ้น)\n"
+                            f"• ทุนจริง: {float(r['average_price']):.2f} | ตลาด: {mkt_p:.2f} (พอร์ต: {pnl:+.2f}%)\n"
+                            f"• ฐานรับเลี้ยง: {adopt_base:.2f} (รอบใหม่: {adopt_pnl:+.2f}%)\n"
+                            f"• Initial SL: {sl_str} | Trailing SL: {ts_str}\n"
+                        )
+                    else:
+                        item = (
+                            f"\nNo.{num}: {tag} {sym_link} ({r['current_volume']:,} หุ้น)\n"
+                            f"• ทุน: {float(r['average_price']):.2f} | ตลาด: {float(r['market_price']):.2f}\n"
+                            f"• กำไร/ขาดทุน: {pnl:+.2f}%\n"
+                            f"• Initial SL: {sl_str} | Trailing SL: {ts_str}\n"
+                        )
                     # ป้องกันข้อความยาวเกินลิมิต 4,096 ตัวอักษร หรือเกิน 100 formatting entities ของ Telegram (แบ่งเป็นข้อความละไม่เกิน 15 หุ้น)
                     if items_in_batch >= 15 or (len(current_msg) + len(item) > 3500):
                         messages_to_send.append(current_msg)
@@ -505,6 +529,187 @@ async def cmd_port(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     parse_mode="HTML",
                     link_preview_options=LinkPreviewOptions(is_disabled=True)
                 )
+    finally:
+        conn.close()
+
+async def cmd_adopt(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/adopt <SYM> - แปลงหุ้น Manual ให้บอทเข้ามาช่วยดูแลความปลอดภัยและ Trailing Stop รอบใหม่"""
+    if not context.args:
+        await update.message.reply_text(
+            "📌 <b>วิธีใช้งานคำสั่ง /adopt:</b>\n"
+            "• <code>/adopt 3BBIF</code> (ระบุชื่อหุ้นที่ถืออยู่ในพอร์ต)\n\n"
+            "ℹ️ <i>บอทจะเริ่มนับฐานราคาความปลอดภัยจากราคาตลาดปัจจุบัน และคำนวณ Initial SL พร้อมตั้ง Trailing Stop ยกตามตูดให้ทันที โดยไม่นำผลขาดทุนสะสมเดิมมาตัดขายทิ้ง</i>\n"
+            "👉 พิมพ์ /port เพื่อดูรายชื่อหุ้น [MANUAL] ในพอร์ต",
+            parse_mode="HTML"
+        )
+        return
+
+    sym = context.args[0].upper().strip()
+    conn = get_db_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # 1. ตรวจสอบว่ามีหุ้นในพอร์ตจริงหรือไม่
+            cur.execute("""
+                SELECT p.symbol, p.current_volume, p.average_price, p.market_price, p.percent_profit,
+                       c.quote_type, i.atr14,
+                       b.id AS position_id, b.status AS pos_status, b.is_adopted, b.is_managed_by_bot
+                FROM public.portfolio_stock p
+                LEFT JOIN public.master_stock_classification c ON p.symbol = c.symbol
+                LEFT JOIN public.bot_active_positions b ON p.symbol = b.symbol AND b.status = 'OPEN'
+                LEFT JOIN public.mv_stock_indicators i ON p.symbol = i.symbol
+                    AND i.trade_date = (SELECT MAX(trade_date) FROM public.mv_stock_indicators)
+                WHERE p.imported_at = (SELECT MAX(imported_at) FROM public.portfolio_stock)
+                  AND p.symbol = %s
+                  AND p.current_volume > 0;
+            """, (sym,))
+            row = cur.fetchone()
+
+            if not row:
+                await update.message.reply_text(
+                    f"❌ ไม่พบหุ้น <b>{sym}</b> ที่ถือครองในพอร์ตจริงขณะนี้\n"
+                    f"👉 พิมพ์ <code>/port</code> เพื่อดูรายชื่อหุ้นทั้งหมดในพอร์ต",
+                    parse_mode="HTML"
+                )
+                return
+
+            # 2. ตรวจสอบว่าบอทดูแลอยู่แล้วหรือไม่
+            if row.get("position_id") and row.get("pos_status") == "OPEN":
+                if row.get("is_adopted"):
+                    await update.message.reply_text(
+                        f"ℹ️ หุ้น <b>{sym}</b> อยู่ในสถานะ 🛡️ <b>[ADOPT]</b> ที่บอทดูแลอยู่แล้วครับ\n"
+                        f"👉 หากต้องการยกเลิกให้พิมพ์ <code>/release {sym}</code>",
+                        parse_mode="HTML"
+                    )
+                    return
+                elif row.get("is_managed_by_bot"):
+                    await update.message.reply_text(
+                        f"ℹ️ หุ้น <b>{sym}</b> เป็นหุ้นที่บอทซื้อและดูแลอยู่แล้ว (🤖 <b>[BOT]</b>)",
+                        parse_mode="HTML"
+                    )
+                    return
+
+            # 3. ดึงราคาตลาดปัจจุบัน และ ATR
+            mkt_price = float(row["market_price"] or 0)
+            avg_price = float(row["average_price"] or 0)
+            pnl_pct = float(row["percent_profit"] or 0)
+            curr_vol = int(row["current_volume"])
+            atr = float(row["atr14"]) if row["atr14"] else None
+            q_type = row["quote_type"] or "EQUITY"
+
+            if mkt_price <= 0:
+                try:
+                    quote = get_realtime_quote(None, sym)
+                    mkt_price = float(quote.get("last", 0.0))
+                except Exception:
+                    pass
+                if mkt_price <= 0:
+                    mkt_price = avg_price
+
+            # คำนวณ Initial Stop Loss สำหรับรอบรับเลี้ยงใหม่
+            from core.position_tracker import calculate_initial_stop_loss, load_config
+            config = load_config()
+            init_sl = calculate_initial_stop_loss(mkt_price, atr, q_type, config)
+            sl_pct = round(((mkt_price - init_sl) / mkt_price) * 100, 2) if mkt_price > 0 else 0.0
+
+            # 4. หากอยู่ใน excluded_symbols ให้ปลดออกเพื่อเปิดให้ระบบคุ้มครอง
+            from core.config_manager import remove_excluded_symbols, get_excluded_symbols
+            if sym in get_excluded_symbols():
+                remove_excluded_symbols([sym])
+
+            # 5. Upsert เข้า bot_active_positions
+            cur.execute("""
+                INSERT INTO public.bot_active_positions (
+                    symbol, entry_date, entry_price, entry_atr14,
+                    initial_stop_loss, max_price_reached, current_volume,
+                    is_managed_by_bot, is_adopted, status
+                ) VALUES (
+                    %s, CURRENT_DATE, %s, %s,
+                    %s, %s, %s,
+                    TRUE, TRUE, 'OPEN'
+                )
+                ON CONFLICT (symbol) WHERE (status = 'OPEN') DO UPDATE
+                SET entry_date = CURRENT_DATE,
+                    entry_price = EXCLUDED.entry_price,
+                    entry_atr14 = EXCLUDED.entry_atr14,
+                    initial_stop_loss = EXCLUDED.initial_stop_loss,
+                    max_price_reached = EXCLUDED.max_price_reached,
+                    current_volume = EXCLUDED.current_volume,
+                    is_managed_by_bot = TRUE,
+                    is_adopted = TRUE,
+                    status = 'OPEN',
+                    updated_at = timezone('Asia/Bangkok', now());
+            """, (sym, mkt_price, atr, init_sl, mkt_price, curr_vol))
+
+            conn.commit()
+
+            msg = (
+                f"🛡️ <b>รับเลี้ยงหุ้น [ADOPT] สำเร็จเรียบร้อย!</b>\n\n"
+                f"• หุ้น: <b>{sym}</b> (<code>{curr_vol:,}</code> หุ้น)\n"
+                f"• ทุนเดิมในพอร์ต: <code>{avg_price:.2f}</code> THB (P/L รวม: <code>{pnl_pct:+.2f}%</code>)\n"
+                f"• <b>ฐานราคาเริ่มดูแล (Adopt Base):</b> <code>{mkt_price:.2f}</code> THB\n"
+                f"• Initial Stop Loss: <code>{init_sl:.2f}</code> THB (<code>-{sl_pct:.2f}%</code>)\n"
+                f"• Trailing Stop: <i>จะเริ่มยกตามเมื่อราคาปิดสูงกว่า <code>{mkt_price:.2f}</code> THB</i>\n"
+                f"------------------------------------\n"
+                f"ℹ️ <i>บอทคุ้มครองความปลอดภัยรอบใหม่ให้ทันที และไม่นำผลขาดทุนเดิมมาตัดขาย\n"
+                f"👉 หากต้องการยกเลิกให้กลับเป็น Manual พิมพ์ <code>/release {sym}</code></i>"
+            )
+            await update.message.reply_text(msg, parse_mode="HTML")
+    except Exception as e:
+        await update.message.reply_text(f"❌ เกิดข้อผิดพลาดในการ Adopt หุ้น {sym}: {e}")
+    finally:
+        conn.close()
+
+async def cmd_release(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/release <SYM> - ปลดหุ้นจากการดูแลของบอท กลับไปเป็น [MANUAL]"""
+    if not context.args:
+        await update.message.reply_text(
+            "📌 <b>วิธีใช้งานคำสั่ง /release:</b>\n"
+            "• <code>/release 3BBIF</code> (ระบุชื่อหุ้นที่ต้องการปลดออกจากการดูแล)\n\n"
+            "ℹ️ <i>เมื่อปลดออก หุ้นจะกลับไปเป็นสถานะ 👤 [MANUAL] บอทจะไม่ตั้ง Stop Loss ไม่ขยับ Trailing Stop และไม่สั่งขายอัตโนมัติ</i>",
+            parse_mode="HTML"
+        )
+        return
+
+    sym = context.args[0].upper().strip()
+    conn = get_db_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT id, symbol, is_adopted, is_managed_by_bot
+                FROM public.bot_active_positions
+                WHERE symbol = %s AND status = 'OPEN';
+            """, (sym,))
+            row = cur.fetchone()
+
+            if not row:
+                await update.message.reply_text(
+                    f"ℹ️ หุ้น <b>{sym}</b> ไม่ได้อยู่ในการดูแลของบอทอยู่แล้ว (สถานะเป็น 👤 <b>[MANUAL]</b>)",
+                    parse_mode="HTML"
+                )
+                return
+
+            # ปิดสถานะใน bot_active_positions
+            cur.execute("""
+                UPDATE public.bot_active_positions
+                SET status = 'CLOSED',
+                    closed_date = CURRENT_DATE,
+                    exit_reason = 'USER_RELEASED',
+                    updated_at = timezone('Asia/Bangkok', now())
+                WHERE id = %s;
+            """, (row["id"],))
+            conn.commit()
+
+            msg = (
+                f"👤 <b>ปลดการดูแลหุ้น {sym} สำเร็จ!</b>\n\n"
+                f"• หุ้น: <b>{sym}</b>\n"
+                f"• สถานะปัจจุบัน: กลับเป็น 👤 <b>[MANUAL]</b> ตามเดิมเรียบร้อย\n"
+                f"------------------------------------\n"
+                f"<i>บอทจะไม่ส่งคำสั่งขาย ไม่คิด Trailing Stop และไม่คำนวณ Stop Loss สำหรับหุ้นตัวนี้อีกต่อไป</i>\n"
+                f"👉 หากต้องการให้บอทกลับมาดูแลใหม่ พิมพ์ <code>/adopt {sym}</code> ได้ตลอดเวลา"
+            )
+            await update.message.reply_text(msg, parse_mode="HTML")
+    except Exception as e:
+        await update.message.reply_text(f"❌ เกิดข้อผิดพลาดในการปลดหุ้น {sym}: {e}")
     finally:
         conn.close()
 
@@ -901,6 +1106,9 @@ def main():
     app.add_handler(CommandHandler("update_orders", cmd_sync_orders))
     
     app.add_handler(CommandHandler("cancel", cmd_cancel))
+    app.add_handler(CommandHandler("adopt", cmd_adopt))
+    app.add_handler(CommandHandler("release", cmd_release))
+    app.add_handler(CommandHandler("unadopt", cmd_release))
     app.add_handler(CommandHandler("close_pos", cmd_close_pos))
     app.add_handler(CommandHandler("panic_close_all", cmd_panic_close_all))
     app.add_handler(CommandHandler("status", cmd_status))

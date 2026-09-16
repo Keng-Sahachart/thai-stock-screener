@@ -124,16 +124,27 @@ def sync_active_positions():
 
                 # [Case B] มีหุ้นใหม่เข้ามาในพอร์ตและยังไม่มีใน bot_active_positions
                 elif curr_vol > 0:
+                    # ตรวจสอบก่อนว่าเป็นหุ้นที่ซื้อผ่านคำสั่ง Bot จริงหรือไม่
+                    cur.execute("""
+                        SELECT order_id FROM public.bot_orders
+                        WHERE symbol = %s AND side = 'BUY' AND status = 'FILLED'
+                        LIMIT 1;
+                    """, (sym,))
+                    bot_order = cur.fetchone()
+                    if not bot_order:
+                        # หุ้นนี้ซื้อแบบ Manual และผู้ใช้ยังไม่ได้สั่ง /adopt -> ข้าม ไม่ auto-insert
+                        continue
+
                     init_sl = calculate_initial_stop_loss(avg_price, atr, q_type, config)
                     cur.execute("""
                         INSERT INTO bot_active_positions (
                             symbol, entry_date, entry_price, entry_atr14,
                             initial_stop_loss, max_price_reached, current_volume,
-                            is_managed_by_bot, status
+                            is_managed_by_bot, is_adopted, status
                         ) VALUES (
                             %s, CURRENT_DATE, %s, %s,
                             %s, %s, %s,
-                            TRUE, 'OPEN'
+                            TRUE, FALSE, 'OPEN'
                         )
                         ON CONFLICT (symbol) WHERE (status = 'OPEN') DO UPDATE
                         SET current_volume = EXCLUDED.current_volume,

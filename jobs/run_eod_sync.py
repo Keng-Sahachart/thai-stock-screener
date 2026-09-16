@@ -119,6 +119,7 @@ async def sync_eod_portfolio():
                     b.symbol, b.entry_price, b.current_volume,
                     COALESCE(p.close, b.entry_price) AS last_price,
                     b.initial_stop_loss, b.trailing_stop_loss,
+                    COALESCE(b.is_adopted, false) AS is_adopted,
                     ROUND(((COALESCE(p.close, b.entry_price) - b.entry_price) / b.entry_price * 100)::numeric, 2) AS pnl_pct
                 FROM public.bot_active_positions b
                 LEFT JOIN (
@@ -142,10 +143,11 @@ async def sync_eod_portfolio():
             else:
                 for item in open_items:
                     trail_str = f"{float(item['trailing_stop_loss']):.2f}" if item["trailing_stop_loss"] else "ยังไม่เปิดใช้งาน"
+                    badge = "🛡️ [ADOPT]" if item.get("is_adopted") else "🤖 [BOT]"
                     msg += (
-                        f"📌 <b>{item['symbol']}</b> ({item['current_volume']:,} หุ้น)\n"
-                        f"• ทุน: <code>{float(item['entry_price']):.2f}</code> | ปิด: <code>{float(item['last_price']):.2f}</code>\n"
-                        f"• กำไร/ขาดทุน: <code>{float(item['pnl_pct']):+.2f}%</code>\n"
+                        f"{badge} <b>{item['symbol']}</b> ({item['current_volume']:,} หุ้น)\n"
+                        f"• ทุนฐาน: <code>{float(item['entry_price']):.2f}</code> | ปิด: <code>{float(item['last_price']):.2f}</code>\n"
+                        f"• กำไร/ขาดทุนรอบนี้: <code>{float(item['pnl_pct']):+.2f}%</code>\n"
                         f"• Initial SL: <code>{float(item['initial_stop_loss']):.2f}</code> THB\n"
                         f"• Trailing SL: <code>{trail_str}</code>\n\n"
                     )
