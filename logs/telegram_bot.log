@@ -365,3 +365,182 @@ NameError: name 'ContextTypes' is not defined
 🚀 Telegram Bot Service is running with Safety Controls...
 บันทึกข้อมูลพอร์ต 602018178 เรียบร้อยแล้ว
 Data copied to 'portfolio_stock' successfully.
+
+[START BOT] at 2026-09-16 22:55:51
+0.27s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+🚀 Telegram Bot Service is running with Safety Controls...
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+No error handlers are registered, logging exception.
+Traceback (most recent call last):
+  File "c:\drv_D\GitRepo\thai-stock-screener\env\Lib\site-packages\telegram\ext\_application.py", line 1315, in process_update
+    await coroutine
+  File "c:\drv_D\GitRepo\thai-stock-screener\env\Lib\site-packages\telegram\ext\_handlers\basehandler.py", line 159, in handle_update
+    return await self.callback(update, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\drv_D\GitRepo\thai-stock-screener\bot\callback_handlers.py", line 276, in handle_signal_callback
+    await query.edit_message_reply_markup(reply_markup=sell_kbd)
+  File "c:\drv_D\GitRepo\thai-stock-screener\env\Lib\site-packages\telegram\_callbackquery.py", line 438, in edit_message_reply_markup
+    return await self._get_message().edit_reply_markup(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\drv_D\GitRepo\thai-stock-screener\env\Lib\site-packages\telegram\_message.py", line 4678, in edit_reply_markup
+    return await self.get_bot().edit_message_reply_markup(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\drv_D\GitRepo\thai-stock-screener\env\Lib\site-packages\telegram\ext\_extbot.py", line 1730, in edit_message_reply_markup
+    return await super().edit_message_reply_markup(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\drv_D\GitRepo\thai-stock-screener\env\Lib\site-packages\telegram\_bot.py", line 4667, in edit_message_reply_markup
+    return await self._send_message(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\drv_D\GitRepo\thai-stock-screener\env\Lib\site-packages\telegram\ext\_extbot.py", line 638, in _send_message
+    result = await super()._send_message(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\drv_D\GitRepo\thai-stock-screener\env\Lib\site-packages\telegram\_bot.py", line 828, in _send_message
+    result = await self._post(
+             ^^^^^^^^^^^^^^^^^
+  File "c:\drv_D\GitRepo\thai-stock-screener\env\Lib\site-packages\telegram\_bot.py", line 712, in _post
+    return await self._do_post(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "c:\drv_D\GitRepo\thai-stock-screener\env\Lib\site-packages\telegram\ext\_extbot.py", line 378, in _do_post
+    return await super()._do_post(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\drv_D\GitRepo\thai-stock-screener\env\Lib\site-packages\telegram\_bot.py", line 741, in _do_post
+    result = await request.post(
+             ^^^^^^^^^^^^^^^^^^^
+  File "c:\drv_D\GitRepo\thai-stock-screener\env\Lib\site-packages\telegram\request\_baserequest.py", line 198, in post
+    result = await self._request_wrapper(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\drv_D\GitRepo\thai-stock-screener\env\Lib\site-packages\telegram\request\_baserequest.py", line 375, in _request_wrapper
+    raise exception
+telegram.error.BadRequest: Message is not modified: specified new message content and reply markup are exactly the same as a current content and reply markup of the message
+No error handlers are registered, logging exception.
+Traceback (most recent call last):
+  File "c:\drv_D\GitRepo\thai-stock-screener\env\Lib\site-packages\telegram\ext\_application.py", line 1315, in process_update
+    await coroutine
+  File "c:\drv_D\GitRepo\thai-stock-screener\env\Lib\site-packages\telegram\ext\_handlers\basehandler.py", line 159, in handle_update
+    return await self.callback(update, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\drv_D\GitRepo\thai-stock-screener\bot\callback_handlers.py", line 276, in handle_signal_callback
+    await query.edit_message_reply_markup(reply_markup=sell_kbd)
+  File "c:\drv_D\GitRepo\thai-stock-screener\env\Lib\site-packages\telegram\_callbackquery.py", line 438, in edit_message_reply_markup
+    return await self._get_message().edit_reply_markup(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\drv_D\GitRepo\thai-stock-screener\env\Lib\site-packages\telegram\_message.py", line 4678, in edit_reply_markup
+    return await self.get_bot().edit_message_reply_markup(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\drv_D\GitRepo\thai-stock-screener\env\Lib\site-packages\telegram\ext\_extbot.py", line 1730, in edit_message_reply_markup
+    return await super().edit_message_reply_markup(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\drv_D\GitRepo\thai-stock-screener\env\Lib\site-packages\telegram\_bot.py", line 4667, in edit_message_reply_markup
+    return await self._send_message(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\drv_D\GitRepo\thai-stock-screener\env\Lib\site-packages\telegram\ext\_extbot.py", line 638, in _send_message
+    result = await super()._send_message(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\drv_D\GitRepo\thai-stock-screener\env\Lib\site-packages\telegram\_bot.py", line 828, in _send_message
+    result = await self._post(
+             ^^^^^^^^^^^^^^^^^
+  File "c:\drv_D\GitRepo\thai-stock-screener\env\Lib\site-packages\telegram\_bot.py", line 712, in _post
+    return await self._do_post(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "c:\drv_D\GitRepo\thai-stock-screener\env\Lib\site-packages\telegram\ext\_extbot.py", line 378, in _do_post
+    return await super()._do_post(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\drv_D\GitRepo\thai-stock-screener\env\Lib\site-packages\telegram\_bot.py", line 741, in _do_post
+    result = await request.post(
+             ^^^^^^^^^^^^^^^^^^^
+  File "c:\drv_D\GitRepo\thai-stock-screener\env\Lib\site-packages\telegram\request\_baserequest.py", line 198, in post
+    result = await self._request_wrapper(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\drv_D\GitRepo\thai-stock-screener\env\Lib\site-packages\telegram\request\_baserequest.py", line 375, in _request_wrapper
+    raise exception
+telegram.error.BadRequest: Message is not modified: specified new message content and reply markup are exactly the same as a current content and reply markup of the message
+No error handlers are registered, logging exception.
+Traceback (most recent call last):
+  File "c:\drv_D\GitRepo\thai-stock-screener\env\Lib\site-packages\telegram\ext\_application.py", line 1315, in process_update
+    await coroutine
+  File "c:\drv_D\GitRepo\thai-stock-screener\env\Lib\site-packages\telegram\ext\_handlers\basehandler.py", line 159, in handle_update
+    return await self.callback(update, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\drv_D\GitRepo\thai-stock-screener\bot\telegram_app.py", line 424, in cmd_scan_port
+    await update.message.reply_text("🔍 กำลังเริ่มกระบวนการสแกนสัญญาณกราฟหุ้นทั้งหมดในพอร์ต...", parse_mode="HTML")
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'reply_text'
+
+[START BOT] at 2026-09-16 23:20:32
+0.24s - Expected: c:\Users\ROG\.antigravity-ide\extensions\ms-python.debugpy-2026.6.0-win32-x64\bundled\libs\debugpy\_vendored\pydevd\pydevd_attach_to_process\attach_amd64.dll to exist.
+🚀 Telegram Bot Service is running with Safety Controls...
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
+C:\drv_D\GitRepo\thai-stock-screener\bot\chart_generator.py:48: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=(symbol, lookback_days))
