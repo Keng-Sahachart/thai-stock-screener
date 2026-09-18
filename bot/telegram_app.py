@@ -418,16 +418,19 @@ async def cmd_scan(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def cmd_scan_port(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """/scan_port [SYM] - รายงานสัญญาณกราฟเทคนิคอลของหุ้นในพอร์ตเข้า Telegram"""
     sym = context.args[0].upper().strip() if context.args else None
-    if sym:
-        await update.message.reply_text(f"🔍 กำลังสร้างกราฟและวิเคราะห์สัญญาณเทคนิคอลของ <b>{sym}</b> ในพอร์ต...", parse_mode="HTML")
-    else:
-        await update.message.reply_text("🔍 กำลังเริ่มกระบวนการสแกนสัญญาณกราฟหุ้นทั้งหมดในพอร์ต...", parse_mode="HTML")
+    target_msg = update.effective_message
+    if target_msg:
+        if sym:
+            await target_msg.reply_text(f"🔍 กำลังสร้างกราฟและวิเคราะห์สัญญาณเทคนิคอลของ <b>{sym}</b> ในพอร์ต...", parse_mode="HTML")
+        else:
+            await target_msg.reply_text("🔍 กำลังเริ่มกระบวนการสแกนสัญญาณกราฟหุ้นทั้งหมดในพอร์ต...", parse_mode="HTML")
 
     try:
         from jobs.run_port_scanner import scan_portfolio_and_notify
         await scan_portfolio_and_notify(symbol=sym, bot=context.bot, chat_id=update.effective_chat.id)
     except Exception as e:
-        await update.message.reply_text(f"❌ เกิดข้อผิดพลาดในการสแกนหุ้นในพอร์ต: {e}")
+        if target_msg:
+            await target_msg.reply_text(f"❌ เกิดข้อผิดพลาดในการสแกนหุ้นในพอร์ต: {e}")
 
 async def cmd_port(update: Update, context: ContextTypes.DEFAULT_TYPE):
     '''/port - แสดงสถานะหุ้นในพอร์ต, เงินสด, และอำนาจซื้อ'''

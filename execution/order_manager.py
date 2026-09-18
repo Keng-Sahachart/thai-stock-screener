@@ -184,6 +184,13 @@ def place_sell_order(symbol: str, volume: int, exit_price: float, exit_reason: s
             if pending_sell:
                 err_msg = f"มีคำสั่งขาย {symbol} ค้างรออยู่ในตลาดแล้ว (Order #{pending_sell['broker_order_no']} สถานะ {pending_sell['status']})"
                 print(f"[ORDER MGR REJECTED] {err_msg}")
+                log_event(
+                    event_type="ORDER_SELL_FAILED",
+                    message=f"ปฏิเสธการส่งคำสั่งขาย {symbol} [{mode_label}]: {err_msg}",
+                    symbol=symbol,
+                    level="WARN",
+                    raw_payload={"error": err_msg}
+                )
                 return {"success": False, "error": err_msg}
     finally:
         conn.close()
@@ -195,6 +202,13 @@ def place_sell_order(symbol: str, volume: int, exit_price: float, exit_reason: s
         if not is_open:
             err_msg = f"ไม่สามารถส่งคำสั่งขายจริงได้: {mkt_reason}"
             print(f"[ORDER MGR REJECTED] {err_msg}")
+            log_event(
+                event_type="ORDER_SELL_FAILED",
+                message=f"ปฏิเสธการส่งคำสั่งขาย {symbol} [{mode_label}]: {err_msg}",
+                symbol=symbol,
+                level="WARN",
+                raw_payload={"error": err_msg}
+            )
             return {"success": False, "error": err_msg}
 
     if profit_ticks is None:

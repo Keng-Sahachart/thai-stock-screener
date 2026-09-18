@@ -152,7 +152,7 @@ def execute_dry_run_sell(symbol: str, volume: int, exit_price: float, exit_reaso
         cfg_data = load_config()
         profit_ticks = cfg_data.get("tick_execution", {}).get("sell_profit_ticks", 1)
 
-    if exit_reason in ("HARD_CUT_LOSS", "INITIAL_SL_HIT", "PANIC_CIRCUIT_BREAKER"):
+    if exit_reason in ("HARD_CUT_LOSS", "INITIAL_SL_HIT", "PANIC_CIRCUIT_BREAKER", "MANUAL_CARD_SELL"):
         final_sell_price = round(exit_price, 2)
     else:
         final_sell_price = adjust_price_by_ticks(exit_price, ticks=profit_ticks)

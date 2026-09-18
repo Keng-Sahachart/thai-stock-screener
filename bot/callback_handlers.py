@@ -282,7 +282,11 @@ async def handle_signal_callback(update: Update, context: ContextTypes.DEFAULT_T
             max_shares = int(data[3])
             price = float(data[4])
 
-            await query.answer("⏳ กำลังส่งคำสั่งขาย...")
+            try:
+                await query.answer("⏳ กำลังส่งคำสั่งขาย...")
+            except Exception:
+                pass
+
             exec_res = place_sell_order(
                 symbol=sym,
                 volume=shares,
@@ -320,7 +324,12 @@ async def handle_signal_callback(update: Update, context: ContextTypes.DEFAULT_T
                     print(f"⚠️ Edit message on msell_conf warning: {edit_err}")
                     await query.message.reply_text(caption_note, parse_mode="HTML")
             else:
-                await query.answer(f"❌ ส่งคำสั่งขายไม่สำเร็จ: {exec_res.get('error')}", show_alert=True)
+                err_msg = exec_res.get("error", "ไม่ทราบสาเหตุ")
+                err_note = f"❌ <b>ส่งคำสั่งขาย {sym} ไม่สำเร็จ:</b>\n\n{err_msg}"
+                try:
+                    await query.message.reply_text(err_note, parse_mode="HTML")
+                except Exception as reply_err:
+                    print(f"⚠️ Failed to send sell failure message for {sym}: {reply_err}")
             return
 
     # =========================================================================

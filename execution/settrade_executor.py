@@ -266,6 +266,9 @@ def execute_real_sell(symbol: str, volume: int, exit_price: float, exit_reason: 
         if exit_reason in ("HARD_CUT_LOSS", "INITIAL_SL_HIT", "PANIC_CIRCUIT_BREAKER"):
             # กรณีหนีตาย: ขายที่ราคา Best Bid หรือ Last เพื่อการันตีการ Match ทันที
             final_sell_price = best_bid if best_bid > 0 else live_last
+        elif exit_reason == "MANUAL_CARD_SELL":
+            # กรณีขายผ่านหน้าต่างคำสั่งขายที่ผู้ใช้กำหนดราคาเอง: ใช้ราคาที่ผู้ใช้ระบุโดยตรง
+            final_sell_price = exit_price
         else:
             # กรณีขายปกติ/ขายทำกำไร: ขยับราคาขายขึ้นตาม Tick Size ที่กำหนด (เช่น +1 ถึง +3 Ticks)
             base_p = live_last if live_last > 0 else exit_price
