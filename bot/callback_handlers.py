@@ -325,7 +325,11 @@ async def handle_signal_callback(update: Update, context: ContextTypes.DEFAULT_T
                     await query.message.reply_text(caption_note, parse_mode="HTML")
             else:
                 err_msg = exec_res.get("error", "ไม่ทราบสาเหตุ")
-                err_note = f"❌ <b>ส่งคำสั่งขาย {sym} ไม่สำเร็จ:</b>\n\n{err_msg}"
+                retry_hint = ""
+                if "ตลาดปิด" in err_msg or "Intermission" in err_msg or "Off-hour" in err_msg:
+                    retry_hint = "\n\n💡 <b>คำแนะนำ:</b> กรุณากดส่งคำสั่งขายอีกครั้งหลังจากตลาดเปิดทำการในรอบถัดไปครับ (รอบบ่ายเปิด 14:25 น.)"
+                
+                err_note = f"❌ <b>ส่งคำสั่งขาย {sym} ไม่สำเร็จ:</b>\n\n{err_msg}{retry_hint}"
                 try:
                     await query.message.reply_text(err_note, parse_mode="HTML")
                 except Exception as reply_err:
