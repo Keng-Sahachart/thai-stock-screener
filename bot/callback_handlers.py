@@ -53,6 +53,132 @@ def build_trade_keyboard(signal_id: int, current_shares: int, price: float):
     from jobs.run_buy_scanner import build_trade_keyboard as b_kbd
     return b_kbd(signal_id, current_shares, price)
 
+
+def build_auto_sell_text(ctrl: dict) -> str:
+    """สร้างข้อความแสดงสถานะระบบ Auto-Sell Controls"""
+    cut_on = ctrl.get("enable_auto_cut_loss", False)
+    sl_on = ctrl.get("enable_auto_stop_loss", False)
+    ts_on = ctrl.get("enable_auto_trailing_stop", False)
+    tech_on = ctrl.get("enable_auto_technical_sell", False)
+
+    cut_str = "🟢 เปิด (ON)" if cut_on else "🔴 ปิด (OFF)"
+    sl_str = "🟢 เปิด (ON)" if sl_on else "🔴 ปิด (OFF)"
+    ts_str = "🟢 เปิด (ON)" if ts_on else "🔴 ปิด (OFF)"
+    tech_str = "🟢 เปิด (ON)" if tech_on else "🔴 ปิด (OFF)"
+
+    msg = (
+        f"🛡️ <b>การตั้งค่าระบบตัดขายอัตโนมัติ (Auto-Sell Controls)</b>\n\n"
+        f"• <b>Hard Cut Loss (-10%):</b> {cut_str}\n"
+        f"  <i>(ตัดขายทันทีเมื่อขาดทุนถึง -10% ไม่ว่ากรณีใดๆ)</i>\n"
+        f"• <b>Initial Stop Loss:</b> {sl_str}\n"
+        f"  <i>(ตัดขายเมื่อราคาตลาดหลุดจุด Stop Loss แรกเข้า)</i>\n"
+        f"• <b>Trailing Stop Loss:</b> {ts_str}\n"
+        f"  <i>(ตัดขายเมื่อราคาย่อตัวหลุด Trailing Stop ที่ยกตามกำไร)</i>\n"
+        f"• <b>Technical Sell Signal:</b> {tech_str}\n"
+        f"  <i>(ตัดขายเมื่อมีสัญญาณขาย SELL / SELL-STRONG)</i>\n\n"
+        f"💡 <i>เงื่อนไขที่ปิด (OFF) บอทจะแจ้งเตือน ⚠️ [ALERT ONLY] เท่านั้น แต่จะไม่ส่งคำสั่งขาย</i>\n\n"
+        f"👉 <b>แตะปุ่มด้านล่างเพื่อเปิด/ปิด หรือพิมพ์คำสั่ง:</b>\n"
+        f"• <code>/auto_sell trailing on</code> / <code>off</code> (หรือ <code>/auto_sell ts on</code>)\n"
+        f"• <code>/auto_sell sl on</code> / <code>off</code>\n"
+        f"• <code>/auto_sell cutloss on</code> / <code>off</code>\n"
+        f"• <code>/auto_sell all on</code> / <code>off</code>"
+    )
+    return msg
+
+
+def build_auto_sell_keyboard(ctrl: dict, view_mode: str = "auto_sell") -> InlineKeyboardMarkup:
+    """สร้างปุ่มเปิด/ปิด Auto-Sell Controls"""
+    cut_on = ctrl.get("enable_auto_cut_loss", False)
+    sl_on = ctrl.get("enable_auto_stop_loss", False)
+    ts_on = ctrl.get("enable_auto_trailing_stop", False)
+    tech_on = ctrl.get("enable_auto_technical_sell", False)
+
+    btn_cut = f"🛑 Cut Loss: {'🟢 ON' if cut_on else '🔴 OFF'}"
+    btn_sl = f"🛡️ Stop Loss: {'🟢 ON' if sl_on else '🔴 OFF'}"
+    btn_ts = f"📈 Trailing: {'🟢 ON' if ts_on else '🔴 OFF'}"
+    btn_tech = f"📊 Tech Sell: {'🟢 ON' if tech_on else '🔴 OFF'}"
+
+    keyboard = [
+        [
+            InlineKeyboardButton(btn_cut, callback_data=f"toggle_auto_sell:cut_loss:{view_mode}"),
+            InlineKeyboardButton(btn_sl, callback_data=f"toggle_auto_sell:stop_loss:{view_mode}")
+        ],
+        [
+            InlineKeyboardButton(btn_ts, callback_data=f"toggle_auto_sell:trailing_stop:{view_mode}"),
+            InlineKeyboardButton(btn_tech, callback_data=f"toggle_auto_sell:technical_sell:{view_mode}")
+        ],
+        [
+            InlineKeyboardButton("⚡ เปิดทั้งหมด (ON)", callback_data=f"toggle_auto_sell:all_on:{view_mode}"),
+            InlineKeyboardButton("⛔ ปิดทั้งหมด (OFF)", callback_data=f"toggle_auto_sell:all_off:{view_mode}")
+        ]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def build_status_text(config: dict, job_notify_on: bool) -> str:
+    """สร้างข้อความสถานะระบบสำหรับ /status"""
+    t_mode = config.get("trading_mode", {})
+    mode_str = "🧪 DRY_RUN (จำลองคำสั่ง)" if t_mode.get("dry_run", True) else "🔴 LIVE (เงินจริง)"
+
+    ctrl = config.get("auto_sell_controls", {})
+    cut_loss_str = "🟢 เปิด (ON)" if ctrl.get("enable_auto_cut_loss") else "🔴 ปิด (OFF)"
+    stop_loss_str = "🟢 เปิด (ON)" if ctrl.get("enable_auto_stop_loss") else "🔴 ปิด (OFF)"
+    trail_str = "🟢 เปิด (ON)" if ctrl.get("enable_auto_trailing_stop") else "🔴 ปิด (OFF)"
+    tech_str = "🟢 เปิด (ON)" if ctrl.get("enable_auto_technical_sell") else "🔴 ปิด (OFF)"
+
+    job_notify_str = "🟢 เปิด (ON)" if job_notify_on else "🔴 ปิด (OFF)"
+    excluded_list = config.get("excluded_symbols", [])
+
+    msg = (
+        f"⚙️ <b>สถานะการทำงานของระบบบอท</b>\n"
+        f"• โหมดเทรดปัจจุบัน: <b>{mode_str}</b>\n"
+        f"• แจ้งเตือน Background Jobs: <b>{job_notify_str}</b>\n"
+        f"------------------------------------\n"
+        f"🛡️ <b>สถานะสวิตช์ขายอัตโนมัติ (Auto-Sell):</b>\n"
+        f"• Hard Cut Loss (-10%): {cut_loss_str}\n"
+        f"• Initial Stop Loss: {stop_loss_str}\n"
+        f"• Trailing Stop Loss: {trail_str}\n"
+        f"• Technical Sell Signal: {tech_str}\n"
+        f"------------------------------------\n"
+        f"🔒 <b>หุ้นที่ได้รับการยกเว้น ({len(excluded_list)} ตัว):</b>\n"
+        f"<code>{', '.join(excluded_list)}</code>\n\n"
+        f"👉 ปรับ Auto-Sell พิมพ์: <code>/auto_sell</code> หรือแตะปุ่มด้านล่าง\n"
+        f"👉 ปรับการแจ้งเตือน Jobs พิมพ์: <code>/notify_job [on|off]</code>"
+    )
+    return msg
+
+
+def build_status_keyboard(ctrl: dict, job_notify_on: bool) -> InlineKeyboardMarkup:
+    """สร้างคีย์บอร์ดรวมสำหรับหน้า /status พร้อมปุ่ม Toggle Auto-Sell และ Jobs"""
+    cut_on = ctrl.get("enable_auto_cut_loss", False)
+    sl_on = ctrl.get("enable_auto_stop_loss", False)
+    ts_on = ctrl.get("enable_auto_trailing_stop", False)
+    tech_on = ctrl.get("enable_auto_technical_sell", False)
+
+    btn_cut = f"🛑 Cut: {'🟢 ON' if cut_on else '🔴 OFF'}"
+    btn_sl = f"🛡️ Stop: {'🟢 ON' if sl_on else '🔴 OFF'}"
+    btn_ts = f"📈 Trail: {'🟢 ON' if ts_on else '🔴 OFF'}"
+    btn_tech = f"📊 Tech: {'🟢 ON' if tech_on else '🔴 OFF'}"
+
+    next_job_action = "off" if job_notify_on else "on"
+    btn_job_text = "🔕 ปิดแจ้งเตือน Jobs" if job_notify_on else "🔔 เปิดแจ้งเตือน Jobs"
+
+    keyboard = [
+        [
+            InlineKeyboardButton(btn_cut, callback_data="toggle_auto_sell:cut_loss:status"),
+            InlineKeyboardButton(btn_sl, callback_data="toggle_auto_sell:stop_loss:status")
+        ],
+        [
+            InlineKeyboardButton(btn_ts, callback_data="toggle_auto_sell:trailing_stop:status"),
+            InlineKeyboardButton(btn_tech, callback_data="toggle_auto_sell:technical_sell:status")
+        ],
+        [
+            InlineKeyboardButton(btn_job_text, callback_data=f"toggle_job_notify:{next_job_action}:status")
+        ]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
 async def handle_signal_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     data = query.data.split(":")
@@ -66,33 +192,86 @@ async def handle_signal_callback(update: Update, context: ContextTypes.DEFAULT_T
         await query.answer("⚠️ หุ้นตัวนี้มีคำสั่งซื้อของวันนี้หรือรอคิวในตลาดแล้ว (ปิดปุ่ม Approve)", show_alert=True)
         return
 
+    if action == "toggle_auto_sell":
+        from core.config_manager import (
+            toggle_auto_sell_control,
+            set_all_auto_sell_controls,
+            load_bot_config
+        )
+        from core.job_notifier import is_job_notification_enabled
+
+        setting_key = data[1] if len(data) > 1 else ""
+        view_mode = data[2] if len(data) > 2 else "auto_sell"
+
+        if setting_key == "all_on":
+            set_all_auto_sell_controls(True)
+            alert_msg = "⚡ เปิด Auto-Sell ทุกเงื่อนไขแล้ว"
+        elif setting_key == "all_off":
+            set_all_auto_sell_controls(False)
+            alert_msg = "⛔ ปิด Auto-Sell ทุกเงื่อนไขแล้ว (แจ้งเตือน Alert Only)"
+        else:
+            ok, new_val, field_name, display_name = toggle_auto_sell_control(setting_key)
+            if ok:
+                st = "🟢 เปิด" if new_val else "🔴 ปิด"
+                alert_msg = f"{st} {display_name} แล้ว"
+            else:
+                alert_msg = "⚠️ เกิดข้อผิดพลาดในการเปลี่ยนการตั้งค่า"
+
+        await query.answer(alert_msg)
+
+        cfg = load_bot_config()
+        ctrl = cfg.get("auto_sell_controls", {})
+
+        if view_mode == "status":
+            job_on = is_job_notification_enabled()
+            msg = build_status_text(cfg, job_on)
+            keyboard = build_status_keyboard(ctrl, job_on)
+        else:
+            msg = build_auto_sell_text(ctrl)
+            keyboard = build_auto_sell_keyboard(ctrl, view_mode="auto_sell")
+
+        try:
+            await query.edit_message_text(msg, parse_mode="HTML", reply_markup=keyboard)
+        except Exception:
+            pass
+        return
+
     if action == "toggle_job_notify":
-        from core.job_notifier import set_job_notification_enabled
+        from core.job_notifier import set_job_notification_enabled, is_job_notification_enabled
+        from core.config_manager import load_bot_config
         target_state = (data[1] == "on")
         set_job_notification_enabled(target_state)
-
-        st_text = "🟢 เปิดใช้งานอยู่ (ON)" if target_state else "🔴 ปิดใช้งานอยู่ (OFF)"
-        next_action = "off" if target_state else "on"
-        btn_text = "🔕 กดเพื่อปิดการแจ้งเตือน" if target_state else "🔔 กดเพื่อเปิดการแจ้งเตือน"
-
-        keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton(btn_text, callback_data=f"toggle_job_notify:{next_action}")]
-        ])
+        view_mode = data[2] if len(data) > 2 else "job"
 
         alert_msg = "🔔 เปิดการแจ้งเตือน Background Jobs แล้ว" if target_state else "🔕 ปิดการแจ้งเตือน Background Jobs แล้ว"
         await query.answer(alert_msg)
 
-        msg = (
-            f"📢 <b>การตั้งค่าแจ้งเตือน Background Jobs (Crontab)</b>\n"
-            f"• สถานะปัจจุบัน: <b>{st_text}</b>\n\n"
-            f"<i>เมื่อเปิดใช้งาน ระบบจะแจ้งเตือนความคืบหน้าของ Job ทุกตัว:\n"
-            f"• run_buy_scanner.py (สแกนหาจังหวะซื้อ)\n"
-            f"• run_sell_monitor.py (ตรวจสอบเงื่อนไขขาย)\n"
-            f"• sync_order_status.py (ซิงค์สถานะ Order กับ Settrade)\n"
-            f"• taskUpdate.py (อัปเดตราคาและ Indicators สิ้นวัน)\n"
-            f"• run_eod_sync.py (สรุปพอร์ตสิ้นวัน)</i>\n\n"
-            f"👉 กดปุ่มด้านล่าง หรือพิมพ์ <code>/notify_job on</code> / <code>/notify_job off</code>"
-        )
+        if view_mode == "status":
+            cfg = load_bot_config()
+            ctrl = cfg.get("auto_sell_controls", {})
+            msg = build_status_text(cfg, target_state)
+            keyboard = build_status_keyboard(ctrl, target_state)
+        else:
+            st_text = "🟢 เปิดใช้งานอยู่ (ON)" if target_state else "🔴 ปิดใช้งานอยู่ (OFF)"
+            next_action = "off" if target_state else "on"
+            btn_text = "🔕 กดเพื่อปิดการแจ้งเตือน" if target_state else "🔔 กดเพื่อเปิดการแจ้งเตือน"
+
+            keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton(btn_text, callback_data=f"toggle_job_notify:{next_action}:job")]
+            ])
+
+            msg = (
+                f"📢 <b>การตั้งค่าแจ้งเตือน Background Jobs (Crontab)</b>\n"
+                f"• สถานะปัจจุบัน: <b>{st_text}</b>\n\n"
+                f"<i>เมื่อเปิดใช้งาน ระบบจะแจ้งเตือนความคืบหน้าของ Job ทุกตัว:\n"
+                f"• run_buy_scanner.py (สแกนหาจังหวะซื้อ)\n"
+                f"• run_sell_monitor.py (ตรวจสอบเงื่อนไขขาย)\n"
+                f"• sync_order_status.py (ซิงค์สถานะ Order กับ Settrade)\n"
+                f"• taskUpdate.py (อัปเดตราคาและ Indicators สิ้นวัน)\n"
+                f"• run_eod_sync.py (สรุปพอร์ตสิ้นวัน)</i>\n\n"
+                f"👉 กดปุ่มด้านล่าง หรือพิมพ์ <code>/notify_job on</code> / <code>/notify_job off</code>"
+            )
+
         try:
             await query.edit_message_text(msg, parse_mode="HTML", reply_markup=keyboard)
         except Exception:

@@ -326,6 +326,7 @@ psql -h localhost -U postgres -d stocks -f database/create_bot_system_logs.sql
 | `/cancel <ORDER_ID>` | สั่งยกเลิกคำสั่งซื้อขายที่ยังค้างอยู่ในกระดาน |
 | `/close_pos <SYM>` | ส่งคำสั่งขายปิดสถานะหุ้นรายตัวทันทีที่ราคาตลาด |
 | `/panic_close_all` | **[Emergency]** คำสั่งฉุกเฉิน: สั่งยกเลิก Order ค้างทั้งหมด และขายล้างทุกไม้ที่บอทดูแลทันที |
+| `/auto_sell [trailing\|sl\|cutloss\|all] [on\|off]` | สั่งเปิด/ปิดสวิตช์ขายอัตโนมัติ (Trailing Stop, Stop Loss, Cut Loss) หรือเรียกแผงปุ่มกด Inline Keyboard |
 | `/status` | แสดงสถานะการทำงานของบอท, โหมดปัจจุบัน (Live/Dry-Run) และสวิตช์ความปลอดภัย |
 | `/help` | แสดงรายการคำสั่งทั้งหมดและคู่มือการใช้งาน |
 

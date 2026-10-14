@@ -15,6 +15,7 @@ DESCRIPTION : และดักฟัง Event จากปุ่มกด ,ร
               /cancel <ID> - ขอยกเลิกคำสั่งซื้อขายที่ค้างในตลาด
               /close_pos <SYM> - สั่งขายปิดสถานะหุ้นรายตัวทันที
               /panic_close_all - [Emergency] ขายล้างทุกไม้ที่บอทดูแลทันที
+              /auto_sell   - เปิด/ปิดสวิตช์ Auto Sell (Trailing Stop, Stop Loss, Cut Loss)
               /status      - แสดงสถานะการทำงานของบอทและสวิตช์ควบคุมความปลอดภัย
               /help        - แสดงคู่มือการใช้งานคำสั่งทั้งหมด
 ==============================================================================
@@ -276,6 +277,7 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• /release &lt;SYM&gt; - 👤 ปลดการดูแลหุ้น กลับไปเป็น Manual ตามเดิมทันที\n"
         "• /close_pos &lt;SYM&gt; - สั่งขายปิดสถานะหุ้นรายตัวทันที\n"
         "• /panic_close_all - 🚨 ขายล้างทุกไม้ที่บอทดูแลทันที\n"
+        "• /auto_sell [trailing|sl|cutloss|all] [on|off] - ตั้งค่า/เปิด/ปิดสวิตช์ Auto-Sell (หรือพิมพ์เฉยๆ เพื่อเปิดแผงปุ่มกด)\n"
         "• /exclude [add|del|list] &lt;SYM&gt; - เพิ่ม/ลบ/ดูหุ้นที่ยกเว้นใน config\n"
         "• /notify_job [on|off] - เปิด/ปิดการแจ้งเตือนรอบรัน Background Jobs (Crontab)\n"
     )
@@ -1107,46 +1109,120 @@ async def cmd_notify_job(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    '''/status - แสดงสถานะการทำงานของบอทและสวิตช์ควบคุมความปลอดภัย'''
-    from bot.callback_handlers import load_config
+    """/status - แสดงสถานะการทำงานของบอทและสวิตช์ควบคุมความปลอดภัย"""
+    from bot.callback_handlers import load_config, build_status_text, build_status_keyboard
     from core.job_notifier import is_job_notification_enabled
     config = load_config()
-    
-    t_mode = config.get("trading_mode", {})
-    mode_str = "🧪 DRY_RUN (จำลองคำสั่ง)" if t_mode.get("dry_run", True) else "🔴 LIVE (เงินจริง)"
-    
     ctrl = config.get("auto_sell_controls", {})
-    cut_loss_str = "🟢 เปิด (ON)" if ctrl.get("enable_auto_cut_loss") else "🔴 ปิด (OFF)"
-    stop_loss_str = "🟢 เปิด (ON)" if ctrl.get("enable_auto_stop_loss") else "🔴 ปิด (OFF)"
-    trail_str = "🟢 เปิด (ON)" if ctrl.get("enable_auto_trailing_stop") else "🔴 ปิด (OFF)"
-    tech_str = "🟢 เปิด (ON)" if ctrl.get("enable_auto_technical_sell") else "🔴 ปิด (OFF)"
-
     job_notify_on = is_job_notification_enabled()
-    job_notify_str = "🟢 เปิด (ON)" if job_notify_on else "🔴 ปิด (OFF)"
-    next_action = "off" if job_notify_on else "on"
-    btn_text = "🔕 ปิดแจ้งเตือน Jobs" if job_notify_on else "🔔 เปิดแจ้งเตือน Jobs"
 
-    excluded_list = config.get("excluded_symbols", [])
-
-    msg = (
-        f"⚙️ <b>สถานะการทำงานของระบบบอท</b>\n"
-        f"• โหมดเทรดปัจจุบัน: <b>{mode_str}</b>\n"
-        f"• แจ้งเตือน Background Jobs: <b>{job_notify_str}</b>\n"
-        f"------------------------------------\n"
-        f"🛡️ <b>สถานะสวิตช์ขายอัตโนมัติ:</b>\n"
-        f"• Hard Cut Loss (-10%): {cut_loss_str}\n"
-        f"• Initial Stop Loss: {stop_loss_str}\n"
-        f"• Trailing Stop Loss: {trail_str}\n"
-        f"• Technical Sell Signal: {tech_str}\n"
-        f"------------------------------------\n"
-        f"🔒 <b>หุ้นที่ได้รับการยกเว้น ({len(excluded_list)} ตัว):</b>\n"
-        f"<code>{', '.join(excluded_list)}</code>\n\n"
-        f"👉 ปรับการแจ้งเตือน Jobs พิมพ์: <code>/notify_job [on|off]</code>"
-    )
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton(btn_text, callback_data=f"toggle_job_notify:{next_action}")]
-    ])
+    msg = build_status_text(config, job_notify_on)
+    keyboard = build_status_keyboard(ctrl, job_notify_on)
     await update.message.reply_text(msg, parse_mode="HTML", reply_markup=keyboard)
+
+
+async def cmd_auto_sell(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/auto_sell [trailing|sl|cutloss|tech|all] [on|off] - จัดการสวิตช์ส่งคำสั่งขายอัตโนมัติ"""
+    from core.config_manager import (
+        get_auto_sell_controls,
+        set_auto_sell_control,
+        set_all_auto_sell_controls,
+        toggle_auto_sell_control,
+        resolve_auto_sell_field
+    )
+    from bot.callback_handlers import build_auto_sell_text, build_auto_sell_keyboard
+
+    args = [a.strip().lower() for a in context.args if a.strip()]
+
+    # กรณีไม่มี argument หรือพิมพ์ /auto_sell status / list / ดู
+    if not args or args[0] in ("status", "list", "show", "ดู"):
+        ctrl = get_auto_sell_controls()
+        msg = build_auto_sell_text(ctrl)
+        keyboard = build_auto_sell_keyboard(ctrl, view_mode="auto_sell")
+        await update.message.reply_text(msg, parse_mode="HTML", reply_markup=keyboard)
+        return
+
+    # กรณีเปิด/ปิดทั้งหมด: /auto_sell on, /auto_sell off, /auto_sell all on, /auto_sell all off
+    if args[0] in ("on", "เปิด", "enable") or (len(args) >= 2 and args[0] in ("all", "ทุกตัว", "ทั้งหมด") and args[1] in ("on", "เปิด", "enable")):
+        set_all_auto_sell_controls(True)
+        ctrl = get_auto_sell_controls()
+        msg = (
+            "⚡ <b>เปิดระบบตัดขายอัตโนมัติ (Auto-Sell) ทุกเงื่อนไขแล้ว</b>\n\n"
+            + build_auto_sell_text(ctrl)
+        )
+        keyboard = build_auto_sell_keyboard(ctrl, view_mode="auto_sell")
+        await update.message.reply_text(msg, parse_mode="HTML", reply_markup=keyboard)
+        return
+
+    if args[0] in ("off", "ปิด", "disable") or (len(args) >= 2 and args[0] in ("all", "ทุกตัว", "ทั้งหมด") and args[1] in ("off", "ปิด", "disable")):
+        set_all_auto_sell_controls(False)
+        ctrl = get_auto_sell_controls()
+        msg = (
+            "⛔ <b>ปิดระบบตัดขายอัตโนมัติ (Auto-Sell) ทุกเงื่อนไขแล้ว</b>\n"
+            "<i>(เมื่อหุ้นหลุดเกณฑ์ ระบบจะส่งเพียง Alert Only แต่ไม่ส่งคำสั่งขาย)</i>\n\n"
+            + build_auto_sell_text(ctrl)
+        )
+        keyboard = build_auto_sell_keyboard(ctrl, view_mode="auto_sell")
+        await update.message.reply_text(msg, parse_mode="HTML", reply_markup=keyboard)
+        return
+
+    # กรณีระบุประเภท: /auto_sell <setting> [on|off]
+    target_key = args[0]
+    field, info = resolve_auto_sell_field(target_key)
+    if not field:
+        await update.message.reply_text(
+            "⚠️ <b>ไม่พบเงื่อนไขที่ระบุ</b>\n\n"
+            "📌 <b>เงื่อนไขที่รองรับ:</b>\n"
+            "• <code>trailing</code> (หรือ <code>ts</code>) : Trailing Stop Loss\n"
+            "• <code>stoploss</code> (หรือ <code>sl</code>) : Initial Stop Loss\n"
+            "• <code>cutloss</code> (หรือ <code>cut</code>) : Hard Cut Loss (-10%)\n"
+            "• <code>tech</code> (หรือ <code>signal</code>) : Technical Sell Signal\n"
+            "• <code>all</code> : ทุกเงื่อนไข\n\n"
+            "<b>ตัวอย่างคำสั่ง:</b>\n"
+            "• <code>/auto_sell trailing on</code> (เปิด Auto Trailing Stop)\n"
+            "• <code>/auto_sell trailing off</code> (ปิด Auto Trailing Stop)\n"
+            "• <code>/auto_sell sl on</code>\n"
+            "• <code>/auto_sell cutloss on</code>\n"
+            "• <code>/auto_sell all off</code> (ปิดทั้งหมด)\n"
+            "• <code>/auto_sell</code> (เปิดแผงปุ่มกด)",
+            parse_mode="HTML"
+        )
+        return
+
+    display_name = info["name"]
+
+    if len(args) >= 2:
+        action = args[1]
+        if action in ("on", "open", "enable", "เปิด", "1", "true"):
+            target_state = True
+        elif action in ("off", "close", "disable", "ปิด", "0", "false"):
+            target_state = False
+        else:
+            await update.message.reply_text(
+                f"⚠️ กรุณาระบุ <code>on</code> หรือ <code>off</code> เช่น <code>/auto_sell {target_key} on</code>",
+                parse_mode="HTML"
+            )
+            return
+        set_auto_sell_control(field, target_state)
+        new_val = target_state
+    else:
+        # หากไม่ระบุ on/off ให้ Toggle
+        _, new_val, _, _ = toggle_auto_sell_control(field)
+
+    state_icon = "🟢 <b>เปิดใช้งาน (ON)</b>" if new_val else "🔴 <b>ปิดใช้งาน (OFF)</b>"
+    desc_extra = "บอทจะส่งคำสั่งขายทันทีที่เข้าเงื่อนไข" if new_val else "บอทจะแจ้งเตือน ⚠️ Alert Only เท่านั้น ไม่ส่งคำสั่งขาย"
+
+    ctrl = get_auto_sell_controls()
+    keyboard = build_auto_sell_keyboard(ctrl, view_mode="auto_sell")
+
+    reply_msg = (
+        f"⚙️ <b>อัปเดตสวิตช์ Auto-Sell สำเร็จ!</b>\n\n"
+        f"• เงื่อนไข: <b>{display_name}</b>\n"
+        f"• สถานะใหม่: {state_icon}\n"
+        f"• ผลการทำงาน: <i>{desc_extra}</i>\n\n"
+        f"👉 กดปุ่มด้านล่างเพื่อปรับเปลี่ยนเพิ่มเติม หรือพิมพ์ <code>/auto_sell</code>"
+    )
+    await update.message.reply_text(reply_msg, parse_mode="HTML", reply_markup=keyboard)
 
 async def post_init(application):
     """ส่งข้อความแจ้งเตือนเมื่อบอทเริ่มทำงานใหม่"""
@@ -1193,6 +1269,10 @@ def main():
     app.add_handler(CommandHandler("close_pos", cmd_close_pos))
     app.add_handler(CommandHandler("panic_close_all", cmd_panic_close_all))
     app.add_handler(CommandHandler("status", cmd_status))
+    app.add_handler(CommandHandler("auto_sell", cmd_auto_sell))
+    app.add_handler(CommandHandler("autosell", cmd_auto_sell))
+    app.add_handler(CommandHandler("autosells", cmd_auto_sell))
+    app.add_handler(CommandHandler("autocut", cmd_auto_sell))
     app.add_handler(CommandHandler("notify_job", cmd_notify_job))
     app.add_handler(CommandHandler("job_notify", cmd_notify_job))
     app.add_handler(CommandHandler("sell_monitor", cmd_sell_monitor))
