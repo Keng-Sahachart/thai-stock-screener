@@ -500,6 +500,8 @@ async def cmd_port(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if not real_rows:
                 current_msg += "<i>ไม่มีหุ้นถือครองในพอร์ตจริง</i>\n"
             else:
+                from core.config_manager import get_excluded_symbols
+                excluded_set = set(s.upper() for s in get_excluded_symbols())
                 items_in_batch = 0
                 for num, r in enumerate(real_rows, 1):
                     is_adopt = bool(r.get("is_adopted"))
@@ -509,6 +511,9 @@ async def cmd_port(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         tag = "🤖 [BOT]"
                     else:
                         tag = "👤 [MANUAL]"
+
+                    if r["symbol"].upper() in excluded_set:
+                        tag += " 🔒 [EXCLUDED]"
 
                     sl_str = f"{float(r['initial_stop_loss']):.2f}" if r["initial_stop_loss"] is not None else "N/A"
                     ts_str = f"{float(r['trailing_stop_loss']):.2f}" if r["trailing_stop_loss"] is not None else "-"
