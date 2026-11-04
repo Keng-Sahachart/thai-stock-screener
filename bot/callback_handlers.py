@@ -278,6 +278,41 @@ async def handle_signal_callback(update: Update, context: ContextTypes.DEFAULT_T
             pass
         return
 
+    if action == "summary_nav":
+        target_mode = data[1] if len(data) > 1 else "overview"
+        if target_mode == "history_hint":
+            await query.answer("💡 พิมพ์คำสั่ง /history เพื่อดูประวัติการขายรายไม้", show_alert=True)
+            return
+
+        from bot.telegram_app import (
+            build_summary_overview_text,
+            build_summary_day_text,
+            build_summary_month_text,
+            build_summary_year_text,
+            build_summary_keyboard
+        )
+        conn = get_db_connection()
+        try:
+            if target_mode == "day":
+                msg = build_summary_day_text(conn)
+            elif target_mode == "month":
+                msg = build_summary_month_text(conn)
+            elif target_mode == "year":
+                msg = build_summary_year_text(conn)
+            else:
+                target_mode = "overview"
+                msg = build_summary_overview_text(conn)
+
+            kbd = build_summary_keyboard(current_mode=target_mode)
+            await query.edit_message_text(msg, parse_mode="HTML", reply_markup=kbd)
+            await query.answer()
+        except Exception as ex:
+            print(f"[SUMMARY NAV ERROR] {ex}")
+            await query.answer("เกิดข้อผิดพลาดในการโหลดข้อมูล")
+        finally:
+            conn.close()
+        return
+
     if action == "exclude_del":
         from core.config_manager import remove_excluded_symbols
         sym = data[1].upper()

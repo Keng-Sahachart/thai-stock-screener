@@ -263,7 +263,7 @@ def execute_real_sell(symbol: str, volume: int, exit_price: float, exit_reason: 
         best_bid = live_quote.get("bid", live_last)
 
         # 2. กำหนดราคาขายตามระดับความเร่งด่วน
-        if exit_reason in ("HARD_CUT_LOSS", "INITIAL_SL_HIT", "PANIC_CIRCUIT_BREAKER"):
+        if exit_reason in ("HARD_CUT_LOSS", "INITIAL_SL_HIT", "TRAILING_STOP_HIT", "PANIC_CIRCUIT_BREAKER"):
             # กรณีหนีตาย: ขายที่ราคา Best Bid หรือ Last เพื่อการันตีการ Match ทันที
             final_sell_price = best_bid if best_bid > 0 else live_last
         else:

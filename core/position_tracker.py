@@ -106,12 +106,34 @@ def sync_active_positions():
                     new_max = max(prev_max, mkt_price)
                     new_trailing = prev_trailing
 
-                    # หากราคาทำ New High และมี ATR ให้คำนวณ Trailing Stop ใหม่
-                    if atr and new_max > float(row["average_price"]):
-                        potential_trailing = round(new_max - (atr * 2.0), 4)
-                        # Trailing Stop ต้องขยับขึ้นได้อย่างเดียว และต้องไม่ต่ำกว่า Initial SL
+                    # 1. ตรวจสอบ Breakeven Stop
+                    be_cfg = config.get("risk_management", {}).get("breakeven_stop", {})
+                    be_enabled = be_cfg.get("enabled", True)
+                    be_trigger_pct = float(be_cfg.get("trigger_profit_pct", 2.0))
+                    be_buffer_pct = float(be_cfg.get("buffer_pct", 0.3))
+
+                    entry_p = float(row["average_price"])
+                    max_gain_pct = ((new_max - entry_p) / entry_p) * 100.0 if entry_p > 0 else 0.0
+
+                    potential_candidates = []
+                    if prev_trailing:
+                        potential_candidates.append(prev_trailing)
+
+                    # เมื่อราคาทำ New High กำไรถึงเกณฑ์ Breakeven ให้ยก SL มาล็อกเสมอตัวทันที
+                    if be_enabled and max_gain_pct >= be_trigger_pct and entry_p > 0:
+                        be_stop_price = round(entry_p * (1.0 + (be_buffer_pct / 100.0)), 4)
+                        if be_stop_price > initial_sl:
+                            potential_candidates.append(be_stop_price)
+
+                    # 2. Dynamic Trailing Stop จาก ATR
+                    if atr and new_max > entry_p:
+                        mult = config.get("risk_management", {}).get("atr_multiplier", {}).get(q_type, 2.0)
+                        potential_trailing = round(new_max - (atr * mult), 4)
                         if potential_trailing > initial_sl:
-                            new_trailing = max(prev_trailing or 0.0, potential_trailing)
+                            potential_candidates.append(potential_trailing)
+
+                    if potential_candidates:
+                        new_trailing = max(potential_candidates)
 
                     cur.execute("""
                         UPDATE bot_active_positions

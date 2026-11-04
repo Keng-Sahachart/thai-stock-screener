@@ -29,6 +29,10 @@ load_dotenv()
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
+def load_config():
+    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+        return json.load(f)
+
 def get_db_connection():
     return psycopg2.connect(
         host=os.getenv("posql_host", "localhost"),
@@ -39,6 +43,7 @@ def get_db_connection():
     )
 
 async def sync_eod_portfolio():
+    config = load_config()
     conn = get_db_connection()
     bot = Bot(token=TOKEN, request=HTTPXRequest(connect_timeout=20.0, read_timeout=60.0))
 
@@ -89,11 +94,33 @@ async def sync_eod_portfolio():
                 new_max = max(curr_max, close_p)
                 new_trailing = prev_trailing
 
-                # ถ้ามีกำไรและมี ATR ให้คำนวณ Trailing Stop ใหม่
-                if atr and new_max > float(pos["entry_price"]):
+                # 1. ตรวจสอบ Breakeven Stop
+                be_cfg = config.get("risk_management", {}).get("breakeven_stop", {})
+                be_enabled = be_cfg.get("enabled", True)
+                be_trigger_pct = float(be_cfg.get("trigger_profit_pct", 2.0))
+                be_buffer_pct = float(be_cfg.get("buffer_pct", 0.3))
+
+                entry_p = float(pos["entry_price"])
+                max_gain_pct = ((new_max - entry_p) / entry_p) * 100.0 if entry_p > 0 else 0.0
+
+                potential_candidates = []
+                if prev_trailing:
+                    potential_candidates.append(prev_trailing)
+
+                # เมื่อราคาปิดสูงสุด (Highest Close) กำไรถึงเกณฑ์ ให้ยก Trailing มาล็อกเท่าทุนทันที
+                if be_enabled and max_gain_pct >= be_trigger_pct and entry_p > 0:
+                    be_stop_price = round(entry_p * (1.0 + (be_buffer_pct / 100.0)), 4)
+                    if be_stop_price > init_sl:
+                        potential_candidates.append(be_stop_price)
+
+                # 2. ATR Trailing Stop
+                if atr and new_max > entry_p:
                     candidate_trailing = round(new_max - (atr * 2.0), 4)
                     if candidate_trailing > init_sl:
-                        new_trailing = max(prev_trailing or 0.0, candidate_trailing)
+                        potential_candidates.append(candidate_trailing)
+
+                if potential_candidates:
+                    new_trailing = max(potential_candidates)
 
                 cur.execute("""
                     UPDATE public.bot_active_positions

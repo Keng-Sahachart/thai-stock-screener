@@ -5,6 +5,7 @@ Recalculate trailing stops for open positions using Highest Close instead of Hig
 """
 
 import os
+import json
 import sys
 from pathlib import Path
 import psycopg2
@@ -72,11 +73,33 @@ def main():
                 new_max = max(entry_p, float(new_max_close or entry_p))
                 atr = float(atr) if atr else None
 
-                new_ts = None
+                # 1. ตรวจสอบ Breakeven Stop
+                CONFIG_PATH = ROOT_DIR / "config" / "bot_config.json"
+                try:
+                    with open(CONFIG_PATH, "r", encoding="utf-8") as cf:
+                        cfg_data = json.load(cf)
+                except Exception:
+                    cfg_data = {}
+
+                be_cfg = cfg_data.get("risk_management", {}).get("breakeven_stop", {})
+                be_enabled = be_cfg.get("enabled", True)
+                be_trigger_pct = float(be_cfg.get("trigger_profit_pct", 2.0))
+                be_buffer_pct = float(be_cfg.get("buffer_pct", 0.3))
+
+                gain_pct = ((new_max - entry_p) / entry_p) * 100.0 if entry_p > 0 else 0.0
+
+                potential_ts = []
+                if be_enabled and gain_pct >= be_trigger_pct and entry_p > 0:
+                    be_stop_price = round(entry_p * (1.0 + (be_buffer_pct / 100.0)), 4)
+                    if be_stop_price > init_sl:
+                        potential_ts.append(be_stop_price)
+
                 if atr and new_max > entry_p:
                     cand_ts = round(new_max - (atr * 2.0), 4)
                     if cand_ts > init_sl:
-                        new_ts = cand_ts
+                        potential_ts.append(cand_ts)
+
+                new_ts = max(potential_ts) if potential_ts else None
 
                 cur.execute("""
                     UPDATE bot_active_positions

@@ -6,12 +6,12 @@
     "auto_sell_controls": {
         "enable_auto_cut_loss": true,
         "enable_auto_stop_loss": true,
-        "enable_auto_trailing_stop": false,
-        "enable_auto_technical_sell": false,
+        "enable_auto_trailing_stop": true,
+        "enable_auto_technical_sell": true,
         "description": "สวิตช์ควบคุม: ถ้า false ระบบจะแค่แจ้งเตือนเข้า Telegram แต่ไม่ส่งคำสั่งขาย"
     },
     "job_notifications": {
-        "enabled": true,
+        "enabled": false,
         "description": "true = ส่งข้อความแจ้งเตือนเข้า Telegram เมื่อ Background Jobs (Cron) เริ่มและสิ้นสุดการทำงาน, false = ปิดการแจ้งเตือน"
     },
     "tick_execution": {
@@ -31,26 +31,33 @@
         "risk_per_trade_pct": 0.01,
         "hard_cut_loss_pct": -10.0,
         "safety_clamp": {
+            "desc":"ควบคุม % ของ INITIAL_SL_HIT",
             "min_stop_pct": 4.0,
-            "max_stop_pct": 8.0
+            "min_stop_pct_desc" :"กรอบ SL ขั้นต่ำ",
+            "max_stop_pct": 5.5,
+            "max_stop_pct_desc":"เพดานจำกัดขาดทุนเริ่มต้นสูงสุด"
+        },
+        "breakeven_stop": {
+            "desc": "ระบบยก Stop Loss มาล็อกเสมอตัว (Breakeven) เมื่อราคาทำ New High กำไรถึงเป้าแรก",
+            "enabled": true,
+            "trigger_profit_pct": 2.0,
+            "trigger_profit_pct_desc": "เมื่อราคาทำ New High กำไรถึง 2.0% จะยก Trailing Stop มาล็อกเท่าทุนทันที",
+            "buffer_pct": 0.3,
+            "buffer_pct_desc": "ล็อกที่ราคา ทุน + 0.3% คลุมค่าคอมมิชชั่นซื้อขาย"
         },
         "max_position_pct": 0.2,
         "default_shares_per_trade": 100,
         "atr_multiplier": {
+            "desc":"ตัวคูณความผันผวน ATR สำหรับหุ้นทั่วไป (ATR x 2.0)",
             "EQUITY": 2.0,
+            "EQUITY_desc":"หุ้นทั่วไป (ATR x 2.0)",
             "ETF": 3.0,
+            "ETF_desc":"หุ้นที่เป็น ETF",
             "MUTUALFUND": 3.0,
             "DEFAULT": 2.0
         }
     },
     "excluded_symbols": [
-        "TEAM",
-        "QH",
-        "PIN",
-        "KIAT",
-        "SIAM",
-        "CHG",
-        "SMD100",
         "NOBLE-W3"
     ],
     "tradingview_chart_url_template": "https://th.tradingview.com/chart/sYR6pQNG/?symbol=SET%3A{symbol}",

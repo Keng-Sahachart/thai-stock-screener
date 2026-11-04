@@ -25,6 +25,7 @@ import os
 import sys
 import time
 import asyncio
+from datetime import datetime
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, LinkPreviewOptions
@@ -237,6 +238,8 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• /scan_port [SYM] - 📈 สแกนรายงานสัญญาณกราฟหุ้นในพอร์ต\n"
         "• /update_port - ซิงค์ยอดเงินสดจาก Settrade ล่าสุด\n"
         "• /order - ตรวจสอบสถานะคำสั่งซื้อขายวันนี้ทั้งหมด\n"
+        "• /history [N|SYM] - 📜 ดูประวัติการขายที่ปิดสถานะแล้ว กำไร/ขาดทุน กี่บาท กี่%\n"
+        "• /summary [day|month|year] - 🏆 สรุปผลงาน Performance รายวัน รายเดือน รายปี\n"
         "• /sync_order - ซิงค์สถานะ Order ล่าสุดจาก Settrade ทันที\n\n"
         "<b>🛒 การส่งและจัดการคำสั่ง:</b>\n"
         "• /scan - สั่งสแกนหาจังหวะซื้อและส่งกราฟใหม่\n"
@@ -265,6 +268,8 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• /update_port - ซิงค์ยอดเงินสดล่าสุดจาก Settrade API\n"
         "• /status - ตรวจสอบโหมดเทรด (DRY_RUN/LIVE) และสวิตช์ความปลอดภัย\n"
         "• /order - ตรวจสอบรายการและสถานะคำสั่งซื้อขายของวันนี้ทั้งหมด\n"
+        "• /history [N|SYM] - 📜 ดูประวัติการขายที่ปิดสถานะแล้ว กำไร/ขาดทุน กี่บาท กี่%\n"
+        "• /summary [day|month|year] - 🏆 สรุปผลงาน Performance รายวัน รายเดือน รายปี\n"
         "• /sync_order - ซิงค์สถานะ Order กับ Settrade ทันที (ตรวจผลจับคู่/ยกเลิก)\n\n"
         "🛒 <b>การส่งและจัดการคำสั่ง:</b>\n"
         "• /scan - สั่งสแกนหาจังหวะซื้อและส่งกราฟขออนุมัติ\n"
@@ -337,6 +342,467 @@ async def cmd_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(msg, parse_mode="HTML")
     finally:
         conn.close()
+
+
+
+def build_summary_keyboard(current_mode: str = "overview") -> InlineKeyboardMarkup:
+    """สร้าง Inline Keyboard สำหรับสลับมุมมองผลงาน Performance (ภาพรวม, รายวัน, รายเดือน, รายปี)"""
+    row1 = [
+        InlineKeyboardButton("📊 ภาพรวม" + (" ✅" if current_mode == "overview" else ""), callback_data="summary_nav:overview"),
+        InlineKeyboardButton("📅 รายวัน" + (" ✅" if current_mode == "day" else ""), callback_data="summary_nav:day"),
+    ]
+    row2 = [
+        InlineKeyboardButton("🗓️ รายเดือน" + (" ✅" if current_mode == "month" else ""), callback_data="summary_nav:month"),
+        InlineKeyboardButton("📆 รายปี" + (" ✅" if current_mode == "year" else ""), callback_data="summary_nav:year"),
+    ]
+    row3 = [
+        InlineKeyboardButton("📜 ดูประวัติการขายรายไม้ (/history)", callback_data="summary_nav:history_hint")
+    ]
+    return InlineKeyboardMarkup([row1, row2, row3])
+
+def build_summary_overview_text(conn) -> str:
+    """สร้างข้อความสรุปผลงานภาพรวม: ตลอดการใช้งาน, วันนี้, เดือนนี้, ปีนี้"""
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute("""
+            SELECT 
+                COUNT(*) as total,
+                COUNT(CASE WHEN closed_price > entry_price THEN 1 END) as win,
+                COUNT(CASE WHEN closed_price < entry_price THEN 1 END) as loss,
+                COUNT(CASE WHEN closed_price = entry_price THEN 1 END) as be,
+                COALESCE(ROUND(SUM((closed_price - entry_price) * current_volume), 2), 0) as pnl_thb,
+                COALESCE(ROUND(AVG(((closed_price - entry_price) / entry_price) * 100)::numeric, 2), 0) as avg_pct,
+                COALESCE(ROUND(MAX(((closed_price - entry_price) / entry_price) * 100)::numeric, 2), 0) as max_win_pct,
+                COALESCE(ROUND(MIN(((closed_price - entry_price) / entry_price) * 100)::numeric, 2), 0) as max_loss_pct
+            FROM public.bot_active_positions
+            WHERE status = 'CLOSED';
+        """)
+        all_time = cur.fetchone()
+
+        cur.execute("""
+            SELECT 
+                COUNT(*) as total,
+                COUNT(CASE WHEN closed_price > entry_price THEN 1 END) as win,
+                COUNT(CASE WHEN closed_price < entry_price THEN 1 END) as loss,
+                COALESCE(ROUND(SUM((closed_price - entry_price) * current_volume), 2), 0) as pnl_thb,
+                COALESCE(ROUND(AVG(((closed_price - entry_price) / entry_price) * 100)::numeric, 2), 0) as avg_pct
+            FROM public.bot_active_positions
+            WHERE status = 'CLOSED' AND closed_date = CURRENT_DATE;
+        """)
+        today = cur.fetchone()
+
+        cur.execute("""
+            SELECT 
+                COUNT(*) as total,
+                COUNT(CASE WHEN closed_price > entry_price THEN 1 END) as win,
+                COUNT(CASE WHEN closed_price < entry_price THEN 1 END) as loss,
+                COALESCE(ROUND(SUM((closed_price - entry_price) * current_volume), 2), 0) as pnl_thb,
+                COALESCE(ROUND(AVG(((closed_price - entry_price) / entry_price) * 100)::numeric, 2), 0) as avg_pct
+            FROM public.bot_active_positions
+            WHERE status = 'CLOSED' AND TO_CHAR(closed_date, 'YYYY-MM') = TO_CHAR(CURRENT_DATE, 'YYYY-MM');
+        """)
+        month = cur.fetchone()
+
+        cur.execute("""
+            SELECT 
+                COUNT(*) as total,
+                COUNT(CASE WHEN closed_price > entry_price THEN 1 END) as win,
+                COUNT(CASE WHEN closed_price < entry_price THEN 1 END) as loss,
+                COALESCE(ROUND(SUM((closed_price - entry_price) * current_volume), 2), 0) as pnl_thb,
+                COALESCE(ROUND(AVG(((closed_price - entry_price) / entry_price) * 100)::numeric, 2), 0) as avg_pct
+            FROM public.bot_active_positions
+            WHERE status = 'CLOSED' AND TO_CHAR(closed_date, 'YYYY') = TO_CHAR(CURRENT_DATE, 'YYYY');
+        """)
+        year = cur.fetchone()
+
+        tot = all_time['total']
+        if tot == 0:
+            return "🏆 <b>สรุปผลงานการเทรดภาพรวม (Performance Summary)</b>\n\n<i>ยังไม่มีประวัติการขายที่ปิดสถานะในระบบ</i>"
+
+        win_rate = (all_time['win'] / tot * 100) if tot > 0 else 0.0
+        pnl_sign = "🟢" if all_time['pnl_thb'] > 0 else ("🔴" if all_time['pnl_thb'] < 0 else "⚪")
+        m_sign = "🟢" if month['pnl_thb'] > 0 else ("🔴" if month['pnl_thb'] < 0 else "⚪")
+        t_sign = "🟢" if today['pnl_thb'] > 0 else ("🔴" if today['pnl_thb'] < 0 else "⚪")
+        y_sign = "🟢" if year['pnl_thb'] > 0 else ("🔴" if year['pnl_thb'] < 0 else "⚪")
+
+        msg = (
+            f"🏆 <b>สรุปผลงานการเทรดภาพรวม (Performance Summary)</b>\n"
+            f"<i>(คำนวณจากสถานะไม้ที่ปิดการขายแล้วทั้งหมด)</i>\n"
+            f"------------------------------------\n"
+            f"🌟 <b>ผลงานตลอดการใช้งาน (All-Time):</b>\n"
+            f"• จำนวนไม้ที่ปิดแล้ว: <b>{tot:,}</b> ไม้\n"
+            f"• อัตราชนะ (Win Rate): <b>{win_rate:.1f}%</b> (🟢 {all_time['win']} | 🔴 {all_time['loss']} | ⚪ {all_time['be']})\n"
+            f"• กำไรสุทธิรวม: {pnl_sign} <b>{float(all_time['pnl_thb']):+,.2f}</b> THB\n"
+            f"• ผลตอบแทนเฉลี่ยต่อไม้: <code>{float(all_time['avg_pct']):+.2f}%</code>\n"
+            f"• ไม้กำไรสูงสุด: <code>+{float(all_time['max_win_pct']):.2f}%</code> | ขาดทุนสูงสุด: <code>{float(all_time['max_loss_pct']):.2f}%</code>\n"
+            f"------------------------------------\n"
+            f"📅 <b>วันนี้ (Today):</b>\n"
+            f"• ปิดไป: <b>{today['total']}</b> ไม้ (🟢 {today['win']} | 🔴 {today['loss']})\n"
+            f"• กำไรสุทธิ: {t_sign} <b>{float(today['pnl_thb']):+,.2f}</b> THB (เฉลี่ย <code>{float(today['avg_pct']):+.2f}%</code>)\n\n"
+            f"🗓️ <b>เดือนนี้ ({datetime.now().strftime('%m/%Y')}):</b>\n"
+            f"• ปิดไป: <b>{month['total']}</b> ไม้ (🟢 {month['win']} | 🔴 {month['loss']})\n"
+            f"• กำไรสุทธิ: {m_sign} <b>{float(month['pnl_thb']):+,.2f}</b> THB (เฉลี่ย <code>{float(month['avg_pct']):+.2f}%</code>)\n\n"
+            f"📆 <b>ปีนี้ ({datetime.now().strftime('%Y')}):</b>\n"
+            f"• ปิดไป: <b>{year['total']}</b> ไม้ (🟢 {year['win']} | 🔴 {year['loss']})\n"
+            f"• กำไรสุทธิ: {y_sign} <b>{float(year['pnl_thb']):+,.2f}</b> THB (เฉลี่ย <code>{float(year['avg_pct']):+.2f}%</code>)\n"
+            f"------------------------------------\n"
+            f"👉 <i>แตะปุ่มด้านล่างเพื่อเลือกดูเจาะลึก รายวัน / รายเดือน / รายปี</i>"
+        )
+        return msg
+
+def build_summary_day_text(conn) -> str:
+    """สร้างข้อความสรุปผลงานรายวัน (10 วันทำการล่าสุด)"""
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute("""
+            SELECT 
+                closed_date,
+                COUNT(*) as total,
+                COUNT(CASE WHEN closed_price > entry_price THEN 1 END) as win,
+                COUNT(CASE WHEN closed_price < entry_price THEN 1 END) as loss,
+                COALESCE(ROUND(SUM((closed_price - entry_price) * current_volume), 2), 0) as pnl_thb,
+                COALESCE(ROUND(AVG(((closed_price - entry_price) / entry_price) * 100)::numeric, 2), 0) as avg_pct,
+                STRING_AGG(symbol || ' (' || CASE WHEN closed_price >= entry_price THEN '+' ELSE '' END || ROUND(((closed_price - entry_price) / entry_price * 100)::numeric, 1) || '%)', ', ') as items
+            FROM public.bot_active_positions
+            WHERE status = 'CLOSED'
+            GROUP BY closed_date
+            ORDER BY closed_date DESC
+            LIMIT 10;
+        """)
+        days = cur.fetchall()
+
+        if not days:
+            return "📅 <b>สรุปผลงานรายวัน (Daily Summary)</b>\n\n<i>ยังไม่มีประวัติการขายที่ปิดสถานะ</i>"
+
+        msg = (
+            f"📅 <b>สรุปผลงานการเทรดรายวัน (Daily Summary)</b>\n"
+            f"<i>(ย้อนหลัง 10 วันทำการล่าสุดที่มีการปิดขาย)</i>\n"
+            f"------------------------------------\n"
+        )
+        total_pnl = 0.0
+        total_trades = 0
+        total_win = 0
+        total_loss = 0
+
+        for d in days:
+            tot = d["total"]
+            w = d["win"]
+            l = d["loss"]
+            pnl_val = float(d["pnl_thb"])
+            avg_p = float(d["avg_pct"])
+            total_pnl += pnl_val
+            total_trades += tot
+            total_win += w
+            total_loss += l
+
+            icon = "🟢" if pnl_val > 0 else ("🔴" if pnl_val < 0 else "⚪")
+            d_str = d["closed_date"].strftime("%Y-%m-%d")
+            items_str = f"\n  ↳ <i>{d['items']}</i>" if d.get("items") else ""
+
+            msg += (
+                f"• <b>{d_str}</b>: {tot} ไม้ (🟢 {w} | 🔴 {l})\n"
+                f"  กำไรสุทธิ: {icon} <b>{pnl_val:+,.2f}</b> THB (เฉลี่ย <code>{avg_p:+.2f}%</code>){items_str}\n\n"
+            )
+
+        period_wr = (total_win / total_trades * 100) if total_trades > 0 else 0.0
+        tot_icon = "🟢" if total_pnl > 0 else ("🔴" if total_pnl < 0 else "⚪")
+        msg += (
+            f"------------------------------------\n"
+            f"📊 <b>รวมช่วงที่แสดง ({len(days)} วันทำการ):</b>\n"
+            f"• ปิดไปทั้งหมด: <b>{total_trades}</b> ไม้ (Win Rate: <b>{period_wr:.1f}%</b>)\n"
+            f"• กำไรสุทธิรวม: {tot_icon} <b>{total_pnl:+,.2f}</b> THB\n"
+        )
+        return msg
+
+def build_summary_month_text(conn) -> str:
+    """สร้างข้อความสรุปผลงานรายเดือน"""
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute("""
+            SELECT 
+                TO_CHAR(closed_date, 'YYYY-MM') as month,
+                COUNT(*) as total,
+                COUNT(CASE WHEN closed_price > entry_price THEN 1 END) as win,
+                COUNT(CASE WHEN closed_price < entry_price THEN 1 END) as loss,
+                COUNT(CASE WHEN closed_price = entry_price THEN 1 END) as be,
+                COALESCE(ROUND(SUM((closed_price - entry_price) * current_volume), 2), 0) as pnl_thb,
+                COALESCE(ROUND(AVG(((closed_price - entry_price) / entry_price) * 100)::numeric, 2), 0) as avg_pct
+            FROM public.bot_active_positions
+            WHERE status = 'CLOSED'
+            GROUP BY TO_CHAR(closed_date, 'YYYY-MM')
+            ORDER BY month DESC;
+        """)
+        months = cur.fetchall()
+
+        if not months:
+            return "🗓️ <b>สรุปผลงานรายเดือน (Monthly Summary)</b>\n\n<i>ยังไม่มีประวัติการขายที่ปิดสถานะ</i>"
+
+        msg = (
+            f"🗓️ <b>สรุปผลงานการเทรดรายเดือน (Monthly Summary)</b>\n"
+            f"------------------------------------\n"
+        )
+        total_pnl = 0.0
+        total_trades = 0
+        total_win = 0
+        total_loss = 0
+
+        for m in months:
+            tot = m["total"]
+            w = m["win"]
+            l = m["loss"]
+            be = m["be"]
+            pnl_val = float(m["pnl_thb"])
+            avg_p = float(m["avg_pct"])
+            wr = (w / tot * 100) if tot > 0 else 0.0
+
+            total_pnl += pnl_val
+            total_trades += tot
+            total_win += w
+            total_loss += l
+
+            icon = "🟢" if pnl_val > 0 else ("🔴" if pnl_val < 0 else "⚪")
+
+            msg += (
+                f"• <b>เดือน {m['month']}</b> ({tot} ไม้):\n"
+                f"  • สถิติ: 🟢 {w} | 🔴 {l} | ⚪ {be} (Win Rate: <b>{wr:.1f}%</b>)\n"
+                f"  • กำไรสุทธิ: {icon} <b>{pnl_val:+,.2f}</b> THB\n"
+                f"  • ผลตอบแทนเฉลี่ย: <code>{avg_p:+.2f}%</code> ต่อไม้\n\n"
+            )
+
+        all_wr = (total_win / total_trades * 100) if total_trades > 0 else 0.0
+        tot_icon = "🟢" if total_pnl > 0 else ("🔴" if total_pnl < 0 else "⚪")
+        msg += (
+            f"------------------------------------\n"
+            f"📊 <b>รวมทุกเดือน (All-Time Total):</b>\n"
+            f"• ปิดไปทั้งหมด: <b>{total_trades}</b> ไม้ (Win Rate: <b>{all_wr:.1f}%</b>)\n"
+            f"• กำไรสุทธิรวม: {tot_icon} <b>{total_pnl:+,.2f}</b> THB\n"
+        )
+        return msg
+
+def build_summary_year_text(conn) -> str:
+    """สร้างข้อความสรุปผลงานรายปี"""
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute("""
+            SELECT 
+                TO_CHAR(closed_date, 'YYYY') as year,
+                COUNT(*) as total,
+                COUNT(CASE WHEN closed_price > entry_price THEN 1 END) as win,
+                COUNT(CASE WHEN closed_price < entry_price THEN 1 END) as loss,
+                COUNT(CASE WHEN closed_price = entry_price THEN 1 END) as be,
+                COALESCE(ROUND(SUM((closed_price - entry_price) * current_volume), 2), 0) as pnl_thb,
+                COALESCE(ROUND(AVG(((closed_price - entry_price) / entry_price) * 100)::numeric, 2), 0) as avg_pct,
+                COALESCE(ROUND(MAX(((closed_price - entry_price) / entry_price) * 100)::numeric, 2), 0) as max_win_pct,
+                COALESCE(ROUND(MIN(((closed_price - entry_price) / entry_price) * 100)::numeric, 2), 0) as max_loss_pct
+            FROM public.bot_active_positions
+            WHERE status = 'CLOSED'
+            GROUP BY TO_CHAR(closed_date, 'YYYY')
+            ORDER BY year DESC;
+        """)
+        years = cur.fetchall()
+
+        if not years:
+            return "📆 <b>สรุปผลงานรายปี (Yearly Summary)</b>\n\n<i>ยังไม่มีประวัติการขายที่ปิดสถานะ</i>"
+
+        msg = (
+            f"📆 <b>สรุปผลงานการเทรดรายปี (Yearly Summary)</b>\n"
+            f"------------------------------------\n"
+        )
+
+        for y in years:
+            tot = y["total"]
+            w = y["win"]
+            l = y["loss"]
+            be = y["be"]
+            pnl_val = float(y["pnl_thb"])
+            avg_p = float(y["avg_pct"])
+            wr = (w / tot * 100) if tot > 0 else 0.0
+            icon = "🟢" if pnl_val > 0 else ("🔴" if pnl_val < 0 else "⚪")
+
+            msg += (
+                f"• <b>ปี {y['year']}</b> (รวม {tot:,} ไม้):\n"
+                f"  • สถิติ: 🟢 ชนะ {w} | 🔴 แพ้ {l} | ⚪ เสมอ {be}\n"
+                f"  • Win Rate: <b>{wr:.1f}%</b>\n"
+                f"  • กำไรสุทธิ: {icon} <b>{pnl_val:+,.2f}</b> THB\n"
+                f"  • ผลตอบแทนเฉลี่ย: <code>{avg_p:+.2f}%</code> ต่อไม้\n"
+                f"  • ไม้กำไรสูงสุด: <code>+{float(y['max_win_pct']):.2f}%</code>\n"
+                f"  • ไม้ขาดทุนสูงสุด: <code>{float(y['max_loss_pct']):.2f}%</code>\n\n"
+            )
+
+        return msg
+
+async def cmd_summary(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    /summary [day|month|year|overview] - แสดง Performance Summary ผลงานการเทรด
+    """
+    sub = "overview"
+    if context.args:
+        arg = context.args[0].lower().strip()
+        if arg in ("day", "daily", "d", "วัน", "รายวัน"):
+            sub = "day"
+        elif arg in ("month", "monthly", "m", "เดือน", "รายเดือน"):
+            sub = "month"
+        elif arg in ("year", "yearly", "y", "ปี", "รายปี"):
+            sub = "year"
+
+    conn = get_db_connection()
+    try:
+        if sub == "day":
+            msg = build_summary_day_text(conn)
+        elif sub == "month":
+            msg = build_summary_month_text(conn)
+        elif sub == "year":
+            msg = build_summary_year_text(conn)
+        else:
+            msg = build_summary_overview_text(conn)
+
+        kbd = build_summary_keyboard(current_mode=sub)
+        await update.message.reply_text(msg, parse_mode="HTML", reply_markup=kbd)
+    finally:
+        conn.close()
+
+async def cmd_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    /history [N หรือ SYM] - ดูประวัติการขายที่ปิดสถานะแล้ว กำไรขาดทุนกี่บาท กี่ %
+    เช่น:
+      /history        -> แสดง 10 ไม้ล่าสุด
+      /history 20     -> แสดง 20 ไม้ล่าสุด
+      /history TDEX   -> แสดงประวัติเฉพาะหุ้น TDEX
+    """
+    limit = 10
+    sym_filter = None
+
+    if context.args:
+        arg = context.args[0].strip()
+        if arg.isdigit():
+            limit = min(max(int(arg), 1), 50)
+        else:
+            sym_filter = arg.upper()
+            if len(context.args) > 1 and context.args[1].isdigit():
+                limit = min(max(int(context.args[1]), 1), 50)
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            base_sql = """
+                SELECT 
+                    b.id AS position_id,
+                    b.symbol,
+                    b.current_volume AS volume,
+                    b.entry_price,
+                    b.closed_price,
+                    b.entry_date,
+                    b.closed_date,
+                    b.exit_reason,
+                    b.is_adopted,
+                    ROUND((b.closed_price - b.entry_price) * b.current_volume, 2) AS pnl_thb,
+                    ROUND(((b.closed_price - b.entry_price) / b.entry_price * 100)::numeric, 2) AS pnl_pct,
+                    o.order_id,
+                    o.broker_order_no,
+                    o.executed_at
+                FROM public.bot_active_positions b
+                LEFT JOIN LATERAL (
+                    SELECT order_id, broker_order_no, executed_at, executed_price
+                    FROM public.bot_orders
+                    WHERE symbol = b.symbol 
+                      AND side = 'SELL' 
+                      AND status = 'FILLED'
+                      AND (executed_at::date = b.closed_date OR created_at::date = b.closed_date)
+                    ORDER BY order_id DESC LIMIT 1
+                ) o ON TRUE
+                WHERE b.status = 'CLOSED'
+            """
+            params = []
+            if sym_filter:
+                base_sql += " AND b.symbol = %s"
+                params.append(sym_filter)
+            base_sql += " ORDER BY b.closed_date DESC, b.id DESC LIMIT %s;"
+            params.append(limit)
+
+            cur.execute(base_sql, tuple(params))
+            rows = cur.fetchall()
+
+            if not rows:
+                if sym_filter:
+                    await update.message.reply_text(f"📜 ไม่พบประวัติการขายสำหรับหุ้น <b>{sym_filter}</b>", parse_mode="HTML")
+                else:
+                    await update.message.reply_text("📜 ยังไม่มีประวัติการขายหุ้นที่ปิดสถานะในระบบ", parse_mode="HTML")
+                return
+
+            filter_note = f" (เฉพาะหุ้น {sym_filter})" if sym_filter else ""
+            header = (
+                f"📜 <b>ประวัติการขายหุ้นที่ปิดสถานะแล้ว{filter_note}</b>\n"
+                f"<i>(แสดง {len(rows)} รายการล่าสุด)</i>\n"
+                f"------------------------------------\n"
+            )
+
+            messages_to_send = []
+            current_msg = header
+            tot_pnl_thb = 0.0
+            win_cnt = 0
+            loss_cnt = 0
+
+            for r in rows:
+                sym = r["symbol"]
+                vol = int(r["volume"])
+                entry_p = float(r["entry_price"])
+                closed_p = float(r["closed_price"])
+                pnl_thb = float(r["pnl_thb"])
+                pnl_pct = float(r["pnl_pct"])
+                tot_pnl_thb += pnl_thb
+
+                if pnl_thb > 0:
+                    win_cnt += 1
+                elif pnl_thb < 0:
+                    loss_cnt += 1
+
+                c_date = r["closed_date"].strftime("%Y-%m-%d") if r["closed_date"] else "-"
+                days = (r["closed_date"] - r["entry_date"]).days if (r["closed_date"] and r["entry_date"]) else 0
+                tag = "🛡️ [ADOPT]" if r.get("is_adopted") else "🤖 [BOT]"
+                pnl_icon = "🟢" if pnl_thb > 0 else ("🔴" if pnl_thb < 0 else "⚪")
+                ref = f"#{r['broker_order_no']}" if r.get("broker_order_no") else (f"Order #{r['order_id']}" if r.get("order_id") else "-")
+                reason = r.get("exit_reason") or "SELL"
+
+                sym_link = f"<a href='https://www.settrade.com/th/equities/quote/{sym}/overview'><b>{sym}</b></a>"
+
+                item = (
+                    f"{pnl_icon} {sym_link} (<code>{vol:,}</code> หุ้น) {tag}\n"
+                    f"• วันที่ปิด: <code>{c_date}</code> (ถือ {days} วัน) | Ref: <code>{ref}</code>\n"
+                    f"• ทุน: <code>{entry_p:.2f}</code> ➔ ขาย: <code>{closed_p:.2f}</code> THB\n"
+                    f"• กำไร/ขาดทุน: <b>{pnl_thb:+,.2f} THB</b> (<code>{pnl_pct:+.2f}%</code>)\n"
+                    f"• เหตุผล: <code>{reason}</code>\n\n"
+                )
+
+                if len(current_msg) + len(item) > 3500:
+                    messages_to_send.append(current_msg)
+                    current_msg = item
+                else:
+                    current_msg += item
+
+            batch_wr = (win_cnt / len(rows) * 100) if rows else 0.0
+            tot_icon = "🟢" if tot_pnl_thb > 0 else ("🔴" if tot_pnl_thb < 0 else "⚪")
+            avg_pnl_pct = sum(float(x["pnl_pct"]) for x in rows) / len(rows) if rows else 0.0
+
+            footer = (
+                f"------------------------------------\n"
+                f"📊 <b>สรุปชุดนี้ ({len(rows)} ไม้):</b>\n"
+                f"• กำไรสุทธิ: {tot_icon} <b>{tot_pnl_thb:+,.2f}</b> THB (เฉลี่ย <code>{avg_pnl_pct:+.2f}%</code> ต่อไม้)\n"
+                f"• Win Rate: <b>{batch_wr:.1f}%</b> (🟢 {win_cnt} | 🔴 {loss_cnt})\n"
+                f"👉 <i>ดูสรุปผลงานภาพรวม: พิมพ์ /summary</i>"
+            )
+
+            if len(current_msg) + len(footer) > 3800:
+                messages_to_send.append(current_msg)
+                messages_to_send.append(footer)
+            else:
+                current_msg += footer
+                messages_to_send.append(current_msg)
+
+            for m in messages_to_send:
+                await update.message.reply_text(
+                    m,
+                    parse_mode="HTML",
+                    link_preview_options=LinkPreviewOptions(is_disabled=True)
+                )
+    finally:
+        conn.close()
+
 
 async def cmd_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """/cancel <ORDER_ID> - ขอยกเลิกคำสั่งซื้อขายที่ค้างในตลาด"""
@@ -1261,6 +1727,12 @@ def main():
     app.add_handler(CommandHandler("buy", cmd_buy))
     app.add_handler(CommandHandler("order", cmd_order))
     app.add_handler(CommandHandler("orders", cmd_order))
+    app.add_handler(CommandHandler("history", cmd_history))
+    app.add_handler(CommandHandler("sell_history", cmd_history))
+    app.add_handler(CommandHandler("trades", cmd_history))
+    app.add_handler(CommandHandler("summary", cmd_summary))
+    app.add_handler(CommandHandler("performance", cmd_summary))
+    app.add_handler(CommandHandler("pnl", cmd_summary))
 
     app.add_handler(CommandHandler("sync_order", cmd_sync_orders))
     app.add_handler(CommandHandler("sync_orders", cmd_sync_orders))
