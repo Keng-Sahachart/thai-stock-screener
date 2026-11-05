@@ -1000,7 +1000,25 @@ async def cmd_ai_scan(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ])
         reply_markup = InlineKeyboardMarkup(buttons)
 
-        await progress_msg.edit_text(html_output, parse_mode="HTML", reply_markup=reply_markup)
+        from core.ai.formatter import split_telegram_html
+        chunks = split_telegram_html(html_output, max_length=3800)
+
+        if len(chunks) == 1:
+            await progress_msg.edit_text(chunks[0], parse_mode="HTML", reply_markup=reply_markup)
+        else:
+            await progress_msg.edit_text(chunks[0], parse_mode="HTML")
+            for chunk in chunks[1:-1]:
+                await context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text=chunk,
+                    parse_mode="HTML"
+                )
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text=chunks[-1],
+                parse_mode="HTML",
+                reply_markup=reply_markup
+            )
 
     except Exception as e:
         await progress_msg.edit_text(f"❌ <b>AI Evaluation Error:</b>\n<code>{e}</code>", parse_mode="HTML")

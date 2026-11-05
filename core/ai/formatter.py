@@ -157,3 +157,40 @@ def format_ai_evaluation_html(ai_result: dict, detail_level: int = 1) -> str:
         lines.append("━━━━━━━━━━━━━━━━━━━")
         lines.append("💡 <i>(พิมพ์ /ai_scan 1 เพื่อดูสรุปย่อแบบ 1 บรรทัด หรือ /ai_scan 2 เพื่อดูกระชับ)</i>")
         return "\n".join(lines)
+
+
+def split_telegram_html(text: str, max_length: int = 3800) -> list:
+    """
+    แบ่งข้อความ HTML ออกเป็นท่อนๆ โดยไม่ให้เกินขีดจำกัด 4,096 ตัวอักษรของ Telegram API
+    โดยตัดแบ่งตามย่อหน้า (\n\n หรือการ์ดแต่ละตัว) เพื่อรักษาความสมบูรณ์ของแท็ก HTML
+    """
+    if not text or len(text) <= max_length:
+        return [text] if text else []
+
+    chunks = []
+    blocks = text.split("\n\n")
+    current_chunk = ""
+
+    for block in blocks:
+        # หากเอาบล็อกนี้มาต่อแล้วความยาวจะเกิน max_length
+        if len(current_chunk) + len(block) + 2 > max_length:
+            if current_chunk:
+                chunks.append(current_chunk.strip())
+                current_chunk = block
+            else:
+                # กรณีบล็อกเดียวยาวเกิน max_length ให้แบ่งย่อยตามบรรทัดเดี่ยว (\n)
+                lines = block.split("\n")
+                for line in lines:
+                    if len(current_chunk) + len(line) + 1 > max_length:
+                        if current_chunk:
+                            chunks.append(current_chunk.strip())
+                        current_chunk = line
+                    else:
+                        current_chunk = f"{current_chunk}\n{line}" if current_chunk else line
+        else:
+            current_chunk = f"{current_chunk}\n\n{block}" if current_chunk else block
+
+    if current_chunk:
+        chunks.append(current_chunk.strip())
+
+    return chunks

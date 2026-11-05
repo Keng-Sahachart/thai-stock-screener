@@ -177,9 +177,12 @@ async def scan_and_notify(
                     for ev in ai_result.get("evaluations", []):
                         ai_lookup[ev.get("symbol")] = ev
 
-                    # ส่งการ์ดสรุปผล AI Scorecard เข้า Telegram
+                    # ส่งการ์ดสรุปผล AI Scorecard เข้า Telegram (แบ่งท่อนหากเกิน 4,000 อักษร)
                     scorecard_html = format_ai_evaluation_html(ai_result, detail_level=chosen_level)
-                    await bot.send_message(chat_id=target_chat, text=scorecard_html, parse_mode="HTML")
+                    from core.ai.formatter import split_telegram_html
+                    chunks = split_telegram_html(scorecard_html, max_length=3800)
+                    for chunk in chunks:
+                        await bot.send_message(chat_id=target_chat, text=chunk, parse_mode="HTML")
 
                     # ตรวจสอบสวิตช์ Auto-buy เมื่อมี Top Pick ผ่านเกณฑ์
                     if ai_cfg.get("auto_buy_on_top_pick", False):
