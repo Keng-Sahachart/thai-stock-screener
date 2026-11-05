@@ -1,4 +1,53 @@
 
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+==============================================================================
+FILE NAME   : callback_handlers.py
+LOCATION    : bot/
+OCCASION    : ทำงานเบื้องหลังเมื่อมีผู้ใช้กดปุ่ม Inline Keyboard บน Telegram
+              เมื่อมีการกดปุ่มผ่าน Telegram โมดูลนี้จะอัปเดตสถานะของสัญญาณในตาราง bot_trade_signals และเตรียมคำสั่งส่งเข้า bot_orders:
+DESCRIPTION :  ตัวจัดการปุ่มกดโต้ตอบทั้งหมด:
+              1. ระบบ Auto Scanner:
+                 - ปรับหุ้น (adj): ตรวจสอบเพดานหุ้นและเงินสดคงเหลือสดๆ
+                 - อนุมัติ (app): ดึง ATR14 คำนวณความเสี่ยง และส่งคำสั่งผ่าน order_manager
+                 - ปฏิเสธ (rej): อัปเดตสถานะเป็น REJECTED
+              2. ระบบ Manual Buy (/buy):
+                 - ปรับราคาตาม Tick (mbuy_p)
+                 - ปรับจำนวนหุ้น (mbuy_v)
+                 - ยืนยันซื้อ (mbuy_conf)
+                 - ยกเลิก (mbuy_cancel)
+==============================================================================
+"""
+
+import os
+import json
+import psycopg2
+from psycopg2.extras import RealDictCursor
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ContextTypes
+from dotenv import load_dotenv
+
+from execution.order_manager import place_buy_order
+from execution.settrade_executor import recalculate_stop_loss
+from core.audit_logger import log_event
+
+load_dotenv()
+CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", "bot_config.json")
+
+def load_config():
+    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def get_db_connection():
+    return psycopg2.connect(
+        host=os.getenv("posql_host", "localhost"),
+        port=os.getenv("posql_port", "5432"),
+        dbname=os.getenv("posql_db", "stocks"),
+        user=os.getenv("posql_user", "postgres"),
+        password=os.getenv("posql_password", "postgres")
+    )
+
 async def show_ai_candidate_charts(update: Update, context: ContextTypes.DEFAULT_TYPE, mode: str = "all"):
     """ส่งกราฟเทคนิคอลเฉพาะหุ้นที่ AI ได้ทำการประเมินในรอบล่าสุด"""
     query = update.callback_query
@@ -64,54 +113,6 @@ async def show_ai_candidate_charts(update: Update, context: ContextTypes.DEFAULT
     except Exception as e:
         await context.bot.send_message(chat_id=chat_id, text=f"❌ เกิดข้อผิดพลาดในการสร้างกราฟ: {e}")
 
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-==============================================================================
-FILE NAME   : callback_handlers.py
-LOCATION    : bot/
-OCCASION    : ทำงานเบื้องหลังเมื่อมีผู้ใช้กดปุ่ม Inline Keyboard บน Telegram
-              เมื่อมีการกดปุ่มผ่าน Telegram โมดูลนี้จะอัปเดตสถานะของสัญญาณในตาราง bot_trade_signals และเตรียมคำสั่งส่งเข้า bot_orders:
-DESCRIPTION :  ตัวจัดการปุ่มกดโต้ตอบทั้งหมด:
-              1. ระบบ Auto Scanner:
-                 - ปรับหุ้น (adj): ตรวจสอบเพดานหุ้นและเงินสดคงเหลือสดๆ
-                 - อนุมัติ (app): ดึง ATR14 คำนวณความเสี่ยง และส่งคำสั่งผ่าน order_manager
-                 - ปฏิเสธ (rej): อัปเดตสถานะเป็น REJECTED
-              2. ระบบ Manual Buy (/buy):
-                 - ปรับราคาตาม Tick (mbuy_p)
-                 - ปรับจำนวนหุ้น (mbuy_v)
-                 - ยืนยันซื้อ (mbuy_conf)
-                 - ยกเลิก (mbuy_cancel)
-==============================================================================
-"""
-
-import os
-import json
-import psycopg2
-from psycopg2.extras import RealDictCursor
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes
-from dotenv import load_dotenv
-
-from execution.order_manager import place_buy_order
-from execution.settrade_executor import recalculate_stop_loss
-from core.audit_logger import log_event
-
-load_dotenv()
-CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", "bot_config.json")
-
-def load_config():
-    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-def get_db_connection():
-    return psycopg2.connect(
-        host=os.getenv("posql_host", "localhost"),
-        port=os.getenv("posql_port", "5432"),
-        dbname=os.getenv("posql_db", "stocks"),
-        user=os.getenv("posql_user", "postgres"),
-        password=os.getenv("posql_password", "postgres")
-    )
 
 def build_trade_keyboard(signal_id: int, current_shares: int, price: float):
     ''' สร้าง Inline Keyboard สำหรับปรับจำนวนหุ้นและอนุมัติ/ปฏิเสธสัญญาณซื้อ
