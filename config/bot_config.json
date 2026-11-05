@@ -10,6 +10,34 @@
         "enable_auto_technical_sell": true,
         "description": "สวิตช์ควบคุม: ถ้า false ระบบจะแค่แจ้งเตือนเข้า Telegram แต่ไม่ส่งคำสั่งขาย"
     },
+    "ai_evaluation": {
+        "enabled": true,
+        "active_provider": "agy_pi5",
+        "default_detail_level": 1,
+        "detail_levels_guide": "1: MINIMAL (1 บรรทัด/ตัว แวบเดียวจบ), 2: COMPACT (กระชับ ชี้ขาดขึ้นจริง/หลอก), 3: DETAILED (จัดเต็ม Pros/Risks)",
+        "min_confidence_score": 80,
+        "max_candidates_to_analyze": 10,
+        "auto_buy_on_top_pick": false,
+        "description": "active_provider: 'agy_pi5' (รัน agy บน Pi 5), 'gemini_api' (Google Cloud Free/Paid API), 'local_ollama' (Ollama REST API)",
+        "providers": {
+            "agy_pi5": {
+                "host": "192.168.1.124",
+                "user": "keng",
+                "plink_path": "C:\\Program Files\\PuTTY\\plink.exe",
+                "agy_binary": "/home/keng/.local/bin/agy",
+                "timeout_sec": 60
+            },
+            "gemini_api": {
+                "model": "gemini-2.0-flash",
+                "api_key_env": "GEMINI_API_KEY"
+            },
+            "local_ollama": {
+                "endpoint": "http://192.168.1.124:11434",
+                "model": "qwen2.5:1.5b",
+                "timeout_sec": 120
+            }
+        }
+    },
     "job_notifications": {
         "enabled": false,
         "description": "true = ส่งข้อความแจ้งเตือนเข้า Telegram เมื่อ Background Jobs (Cron) เริ่มและสิ้นสุดการทำงาน, false = ปิดการแจ้งเตือน"
@@ -20,9 +48,9 @@
         "description": "buy_ticks: ปรับช่องราคาซื้อเมื่อไม่ระบุราคาคงที่ (0=Best Offer, +1=เคาะขวา), sell_profit_ticks: ช่องราคาขายเหนือราคาตลาดสำหรับการขายปกติ/ทำกำไร (default 1 tick)"
     },
     "budget_limits": {
-        "max_amount_per_trade_thb": 2000.0,
+        "max_amount_per_trade_thb": 1500.0,
         "max_shares_per_trade": 500,
-        "max_amount_per_day_thb": 8000.0,
+        "max_amount_per_day_thb": 4000.0,
         "max_trades_per_day": 99,
         "min_lot_size": 100,
         "fee_buffer_pct": 0.0025

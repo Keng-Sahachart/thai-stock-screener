@@ -242,7 +242,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• /summary [day|month|year] - 🏆 สรุปผลงาน Performance รายวัน รายเดือน รายปี\n"
         "• /sync_order - ซิงค์สถานะ Order ล่าสุดจาก Settrade ทันที\n\n"
         "<b>🛒 การส่งและจัดการคำสั่ง:</b>\n"
-        "• /scan - สั่งสแกนหาจังหวะซื้อและส่งกราฟใหม่\n"
+        "• /scan [1|2|3] - 🤖 สแกนหาหุ้นซื้อพร้อม AI วิเคราะห์ (1=สั้นสุด, 2=กระชับ, 3=ละเอียด)\n"
         "• /buy &lt;SYM&gt; [VOL] [PRICE] - สั่งซื้อหุ้นแบบกำหนดเอง\n"
         "• /sell_monitor - 🔍 ตรวจสอบเงื่อนไขขายและ Stop Loss ทันที\n"
         "• /task_update - 🔄 รันอัปเดตราคา, Indicators และพอร์ตสิ้นวัน\n"
@@ -272,7 +272,7 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• /summary [day|month|year] - 🏆 สรุปผลงาน Performance รายวัน รายเดือน รายปี\n"
         "• /sync_order - ซิงค์สถานะ Order กับ Settrade ทันที (ตรวจผลจับคู่/ยกเลิก)\n\n"
         "🛒 <b>การส่งและจัดการคำสั่ง:</b>\n"
-        "• /scan - สั่งสแกนหาจังหวะซื้อและส่งกราฟขออนุมัติ\n"
+        "• /scan [1|2|3] - 🤖 สแกนหาหุ้นซื้อพร้อม AI วิเคราะห์ (1=สั้นสุด, 2=กระชับ, 3=ละเอียด)\n"
         "• /buy &lt;SYM&gt; [VOL] [PRICE] - ส่งคำสั่งซื้อหุ้นแบบกำหนดเอง\n"
         "• /sell_monitor [force] - ตรวจสอบเงื่อนไขขายและ Stop Loss ของพอร์ตทันที\n"
         "• /task_update [force] - รันงานอัปเดตราคา Indicators สิ้นวัน และซิงค์ Trailing Stop\n"
@@ -877,9 +877,24 @@ async def cmd_sync_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ เกิดข้อผิดพลาดในการซิงค์สถานะ Order: {e}")
 
 async def cmd_scan(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🔍 กำลังเริ่มกระบวนการสแกนและสร้างกราฟแจ้งเตือน...")
+    level_arg = 1
+    if context.args:
+        try:
+            level_arg = int(context.args[0])
+            if level_arg not in (1, 2, 3):
+                level_arg = 1
+        except ValueError:
+            level_arg = 1
+
+    level_names = {
+        1: "1 (MINIMAL - สั้นมาก Flash Scorecard)",
+        2: "2 (COMPACT - กระชับ ชี้ขาดขึ้นจริง/หลอก)",
+        3: "3 (DETAILED - บทวิเคราะห์ละเอียดจัดเต็ม)"
+    }
+    await update.message.reply_text(f"🔍 กำลังสแกนหุ้นและส่งให้ AI วิเคราะห์ (ระดับ {level_names.get(level_arg, '1')})...")
     try:
-        await scan_and_notify()
+        from jobs.run_buy_scanner import scan_and_notify
+        await scan_and_notify(detail_level=level_arg)
     except Exception as e:
         await update.message.reply_text(f"❌ เกิดข้อผิดพลาดในการสแกน: {e}")
 
