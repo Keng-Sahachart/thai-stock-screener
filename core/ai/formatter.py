@@ -79,7 +79,7 @@ def format_ai_evaluation_html(ai_result: dict, detail_level: int = 1) -> str:
             m = medals[idx] if idx < len(medals) else f"#{idx+1}"
             lines.append(f"{m} <b>{sym}</b> ({score}คะแนน) | {trend_badge} | {vi_badge} | {dec_badge}")
 
-        lines.append(f"\n💡 <i>(พิมพ์ /scan 2 เพื่อดูกระชับ หรือ /scan 3 เพื่อดูจัดเต็ม)</i>")
+        lines.append(f"\n💡 <i>(พิมพ์ /ai_scan 2 เพื่อดูกระชับ หรือ /ai_scan 3 เพื่อดูจัดเต็ม)</i>")
         return "\n".join(lines)
 
     # =========================================================================
@@ -115,7 +115,7 @@ def format_ai_evaluation_html(ai_result: dict, detail_level: int = 1) -> str:
             ]
             lines.append("\n".join(card) + "\n")
 
-        lines.append("💡 <i>(พิมพ์ /scan 1 ดูสั้น หรือ /scan 3 ดูละเอียดจัดเต็ม)</i>")
+        lines.append("💡 <i>(พิมพ์ /ai_scan 1 ดูสั้น หรือ /ai_scan 3 ดูละเอียดจัดเต็ม)</i>")
         return "\n".join(lines)
 
     # =========================================================================
@@ -155,5 +155,5 @@ def format_ai_evaluation_html(ai_result: dict, detail_level: int = 1) -> str:
             lines.append("\n".join([c for c in card if c]) + "\n")
 
         lines.append("━━━━━━━━━━━━━━━━━━━")
-        lines.append("💡 <i>(พิมพ์ /scan 1 เพื่อดูสรุปย่อแบบ 1 บรรทัด)</i>")
+        lines.append("💡 <i>(พิมพ์ /ai_scan 1 เพื่อดูสรุปย่อแบบ 1 บรรทัด หรือ /ai_scan 2 เพื่อดูกระชับ)</i>")
         return "\n".join(lines)

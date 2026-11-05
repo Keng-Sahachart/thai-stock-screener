@@ -200,10 +200,10 @@ async def handle_signal_callback(update: Update, context: ContextTypes.DEFAULT_T
         await cmd_buy(update, context)
         return
 
-    if action == "ai_view_scan":
-        await query.answer("🔍 กำลังสแกนกราฟเทคนิคอล...")
-        from bot.telegram_app import cmd_scan
-        await cmd_scan(update, context)
+    if action in ("ai_charts", "ai_view_scan"):
+        mode = data[1] if len(data) > 1 and action == "ai_charts" else "all"
+        from bot.telegram_app import show_ai_candidate_charts
+        await show_ai_candidate_charts(update, context, mode=mode)
         return
 
     if action == "toggle_auto_sell":

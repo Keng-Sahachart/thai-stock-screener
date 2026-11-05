@@ -75,34 +75,57 @@ def build_trade_keyboard(signal_id: int, current_shares: int, price: float, pend
     ]
     return InlineKeyboardMarkup(keyboard)
 
-async def scan_and_notify(run_ai: bool = False, detail_level: int = None):
+async def scan_and_notify(
+    run_ai: bool = False,
+    detail_level: int = None,
+    target_symbols: list = None,
+    chat_id: str = None,
+    bot_instance = None
+):
     start_t = time.time()
     job_desc = "สแกนหาจังหวะซื้อและประเมินด้วย AI" if run_ai else "สแกนหาจังหวะซื้อทางเทคนิคอลและสร้างการ์ดขออนุมัติ"
     await notify_job_start("Run Buy Scanner", job_desc)
-    print("🔍 กำลังรัน Aggregator...")
-    run_signal_aggregator()
+    
+    if not target_symbols:
+        print("🔍 กำลังรัน Aggregator...")
+        run_signal_aggregator()
 
-    bot = Bot(token=TOKEN, request=HTTPXRequest(connect_timeout=20.0, read_timeout=60.0, write_timeout=60.0))
+    bot = bot_instance or Bot(token=TOKEN, request=HTTPXRequest(connect_timeout=20.0, read_timeout=60.0, write_timeout=60.0))
+    target_chat = chat_id or CHAT_ID
     conn = get_db_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                SELECT s.*, a.line_available 
-                FROM public.bot_trade_signals s
-                CROSS JOIN (
-                    SELECT line_available FROM public.account_info_history 
-                    WHERE is_disabled = FALSE ORDER BY import_date DESC LIMIT 1
-                ) a
-                WHERE s.status = 'PENDING' 
-                  AND s.trade_date = (SELECT MAX(trade_date) FROM public.bot_trade_signals WHERE status = 'PENDING')
-                ORDER BY s.priority DESC, s.id ASC;
-            """)
+            if target_symbols:
+                cur.execute("""
+                    SELECT s.*, a.line_available 
+                    FROM public.bot_trade_signals s
+                    CROSS JOIN (
+                        SELECT line_available FROM public.account_info_history 
+                        WHERE is_disabled = FALSE ORDER BY import_date DESC LIMIT 1
+                    ) a
+                    WHERE s.status = 'PENDING' 
+                      AND s.trade_date = (SELECT MAX(trade_date) FROM public.bot_trade_signals WHERE status = 'PENDING')
+                      AND s.symbol = ANY(%s)
+                    ORDER BY s.priority DESC, s.id ASC;
+                """, (target_symbols,))
+            else:
+                cur.execute("""
+                    SELECT s.*, a.line_available 
+                    FROM public.bot_trade_signals s
+                    CROSS JOIN (
+                        SELECT line_available FROM public.account_info_history 
+                        WHERE is_disabled = FALSE ORDER BY import_date DESC LIMIT 1
+                    ) a
+                    WHERE s.status = 'PENDING' 
+                      AND s.trade_date = (SELECT MAX(trade_date) FROM public.bot_trade_signals WHERE status = 'PENDING')
+                    ORDER BY s.priority DESC, s.id ASC;
+                """)
             signals = cur.fetchall()
 
             if not signals:
                 print("ไม่มีสัญญาณใหม่")
                 await bot.send_message(
-                    chat_id=CHAT_ID,
+                    chat_id=target_chat,
                     text="🛡️ <b>ผลการสแกนประจำวัน</b>\nไม่พบสัญญาณซื้อใหม่ที่ผ่านเกณฑ์ในขณะนี้",
                     parse_mode="HTML"
                 )
@@ -130,7 +153,7 @@ async def scan_and_notify(run_ai: bool = False, detail_level: int = None):
 
                     # ส่งการ์ดสรุปผล AI Scorecard เข้า Telegram
                     scorecard_html = format_ai_evaluation_html(ai_result, detail_level=chosen_level)
-                    await bot.send_message(chat_id=CHAT_ID, text=scorecard_html, parse_mode="HTML")
+                    await bot.send_message(chat_id=target_chat, text=scorecard_html, parse_mode="HTML")
 
                     # ตรวจสอบสวิตช์ Auto-buy เมื่อมี Top Pick ผ่านเกณฑ์
                     if ai_cfg.get("auto_buy_on_top_pick", False):
@@ -157,7 +180,7 @@ async def scan_and_notify(run_ai: bool = False, detail_level: int = None):
                                         f"• จำนวน: <code>{top_sig['recommended_shares']:,}</code> หุ้น @ <code>{float(top_sig['trigger_price']):.2f}</code> THB\n"
                                         f"• เหตุผล: <i>{top_ev.get('verdict', '')}</i>"
                                     )
-                                    await bot.send_message(chat_id=CHAT_ID, text=auto_msg, parse_mode="HTML")
+                                    await bot.send_message(chat_id=target_chat, text=auto_msg, parse_mode="HTML")
 
             # =================================================================
             # 📊 INDIVIDUAL CANDIDATE CARDS (พร้อมกราฟ)
@@ -221,20 +244,21 @@ async def scan_and_notify(run_ai: bool = False, detail_level: int = None):
 
                 try:
                     if chart_buf:
-                        await bot.send_photo(chat_id=CHAT_ID, photo=chart_buf, caption=caption, parse_mode="HTML", reply_markup=reply_markup)
+                        await bot.send_photo(chat_id=target_chat, photo=chart_buf, caption=caption, parse_mode="HTML", reply_markup=reply_markup)
                     else:
-                        await bot.send_message(chat_id=CHAT_ID, text=caption, parse_mode="HTML", reply_markup=reply_markup)
+                        await bot.send_message(chat_id=target_chat, text=caption, parse_mode="HTML", reply_markup=reply_markup)
                     await asyncio.sleep(2)
                 except Exception as e:
                     print(f"Error sending {sym}: {e}")
 
             # ส่งข้อความสรุปปิดท้ายรอบการสแกน
+            sym_tag = f" (เฉพาะหุ้น {len(signals)} ตัวที่เลือก)" if target_symbols else ""
             summary_msg = (
-                f"🏁 <b>การสแกนเสร็จสิ้น</b>\n"
+                f"🏁 <b>การสแกนเสร็จสิ้น{sym_tag}</b>\n"
                 f"• ตรวจพบสัญญาณซื้อทั้งหมด: <code>{len(signals)}</code> รายการ\n"
                 f"<i>(สามารถกด Approve หรือปรับจำนวนหุ้นผ่านการ์ดด้านบน หรือพิมพ์ /port เพื่อดูยอดเงิน)</i>"
             )
-            await bot.send_message(chat_id=CHAT_ID, text=summary_msg, parse_mode="HTML")
+            await bot.send_message(chat_id=target_chat, text=summary_msg, parse_mode="HTML")
             await notify_job_finish("Run Buy Scanner", elapsed_seconds=time.time() - start_t, summary=f"ตรวจพบสัญญาณซื้อ {len(signals)} รายการ")
     except Exception as e:
         await notify_job_finish("Run Buy Scanner", elapsed_seconds=time.time() - start_t, success=False, error=str(e))

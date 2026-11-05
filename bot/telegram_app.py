@@ -1,3 +1,4 @@
+LAST_AI_EVALUATION = {}
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -153,14 +154,22 @@ def build_manual_sell_keyboard(symbol: str, shares: int, max_shares: int, price:
     return InlineKeyboardMarkup(keyboard)
 
 async def cmd_buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id if update.effective_chat else None
+    target_msg = update.effective_message
+
     if not context.args:
-        await update.message.reply_text(
+        text_help = (
             "📌 <b>วิธีใช้งานคำสั่ง /buy:</b>\n"
             "• <code>/buy THREL</code> (ดึงราคาตลาดสดให้อัตโนมัติ)\n"
             "• <code>/buy THREL 200</code> (ระบุ 200 หุ้น)\n"
-            "• <code>/buy THREL 200 1.45</code> (ระบุ 200 หุ้น ที่ 1.45 บ.)",
-            parse_mode="HTML"
+            "• <code>/buy THREL 200 1.45</code> (ระบุ 200 หุ้น ที่ 1.45 บ.)"
         )
+        if update.message:
+            await update.message.reply_text(text_help, parse_mode="HTML")
+        elif target_msg:
+            await target_msg.reply_text(text_help, parse_mode="HTML")
+        elif chat_id:
+            await context.bot.send_message(chat_id=chat_id, text=text_help, parse_mode="HTML")
         return
 
     sym = context.args[0].upper()
@@ -227,7 +236,12 @@ async def cmd_buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     reply_markup = build_manual_buy_keyboard(sym, shares, target_price)
-    await update.message.reply_text(caption, parse_mode="HTML", reply_markup=reply_markup)
+    if update.message:
+        await update.message.reply_text(caption, parse_mode="HTML", reply_markup=reply_markup)
+    elif target_msg:
+        await target_msg.reply_text(caption, parse_mode="HTML", reply_markup=reply_markup)
+    elif chat_id:
+        await context.bot.send_message(chat_id=chat_id, text=caption, parse_mode="HTML", reply_markup=reply_markup)
 
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -958,16 +972,27 @@ async def cmd_ai_scan(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         html_output = format_ai_evaluation_html(ai_res, detail_level=level)
 
+        LAST_AI_EVALUATION["result"] = ai_res
+        evaluations = ai_res.get("evaluations", [])
+        buy_syms = [ev["symbol"] for ev in evaluations if ev.get("decision") == "BUY"]
+        all_syms = [ev["symbol"] for ev in evaluations]
+
         top_pick = ai_res.get("top_pick", "NONE")
         buttons = []
         if top_pick != "NONE":
             tv_url = get_tradingview_url(top_pick)
             buttons.append([
                 InlineKeyboardButton(f"🛒 ซื้อ {top_pick}", callback_data=f"ai_buy:{top_pick}"),
-                InlineKeyboardButton(f"📈 กราฟ {top_pick}", url=tv_url)
+                InlineKeyboardButton(f"📈 TradingView {top_pick}", url=tv_url)
             ])
+
+        if buy_syms:
+            buttons.append([
+                InlineKeyboardButton(f"📊 ดูกราฟเฉพาะตัวที่แนะนำ BUY ({len(buy_syms)} ตัว)", callback_data="ai_charts:buy")
+            ])
+
         buttons.append([
-            InlineKeyboardButton("🔍 ดูกราฟสัญญาณทั้งหมด (/scan)", callback_data="ai_view_scan")
+            InlineKeyboardButton(f"📈 ดูกราฟทั้งหมดของรอบนี้ ({len(all_syms)} ตัว)", callback_data="ai_charts:all")
         ])
         reply_markup = InlineKeyboardMarkup(buttons)
 
@@ -975,6 +1000,54 @@ async def cmd_ai_scan(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     except Exception as e:
         await progress_msg.edit_text(f"❌ <b>AI Evaluation Error:</b>\n<code>{e}</code>", parse_mode="HTML")
+
+
+async def show_ai_candidate_charts(update: Update, context: ContextTypes.DEFAULT_TYPE, mode: str = "all"):
+    """ส่งกราฟเทคนิคอลเฉพาะหุ้นที่ AI ได้ทำการประเมินในรอบล่าสุด"""
+    query = update.callback_query
+    chat_id = update.effective_chat.id if update.effective_chat else None
+
+    res = LAST_AI_EVALUATION.get("result", {})
+    evaluations = res.get("evaluations", [])
+
+    if not evaluations:
+        if query:
+            await query.answer("⚠️ ไม่พบข้อมูลหุ้นในรอบการวิเคราะห์ล่าสุด กรุณากด /ai_scan ใหม่", show_alert=True)
+        return
+
+    if mode == "buy":
+        target_syms = [ev["symbol"] for ev in evaluations if ev.get("decision") == "BUY"]
+        label = f"เฉพาะหุ้นที่ AI แนะนำ BUY ({len(target_syms)} ตัว)"
+    else:
+        target_syms = [ev["symbol"] for ev in evaluations]
+        label = f"หุ้นทั้ง {len(target_syms)} ตัวจาก AI Scorecard"
+
+    if not target_syms:
+        if query:
+            await query.answer("ℹ️ ไม่มีหุ้นตัวใดที่ AI แนะนำ BUY ในรอบนี้", show_alert=True)
+        return
+
+    if query:
+        await query.answer(f"🔍 กำลังสร้างกราฟ ({label})...")
+
+    syms_str = ", ".join(target_syms)
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text=f"🔍 <b>กำลังสร้างกราฟเทคนิคอล {label}:</b>\n<code>{syms_str}</code>\n<i>(กรุณารอสักครู่ ระบบกำลังวาดกราฟและสร้างปุ่มกด...)</i>",
+        parse_mode="HTML"
+    )
+
+    try:
+        from jobs.run_buy_scanner import scan_and_notify
+        await scan_and_notify(
+            run_ai=False,
+            target_symbols=target_syms,
+            chat_id=chat_id,
+            bot_instance=context.bot
+        )
+    except Exception as e:
+        await context.bot.send_message(chat_id=chat_id, text=f"❌ เกิดข้อผิดพลาดในการสร้างกราฟ: {e}")
+
 
 async def cmd_scan_port(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """/scan_port [SYM] - รายงานสัญญาณกราฟเทคนิคอลของหุ้นในพอร์ตเข้า Telegram"""
