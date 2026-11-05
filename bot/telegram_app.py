@@ -254,6 +254,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "<b>🔍 การสแกนหาหุ้นและเข้าซื้อ:</b>\n"
         "• /scan - 📈 สแกนหาหุ้นซื้อทางเทคนิคอลดั้งเดิม + ส่งการ์ดกราฟขออนุมัติ (รวดเร็ว)\n"
         "• /ai_scan [1|2|3] [SYM] - 🤖 ส่งให้ AI วิเคราะห์ 3 มิติ (1=สั้นกระชับ, 2=ปานกลาง, 3=ละเอียด)\n"
+        "• /ai_credit - 💳 ตรวจสอบสถานะและโควตาคงเหลือของ Antigravity CLI บน Pi 5\n"
         "• /buy &lt;SYM&gt; [VOL] [PRICE] - 🛒 ส่งคำสั่งซื้อหุ้นแบบกำหนดเองพร้อมปุ่มปรับราคา\n\n"
         "<b>📦 จัดการคำสั่งซื้อขาย & พอร์ต:</b>\n"
         "• /order - ตรวจสอบสถานะคำสั่งซื้อขายวันนี้ทั้งหมด\n"
@@ -287,6 +288,7 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🔍 <b>การสแกนหาหุ้นและเข้าซื้อ:</b>\n"
         "• /scan - 📈 สแกนหาหุ้นซื้อทางเทคนิคอลดั้งเดิม + ส่งการ์ดกราฟขออนุมัติ (รวดเร็ว ไม่รอ AI)\n"
         "• /ai_scan [1|2|3] [SYM] - 🤖 ส่งให้ AI วิเคราะห์ 3 มิติ (1=สั้นมาก, 2=กระชับ, 3=ละเอียด)\n"
+        "• /ai_credit - 💳 เช็คโควตาคงเหลือ, สถานะการเชื่อมต่อ และบัญชี Antigravity (Pi 5)\n"
         "• /buy &lt;SYM&gt; [VOL] [PRICE] - ส่งคำสั่งซื้อหุ้นแบบกำหนดเองพร้อมปุ่มปรับราคา\n\n"
         "📦 <b>จัดการคำสั่งซื้อขาย & พอร์ต:</b>\n"
         "• /order - ตรวจสอบรายการและสถานะคำสั่งซื้อขายของวันนี้ทั้งหมด\n"
@@ -1002,6 +1004,99 @@ async def cmd_ai_scan(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     except Exception as e:
         await progress_msg.edit_text(f"❌ <b>AI Evaluation Error:</b>\n<code>{e}</code>", parse_mode="HTML")
+
+
+
+async def cmd_ai_credit(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/ai_credit หรือ /ai_quota - เช็คโควตาคงเหลือและสถานะของ Antigravity CLI บน Pi 5"""
+    from core.ai.router import get_ai_quota_status, get_active_provider_name
+
+    active_provider = get_active_provider_name()
+    if active_provider != "agy_pi5":
+        msg = (
+            "⚠️ <b>คำสั่งนี้ใช้งานได้เฉพาะเมื่อเปิดใช้งาน Provider agy_pi5 เท่านั้น</b>\n\n"
+            f"💡 <b>สถานะปัจจุบัน:</b>\n"
+            f"• Provider ที่ใช้งานอยู่: <code>{active_provider}</code>\n"
+            f"• คำสั่ง /ai_credit ออกแบบมาสำหรับตรวจสอบสถานะและโควตาของ Antigravity CLI บน Raspberry Pi 5\n\n"
+            "<i>หากต้องการสลับกลับมาใช้ agy_pi5 ให้ตั้งค่าใน <code>config/bot_config.json</code></i>"
+        )
+        if update.effective_message:
+            await update.effective_message.reply_text(msg, parse_mode="HTML")
+        return
+
+    progress_msg = None
+    if update.effective_message:
+        progress_msg = await update.effective_message.reply_text(
+            "⏳ <b>กำลังตรวจสอบสถานะและโควตาของ Antigravity CLI บน Pi 5...</b>",
+            parse_mode="HTML"
+        )
+
+    try:
+        status_info = get_ai_quota_status()
+
+        if not status_info.get("supported", False):
+            if progress_msg:
+                await progress_msg.edit_text(
+                    f"⚠️ {status_info.get('message', 'ไม่รองรับการตรวจสอบโควตา')}",
+                    parse_mode="HTML"
+                )
+            return
+
+        is_online = (status_info.get("status") == "ONLINE")
+        conn_emoji = "🟢" if is_online else "🔴"
+        conn_text = "เชื่อมต่อสำเร็จ (Online)" if is_online else "การเชื่อมต่อขัดข้อง (Offline)"
+        latency = status_info.get("latency_ms", 0)
+
+        msg = (
+            "🤖 <b>สถานะ Antigravity AI (Raspberry Pi 5)</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            f"🔌 <b>สถานะการเชื่อมต่อ:</b> {conn_emoji} {conn_text} ({latency} ms)\n"
+            f"👤 <b>บัญชีที่เข้าสู่ระบบ:</b> <code>{status_info.get('account', 'kengnex@gmail.com')}</code>\n"
+            f"💳 <b>แพ็กเกจบัญชี:</b> <b>{status_info.get('tier', 'Gemini Code Assist')}</b>\n"
+            f"🎁 <b>โควตาเครดิต:</b> ♾️ <b>ไม่จำกัด (Unlimited Quota)</b>\n"
+            f"   <i>({status_info.get('tier_desc', 'Unlimited coding assistant')})</i>\n"
+            f"🧠 <b>โมเดล AI หลัก:</b> <code>{status_info.get('model', 'Gemini 3.8 Flash (High)')}</code>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            "📊 <b>สถิติการใช้งานระบบ:</b>\n"
+            f"• คำขอสแกนวันนี้: <b>{status_info.get('today_requests', 0):,} ครั้ง</b>\n"
+            f"• คำขอสะสมทั้งหมด: <b>{status_info.get('total_requests', 0):,} ครั้ง</b>\n"
+        )
+
+        last_usage = status_info.get("last_usage")
+        if last_usage and last_usage.get("usage"):
+            u = last_usage.get("usage", {})
+            dur = last_usage.get("duration_seconds", 0)
+            msg += (
+                f"\n⚡ <b>รอบวิเคราะห์ล่าสุด:</b>\n"
+                f"• ความเร็วประมวลผล: {dur:.1f} วินาที\n"
+                f"• โทเค็นที่ใช้: <code>{u.get('total_tokens', 0):,} tokens</code> "
+                f"(In: {u.get('input_tokens', 0):,} | Out: {u.get('output_tokens', 0):,})\n"
+            )
+
+        msg += (
+            f"\n🕒 <b>เรียกใช้ล่าสุด:</b> {status_info.get('last_request_time', '-')}\n"
+            f"🔑 <b>OAuth Token:</b> 🟢 Valid (หมดอายุ: {status_info.get('token_expiry_formatted', '-')})\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            "💡 <i>Tip: ใช้คำสั่ง /ai_scan เพื่อวิเคราะห์หุ้น 3 มิติได้ตลอดเวลา</i>"
+        )
+
+        keyboard = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("🔄 รีเฟรชสถานะ", callback_data="ai_credit_refresh"),
+                InlineKeyboardButton("⚡ สแกนหุ้นด่วน (/ai_scan)", callback_data="run_scan_ai")
+            ]
+        ])
+
+        if progress_msg:
+            await progress_msg.edit_text(msg, parse_mode="HTML", reply_markup=keyboard)
+        elif update.effective_message:
+            await update.effective_message.reply_text(msg, parse_mode="HTML", reply_markup=keyboard)
+
+    except Exception as e:
+        if progress_msg:
+            await progress_msg.edit_text(f"❌ <b>เกิดข้อผิดพลาดในการตรวจสอบโควตา:</b>\n<code>{e}</code>", parse_mode="HTML")
+        elif update.effective_message:
+            await update.effective_message.reply_text(f"❌ <b>เกิดข้อผิดพลาดในการตรวจสอบโควตา:</b>\n<code>{e}</code>", parse_mode="HTML")
 
 
 async def show_ai_candidate_charts(update: Update, context: ContextTypes.DEFAULT_TYPE, mode: str = "all"):
@@ -1855,6 +1950,8 @@ def main():
     # --- 3. สแกนหาหุ้นและเข้าซื้อ (Scanning & Buying) ---
     app.add_handler(CommandHandler("scan", cmd_scan))
     app.add_handler(CommandHandler("ai_scan", cmd_ai_scan))
+    app.add_handler(CommandHandler("ai_credit", cmd_ai_credit))
+    app.add_handler(CommandHandler("ai_quota", cmd_ai_credit))
     app.add_handler(CommandHandler("buy", cmd_buy))
 
     # --- 4. จัดการคำสั่งซื้อขาย & พอร์ต (Orders & Position Control) ---

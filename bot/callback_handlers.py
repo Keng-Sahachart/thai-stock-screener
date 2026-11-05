@@ -267,6 +267,19 @@ async def handle_signal_callback(update: Update, context: ContextTypes.DEFAULT_T
         await cmd_buy(update, context)
         return
 
+    if action == "ai_credit_refresh":
+        await query.answer("🔄 กำลังรีเฟรชข้อมูลโควตา...")
+        from bot.telegram_app import cmd_ai_credit
+        await cmd_ai_credit(update, context)
+        return
+
+    if action == "run_scan_ai":
+        await query.answer()
+        from bot.telegram_app import cmd_ai_scan
+        context.args = ["1"]
+        await cmd_ai_scan(update, context)
+        return
+
     if action in ("ai_charts", "ai_view_scan"):
         mode = data[1] if len(data) > 1 and action == "ai_charts" else "all"
         await show_ai_candidate_charts(update, context, mode=mode)

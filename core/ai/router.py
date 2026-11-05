@@ -15,7 +15,6 @@ DESCRIPTION : AI Router: สลับและกระจายงานไป�
 import os
 import sys
 import json
-import psycopg2
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
@@ -64,6 +63,33 @@ def get_ai_provider(config: dict = None) -> BaseAIProvider:
     else:
         print(f"[AI Router WARN] ไม่รู้จัก Provider '{provider_name}', สลับกลับมาใช้ agy_pi5")
         return AgyPi5Provider(config=providers_cfg.get("agy_pi5", {}))
+
+def get_active_provider_name() -> str:
+    config = load_config()
+    return config.get("ai_evaluation", {}).get("active_provider", "agy_pi5").lower()
+
+def get_ai_quota_status() -> dict:
+    """ตรวจสอบโควตาและสถานะการเชื่อมต่อ (รองรับเฉพาะ Provider agy_pi5)"""
+    config = load_config()
+    ai_cfg = config.get("ai_evaluation", {})
+    provider_name = ai_cfg.get("active_provider", "agy_pi5").lower()
+    if provider_name != "agy_pi5":
+        return {
+            "supported": False,
+            "active_provider": provider_name,
+            "message": f"คำสั่งนี้รองรับเฉพาะเมื่อใช้งาน Provider 'agy_pi5' บน Pi 5 (ปัจจุบัน: '{provider_name}')"
+        }
+    provider = get_ai_provider(config)
+    if hasattr(provider, "get_quota_status"):
+        res = provider.get_quota_status()
+        res["supported"] = True
+        res["active_provider"] = provider_name
+        return res
+    return {
+        "supported": False,
+        "active_provider": provider_name,
+        "message": "Provider ปัจจุบันไม่มีฟังก์ชันตรวจสอบโควตา"
+    }
 
 def evaluate_candidates(symbols: list = None, target_date: str = None, conn = None) -> dict:
     """
