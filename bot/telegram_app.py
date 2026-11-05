@@ -930,6 +930,21 @@ async def cmd_ai_scan(update: Update, context: ContextTypes.DEFAULT_TYPE):
         symbols = [sym] if sym else None
         ai_res = evaluate_candidates(symbols=symbols)
 
+        if ai_res and ai_res.get("error"):
+            err_text = ai_res.get("error")
+            if "timed out" in err_text.lower():
+                err_msg = (
+                    "⚠️ <b>AI Evaluation Timeout:</b>\n"
+                    "ระบบ AI ใช้เวลาวิเคราะห์นานเกินกำหนด (Timeout)\n\n"
+                    "💡 <i>คำแนะนำ:</i>\n"
+                    "• ลองพิมพ์ <code>/ai_scan SMPC</code> เพื่อให้ AI วิเคราะห์หุ้นตัวที่สนใจรายตัว (ตอบกลับไว 10-15 วิ)\n"
+                    "• หรือพิมพ์ <code>/ai_scan 1</code> เพื่อลองใหม่อีกครั้ง"
+                )
+            else:
+                err_msg = f"⚠️ <b>AI Evaluation Error:</b>\n<code>{err_text}</code>"
+            await progress_msg.edit_text(err_msg, parse_mode="HTML")
+            return
+
         if not ai_res or not ai_res.get("evaluations"):
             no_data_msg = (
                 "🛡️ <b>ผลการสแกนด้วย AI</b>\n\n"

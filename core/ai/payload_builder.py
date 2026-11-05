@@ -58,6 +58,7 @@ def build_candidate_payload(conn, symbols: list = None, target_date: str = None,
                 SELECT symbol
                 FROM public.v_bot_buy_opportunities
                 WHERE trade_date = %s
+                ORDER BY priority DESC, vol_surge_ratio DESC
                 LIMIT %s;
             """, (target_date, max_candidates))
             symbols = [r["symbol"] for r in cur.fetchall()]
