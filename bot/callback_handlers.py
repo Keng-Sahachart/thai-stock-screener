@@ -1,3 +1,69 @@
+
+async def show_ai_candidate_charts(update: Update, context: ContextTypes.DEFAULT_TYPE, mode: str = "all"):
+    """ส่งกราฟเทคนิคอลเฉพาะหุ้นที่ AI ได้ทำการประเมินในรอบล่าสุด"""
+    query = update.callback_query
+    chat_id = update.effective_chat.id if update.effective_chat else None
+
+    from core.ai.state import get_last_evaluation
+    res = get_last_evaluation()
+    evaluations = res.get("evaluations", [])
+
+    # Fallback: หากยังไม่มี state file ให้ดึงหุ้น PENDING ล่าสุดจาก DB
+    if not evaluations:
+        conn = get_db_connection()
+        try:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("""
+                    SELECT symbol FROM public.bot_trade_signals
+                    WHERE status = 'PENDING'
+                      AND trade_date = (SELECT MAX(trade_date) FROM public.bot_trade_signals WHERE status = 'PENDING')
+                    ORDER BY priority DESC, id ASC
+                    LIMIT 10;
+                """)
+                rows = cur.fetchall()
+                if rows:
+                    evaluations = [{"symbol": r["symbol"], "decision": "BUY"} for r in rows]
+        finally:
+            conn.close()
+
+    if not evaluations:
+        if query:
+            await query.answer("⚠️ ไม่พบข้อมูลหุ้นในรอบการวิเคราะห์ล่าสุด กรุณากด /ai_scan ใหม่", show_alert=True)
+        return
+
+    if mode == "buy":
+        target_syms = [ev["symbol"] for ev in evaluations if ev.get("decision") == "BUY"]
+        label = f"เฉพาะหุ้นที่ AI แนะนำ BUY ({len(target_syms)} ตัว)"
+    else:
+        target_syms = [ev["symbol"] for ev in evaluations]
+        label = f"หุ้นทั้ง {len(target_syms)} ตัวจาก AI Scorecard"
+
+    if not target_syms:
+        if query:
+            await query.answer("ℹ️ ไม่มีหุ้นตัวใดที่ AI แนะนำ BUY ในรอบนี้", show_alert=True)
+        return
+
+    if query:
+        await query.answer(f"🔍 กำลังสร้างกราฟ ({label})...")
+
+    syms_str = ", ".join(target_syms)
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text=f"🔍 <b>กำลังสร้างกราฟเทคนิคอล {label}:</b>\n<code>{syms_str}</code>\n<i>(กรุณารอสักครู่ ระบบกำลังวาดกราฟและสร้างปุ่มกด...)</i>",
+        parse_mode="HTML"
+    )
+
+    try:
+        from jobs.run_buy_scanner import scan_and_notify
+        await scan_and_notify(
+            run_ai=False,
+            target_symbols=target_syms,
+            chat_id=chat_id,
+            bot_instance=context.bot
+        )
+    except Exception as e:
+        await context.bot.send_message(chat_id=chat_id, text=f"❌ เกิดข้อผิดพลาดในการสร้างกราฟ: {e}")
+
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """

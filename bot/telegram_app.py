@@ -973,6 +973,8 @@ async def cmd_ai_scan(update: Update, context: ContextTypes.DEFAULT_TYPE):
         html_output = format_ai_evaluation_html(ai_res, detail_level=level)
 
         LAST_AI_EVALUATION["result"] = ai_res
+        from core.ai.state import save_last_evaluation
+        save_last_evaluation(ai_res)
         evaluations = ai_res.get("evaluations", [])
         buy_syms = [ev["symbol"] for ev in evaluations if ev.get("decision") == "BUY"]
         all_syms = [ev["symbol"] for ev in evaluations]
