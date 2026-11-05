@@ -36,13 +36,21 @@ class AgyPi5Provider(BaseAIProvider):
             with open(temp_fd, "w", encoding="utf-8") as f:
                 f.write(prompt)
 
-            cmd = [
-                self.plink_path,
-                "-batch",
-                "-pw", self.password,
-                f"{self.user}@{self.host}",
-                f"{self.agy_binary} --output-format json"
-            ]
+            # ตรวจสอบว่ากำลังรันอยู่บน Pi 5 (Linux) หรือรันจากเครื่อง Windows Dev
+            is_running_locally_on_pi = (sys.platform != "win32") or os.path.exists(self.agy_binary)
+
+            if is_running_locally_on_pi:
+                # รันอยู่บน Pi 5 โดยตรง: เรียก agy ในเครื่องได้ทันที ไม่ต้องผ่าน Plink/SSH
+                cmd = [self.agy_binary, "--output-format", "json"]
+            else:
+                # รันอยู่บน Windows Dev PC: สั่งงานข้ามเครื่องไปยัง Pi 5 ผ่าน Plink
+                cmd = [
+                    self.plink_path,
+                    "-batch",
+                    "-pw", self.password,
+                    f"{self.user}@{self.host}",
+                    f"{self.agy_binary} --output-format json"
+                ]
 
             with open(temp_path, "r", encoding="utf-8") as stdin_f:
                 proc = subprocess.run(

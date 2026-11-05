@@ -85,7 +85,20 @@ def build_candidate_payload(conn, symbols: list = None, target_date: str = None,
             """, (sym, target_date))
             trig = cur.fetchone()
             if not trig:
-                continue
+                # ดึงข้อมูลราคาล่าสุดจาก stock_price_history หากไม่มี Trigger สดในวันนี้
+                cur.execute("""
+                    SELECT symbol, date as trade_date, close as trigger_price, volume,
+                           1.0 as vol_surge_ratio, 0.0 as macd_12_26_9_hist_accel_pct,
+                           'MANUAL_QUERY' as market_zone, false as dual_macd_confluence,
+                           0.0 as atr14, 'MANUAL_QUERY' as strategy_name, 0 as priority,
+                           'ผู้ใช้วิเคราะห์หุ้นรายตัวตามคำขอ' as reason
+                    FROM public.stock_price_history
+                    WHERE symbol = %s
+                    ORDER BY date DESC LIMIT 1;
+                """, (sym,))
+                trig = cur.fetchone()
+                if not trig:
+                    continue
 
             # 2. งบการเงิน & Value Score
             cur.execute("""

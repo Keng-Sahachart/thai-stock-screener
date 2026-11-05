@@ -232,28 +232,31 @@ async def cmd_buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "🤖 <b>Stock Trading Bot Controller</b>\n\n"
-        "<b>📊 ข้อมูลพอร์ตและคำสั่ง:</b>\n"
-        "• /status - แสดงสถานะบอทและสวิตช์ความปลอดภัย\n"
-        "• /port - ดูพอร์ตโฟลิโอและยอดเงินสดคงเหลือ\n"
-        "• /scan_port [SYM] - 📈 สแกนรายงานสัญญาณกราฟหุ้นในพอร์ต\n"
-        "• /update_port - ซิงค์ยอดเงินสดจาก Settrade ล่าสุด\n"
+        "<b>📊 ข้อมูลพอร์ตและผลการดำเนินงาน:</b>\n"
+        "• /port - ดูพอร์ตโฟลิโอ, หุ้นที่ถือ, กำไร/ขาดทุน และเงินสดคงเหลือ\n"
+        "• /port_chart [SYM] - 📈 ดูกราฟสัญญาณเทคนิคอลของหุ้นในพอร์ต (ระบุ SYM ได้)\n"
+        "• /history [N|SYM] - 📜 ดูประวัติการขายที่ปิดสถานะแล้ว (Closed Trades)\n"
+        "• /summary [day|month|year] - 🏆 สรุปผลงาน Performance รายวัน รายเดือน รายปี\n\n"
+        "<b>🔍 การสแกนหาหุ้นและเข้าซื้อ:</b>\n"
+        "• /scan - 📈 สแกนหาหุ้นซื้อทางเทคนิคอลดั้งเดิม + ส่งการ์ดกราฟขออนุมัติ (รวดเร็ว)\n"
+        "• /ai_scan [1|2|3] [SYM] - 🤖 ส่งให้ AI วิเคราะห์ 3 มิติ (1=สั้นกระชับ, 2=ปานกลาง, 3=ละเอียด)\n"
+        "• /buy &lt;SYM&gt; [VOL] [PRICE] - 🛒 ส่งคำสั่งซื้อหุ้นแบบกำหนดเองพร้อมปุ่มปรับราคา\n\n"
+        "<b>📦 จัดการคำสั่งซื้อขาย & พอร์ต:</b>\n"
         "• /order - ตรวจสอบสถานะคำสั่งซื้อขายวันนี้ทั้งหมด\n"
-        "• /history [N|SYM] - 📜 ดูประวัติการขายที่ปิดสถานะแล้ว กำไร/ขาดทุน กี่บาท กี่%\n"
-        "• /summary [day|month|year] - 🏆 สรุปผลงาน Performance รายวัน รายเดือน รายปี\n"
-        "• /sync_order - ซิงค์สถานะ Order ล่าสุดจาก Settrade ทันที\n\n"
-        "<b>🛒 การส่งและจัดการคำสั่ง:</b>\n"
-        "• /scan [1|2|3] - 🤖 สแกนหาหุ้นซื้อพร้อม AI วิเคราะห์ (1=สั้นสุด, 2=กระชับ, 3=ละเอียด)\n"
-        "• /buy &lt;SYM&gt; [VOL] [PRICE] - สั่งซื้อหุ้นแบบกำหนดเอง\n"
-        "• /sell_monitor - 🔍 ตรวจสอบเงื่อนไขขายและ Stop Loss ทันที\n"
-        "• /task_update - 🔄 รันอัปเดตราคา, Indicators และพอร์ตสิ้นวัน\n"
-        "• /cancel &lt;ID&gt; - ขอยกเลิกคำสั่งที่รอคิวในตลาด\n\n"
-        "<b>🛡️ การควบคุมความปลอดภัยและการตั้งค่า:</b>\n"
-        "• /adopt &lt;SYM&gt; - 🛡️ รับเลี้ยงหุ้น Manual เข้าสู่ระบบ Trailing Stop และความปลอดภัย\n"
-        "• /release &lt;SYM&gt; - 👤 ปลดการดูแลหุ้น กลับไปเป็น Manual ตามเดิม\n"
-        "• /close_pos &lt;SYM&gt; - ปิดสถานะหุ้นตัวที่ระบุทันที\n"
-        "• /panic_close_all - 🚨 สั่งขายล้างทุกไม้ที่บอทถือทันที\n"
-        "• /exclude [add|del|list] &lt;SYM&gt; - 🔒 จัดการหุ้นที่ได้รับการยกเว้น\n"
-        "• /notify_job [on|off] - 🔔 เปิด/ปิดแจ้งเตือน Background Jobs (Crontab)\n"
+        "• /sync_order - ซิงค์สถานะ Order กับ Settrade ทันที (Match / Queuing / Cancel)\n"
+        "• /cancel &lt;ID&gt; - ขอยกเลิกคำสั่งซื้อขายที่รอคิวในตลาด\n"
+        "• /close_pos &lt;SYM&gt; - สั่งขายปิดสถานะหุ้นรายตัวทันที\n"
+        "• /panic_close_all - 🚨 สั่งขายล้างทุกไม้ที่บอทดูแลทันที (Emergency)\n"
+        "• /adopt &lt;SYM&gt; - 🛡️ รับเลี้ยงหุ้น Manual เข้าสู่ระบบ Trailing Stop และการคุ้มครอง\n"
+        "• /release &lt;SYM&gt; - 👤 ปลดการดูแลหุ้น กลับไปเป็น Manual ตามเดิม\n\n"
+        "<b>⚙️ ควบคุมความปลอดภัยและการบำรุงรักษา:</b>\n"
+        "• /status - ตรวจสอบสถานะบอท (DRY_RUN/LIVE) และสวิตช์ความปลอดภัย\n"
+        "• /auto_sell [on|off] - ตั้งค่า/เปิด/ปิดสวิตช์ Auto-Sell (Trailing Stop, SL, Cut Loss)\n"
+        "• /sell_monitor - 🔍 ตรวจสอบเงื่อนไขขายและ Stop Loss ของพอร์ตทันที\n"
+        "• /update_port - ซิงค์ยอดเงินสดล่าสุดจาก Settrade API (หลังเติมเงิน)\n"
+        "• /task_update - 🔄 รันอัปเดตราคา, ข้อมูลงบการเงิน และ Indicators สิ้นวัน\n"
+        "• /exclude [add|del|list] &lt;SYM&gt; - 🔒 จัดการรายชื่อหุ้นที่ได้รับการยกเว้น\n"
+        "• /notify_job [on|off] - 🔔 เปิด/ปิดแจ้งเตือนรอบรัน Background Jobs (Cron)\n"
         "• /help - ดูคู่มือการใช้งานคำสั่งทั้งหมดอย่างละเอียด\n",
         parse_mode="HTML"
     )
@@ -262,27 +265,29 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """/help - แสดงคู่มือการใช้งานคำสั่งทั้งหมด"""
     msg = (
         "📖 <b>คู่มือการใช้งาน Stock Trading Bot</b>\n\n"
-        "📊 <b>ข้อมูลพอร์ตและการเงิน:</b>\n"
+        "📊 <b>ข้อมูลพอร์ตและผลการดำเนินงาน:</b>\n"
         "• /port - ดูพอร์ตจริง, พอร์ตจำลอง, กำไร/ขาดทุน และเงินสดคงเหลือ\n"
-        "• /scan_port [SYM] - รายงานสัญญาณกราฟเทคนิคอลและสถานะหุ้นในพอร์ต (ระบุ SYM ได้)\n"
-        "• /update_port - ซิงค์ยอดเงินสดล่าสุดจาก Settrade API\n"
-        "• /status - ตรวจสอบโหมดเทรด (DRY_RUN/LIVE) และสวิตช์ความปลอดภัย\n"
-        "• /order - ตรวจสอบรายการและสถานะคำสั่งซื้อขายของวันนี้ทั้งหมด\n"
+        "• /port_chart [SYM] - รายงานสัญญาณกราฟเทคนิคอลของหุ้นในพอร์ต (ระบุ SYM ได้)\n"
         "• /history [N|SYM] - 📜 ดูประวัติการขายที่ปิดสถานะแล้ว กำไร/ขาดทุน กี่บาท กี่%\n"
-        "• /summary [day|month|year] - 🏆 สรุปผลงาน Performance รายวัน รายเดือน รายปี\n"
-        "• /sync_order - ซิงค์สถานะ Order กับ Settrade ทันที (ตรวจผลจับคู่/ยกเลิก)\n\n"
-        "🛒 <b>การส่งและจัดการคำสั่ง:</b>\n"
-        "• /scan [1|2|3] - 🤖 สแกนหาหุ้นซื้อพร้อม AI วิเคราะห์ (1=สั้นสุด, 2=กระชับ, 3=ละเอียด)\n"
-        "• /buy &lt;SYM&gt; [VOL] [PRICE] - ส่งคำสั่งซื้อหุ้นแบบกำหนดเอง\n"
-        "• /sell_monitor [force] - ตรวจสอบเงื่อนไขขายและ Stop Loss ของพอร์ตทันที\n"
-        "• /task_update [force] - รันงานอัปเดตราคา Indicators สิ้นวัน และซิงค์ Trailing Stop\n"
-        "• /cancel &lt;ORDER_ID&gt; - ขอยกเลิกคำสั่งซื้อขายที่รอคิวในตลาด\n\n"
-        "🛡️ <b>การควบคุมความปลอดภัยและการตั้งค่า:</b>\n"
-        "• /adopt &lt;SYM&gt; - 🛡️ รับเลี้ยงหุ้น Manual เข้าสู่ระบบ Trailing Stop และคุ้มครองความปลอดภัยรอบใหม่\n"
-        "• /release &lt;SYM&gt; - 👤 ปลดการดูแลหุ้น กลับไปเป็น Manual ตามเดิมทันที\n"
+        "• /summary [day|month|year] - 🏆 สรุปผลงาน Performance รายวัน รายเดือน รายปี\n\n"
+        "🔍 <b>การสแกนหาหุ้นและเข้าซื้อ:</b>\n"
+        "• /scan - 📈 สแกนหาหุ้นซื้อทางเทคนิคอลดั้งเดิม + ส่งการ์ดกราฟขออนุมัติ (รวดเร็ว ไม่รอ AI)\n"
+        "• /ai_scan [1|2|3] [SYM] - 🤖 ส่งให้ AI วิเคราะห์ 3 มิติ (1=สั้นมาก, 2=กระชับ, 3=ละเอียด)\n"
+        "• /buy &lt;SYM&gt; [VOL] [PRICE] - ส่งคำสั่งซื้อหุ้นแบบกำหนดเองพร้อมปุ่มปรับราคา\n\n"
+        "📦 <b>จัดการคำสั่งซื้อขาย & พอร์ต:</b>\n"
+        "• /order - ตรวจสอบรายการและสถานะคำสั่งซื้อขายของวันนี้ทั้งหมด\n"
+        "• /sync_order - ซิงค์สถานะ Order กับ Settrade ทันที (ตรวจผลจับคู่/ยกเลิก)\n"
+        "• /cancel &lt;ORDER_ID&gt; - ขอยกเลิกคำสั่งซื้อขายที่รอคิวในตลาด\n"
         "• /close_pos &lt;SYM&gt; - สั่งขายปิดสถานะหุ้นรายตัวทันที\n"
         "• /panic_close_all - 🚨 ขายล้างทุกไม้ที่บอทดูแลทันที\n"
-        "• /auto_sell [trailing|sl|cutloss|all] [on|off] - ตั้งค่า/เปิด/ปิดสวิตช์ Auto-Sell (หรือพิมพ์เฉยๆ เพื่อเปิดแผงปุ่มกด)\n"
+        "• /adopt &lt;SYM&gt; - 🛡️ รับเลี้ยงหุ้น Manual เข้าสู่ระบบ Trailing Stop และคุ้มครองความปลอดภัย\n"
+        "• /release &lt;SYM&gt; - 👤 ปลดการดูแลหุ้น กลับไปเป็น Manual ตามเดิมทันที\n\n"
+        "⚙️ <b>ควบคุมความปลอดภัยและการบำรุงรักษา:</b>\n"
+        "• /status - ตรวจสอบโหมดเทรด (DRY_RUN/LIVE) และสวิตช์ความปลอดภัย\n"
+        "• /auto_sell [trailing|sl|cutloss|all] [on|off] - ตั้งค่า/เปิด/ปิดสวิตช์ Auto-Sell\n"
+        "• /sell_monitor [force] - ตรวจสอบเงื่อนไขขายและ Stop Loss ของพอร์ตทันที\n"
+        "• /update_port - ซิงค์ยอดเงินสดล่าสุดจาก Settrade API (หลังเติมเงิน)\n"
+        "• /task_update [force] - รันงานอัปเดตราคา Indicators สิ้นวัน และซิงค์ Trailing Stop\n"
         "• /exclude [add|del|list] &lt;SYM&gt; - เพิ่ม/ลบ/ดูหุ้นที่ยกเว้นใน config\n"
         "• /notify_job [on|off] - เปิด/ปิดการแจ้งเตือนรอบรัน Background Jobs (Crontab)\n"
     )
@@ -877,26 +882,84 @@ async def cmd_sync_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ เกิดข้อผิดพลาดในการซิงค์สถานะ Order: {e}")
 
 async def cmd_scan(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    level_arg = 1
-    if context.args:
-        try:
-            level_arg = int(context.args[0])
-            if level_arg not in (1, 2, 3):
-                level_arg = 1
-        except ValueError:
-            level_arg = 1
-
-    level_names = {
-        1: "1 (MINIMAL - สั้นมาก Flash Scorecard)",
-        2: "2 (COMPACT - กระชับ ชี้ขาดขึ้นจริง/หลอก)",
-        3: "3 (DETAILED - บทวิเคราะห์ละเอียดจัดเต็ม)"
-    }
-    await update.message.reply_text(f"🔍 กำลังสแกนหุ้นและส่งให้ AI วิเคราะห์ (ระดับ {level_names.get(level_arg, '1')})...")
+    """/scan - สแกนหาจังหวะซื้อทางเทคนิคอลดั้งเดิม และส่งการ์ดกราฟขออนุมัติ (รวดเร็ว ไม่รอ AI)"""
+    await update.message.reply_text("🔍 กำลังสแกนหาจังหวะซื้อทางเทคนิคอลและสร้างกราฟ...")
     try:
         from jobs.run_buy_scanner import scan_and_notify
-        await scan_and_notify(detail_level=level_arg)
+        await scan_and_notify(run_ai=False)
     except Exception as e:
         await update.message.reply_text(f"❌ เกิดข้อผิดพลาดในการสแกน: {e}")
+
+async def cmd_ai_scan(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/ai_scan [1|2|3] [SYM] - สแกนหุ้นและส่งให้ AI วิเคราะห์ 3 มิติ (ขึ้นจริง/หลอก, VI พื้นฐาน, Swing R:R)"""
+    level = 1
+    sym = None
+
+    if context.args:
+        for arg in context.args:
+            arg_str = arg.strip()
+            if arg_str in ("1", "2", "3"):
+                level = int(arg_str)
+            elif arg_str.isalpha():
+                sym = arg_str.upper()
+
+    level_names = {
+        1: "1 (MINIMAL - Flash Scorecard 1 บรรทัด/ตัว)",
+        2: "2 (COMPACT - สรุป 3 เสาหลัก ชี้ขาดขึ้นจริง/หลอก)",
+        3: "3 (DETAILED - บทวิเคราะห์เจาะลึกจัดเต็ม)"
+    }
+    level_label = level_names.get(level, level_names[1])
+
+    target_desc = f"หุ้น <b>{sym}</b>" if sym else "หุ้นผู้สมัครทั้งหมด"
+    progress_msg = await update.message.reply_text(
+        f"🤖 <b>AI Stock Evaluator</b>\n"
+        f"• กำลังประเมิน: {target_desc}\n"
+        f"• ระดับความละเอียด: <code>{level_label}</code>\n"
+        f"⏳ <i>กรุณารอสักครู่ กำลังประมวลผลผ่าน AI บน Pi 5...</i>",
+        parse_mode="HTML"
+    )
+
+    try:
+        from core.signals.aggregator import run_signal_aggregator
+        from core.ai.router import evaluate_candidates
+        from core.ai.formatter import format_ai_evaluation_html
+
+        if not sym:
+            run_signal_aggregator()
+
+        symbols = [sym] if sym else None
+        ai_res = evaluate_candidates(symbols=symbols)
+
+        if not ai_res or not ai_res.get("evaluations"):
+            no_data_msg = (
+                "🛡️ <b>ผลการสแกนด้วย AI</b>\n\n"
+                "ไม่พบสัญญาณซื้อใหม่ที่ผ่านเกณฑ์ทางเทคนิคอลในขณะนี้\n\n"
+                "💡 <i>คำแนะนำ:</i>\n"
+                "• พิมพ์ <code>/ai_scan &lt;SYM&gt;</code> เพื่อให้ AI วิเคราะห์หุ้นรายตัวที่ต้องการ (เช่น <code>/ai_scan SMPC</code>)\n"
+                "• หรือพิมพ์ <code>/scan</code> เพื่อตรวจสอบสัญญาณและดูกราฟเทคนิคอลทั่วไป"
+            )
+            await progress_msg.edit_text(no_data_msg, parse_mode="HTML")
+            return
+
+        html_output = format_ai_evaluation_html(ai_res, detail_level=level)
+
+        top_pick = ai_res.get("top_pick", "NONE")
+        buttons = []
+        if top_pick != "NONE":
+            tv_url = get_tradingview_url(top_pick)
+            buttons.append([
+                InlineKeyboardButton(f"🛒 ซื้อ {top_pick}", callback_data=f"ai_buy:{top_pick}"),
+                InlineKeyboardButton(f"📈 กราฟ {top_pick}", url=tv_url)
+            ])
+        buttons.append([
+            InlineKeyboardButton("🔍 ดูกราฟสัญญาณทั้งหมด (/scan)", callback_data="ai_view_scan")
+        ])
+        reply_markup = InlineKeyboardMarkup(buttons)
+
+        await progress_msg.edit_text(html_output, parse_mode="HTML", reply_markup=reply_markup)
+
+    except Exception as e:
+        await progress_msg.edit_text(f"❌ <b>AI Evaluation Error:</b>\n<code>{e}</code>", parse_mode="HTML")
 
 async def cmd_scan_port(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """/scan_port [SYM] - รายงานสัญญาณกราฟเทคนิคอลของหุ้นในพอร์ตเข้า Telegram"""
@@ -1726,58 +1789,51 @@ async def post_init(application):
 def main():
     req = HTTPXRequest(connect_timeout=20.0, read_timeout=60.0, write_timeout=20.0)
     app = ApplicationBuilder().token(TOKEN).request(req).post_init(post_init).build()
+        # --- 1. ข้อมูลระบบและช่วยเหลือ (System & Help) ---
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("help", cmd_help))
-    app.add_handler(CommandHandler("usage", cmd_help))
+    app.add_handler(CommandHandler("status", cmd_status))
+
+    # --- 2. พอร์ตและผลการดำเนินงาน (Portfolio & Performance) ---
     app.add_handler(CommandHandler("port", cmd_port))
-    app.add_handler(CommandHandler("update_port", cmd_update_port))
-    app.add_handler(CommandHandler("scan", cmd_scan))
-
-    app.add_handler(CommandHandler("scan_port", cmd_scan_port))
-    app.add_handler(CommandHandler("port_scan", cmd_scan_port))
     app.add_handler(CommandHandler("port_chart", cmd_scan_port))
-    app.add_handler(CommandHandler("chart_port", cmd_scan_port))
-    app.add_handler(CommandHandler("scanport", cmd_scan_port))
-
-    app.add_handler(CommandHandler("buy", cmd_buy))
-    app.add_handler(CommandHandler("order", cmd_order))
-    app.add_handler(CommandHandler("orders", cmd_order))
+    app.add_handler(CommandHandler("scan_port", cmd_scan_port))
     app.add_handler(CommandHandler("history", cmd_history))
-    app.add_handler(CommandHandler("sell_history", cmd_history))
     app.add_handler(CommandHandler("trades", cmd_history))
     app.add_handler(CommandHandler("summary", cmd_summary))
-    app.add_handler(CommandHandler("performance", cmd_summary))
     app.add_handler(CommandHandler("pnl", cmd_summary))
+    app.add_handler(CommandHandler("performance", cmd_summary))
 
+    # --- 3. สแกนหาหุ้นและเข้าซื้อ (Scanning & Buying) ---
+    app.add_handler(CommandHandler("scan", cmd_scan))
+    app.add_handler(CommandHandler("ai_scan", cmd_ai_scan))
+    app.add_handler(CommandHandler("buy", cmd_buy))
+
+    # --- 4. จัดการคำสั่งซื้อขาย & พอร์ต (Orders & Position Control) ---
+    app.add_handler(CommandHandler("order", cmd_order))
+    app.add_handler(CommandHandler("orders", cmd_order))
     app.add_handler(CommandHandler("sync_order", cmd_sync_orders))
     app.add_handler(CommandHandler("sync_orders", cmd_sync_orders))
     app.add_handler(CommandHandler("update_order", cmd_sync_orders))
-    app.add_handler(CommandHandler("update_orders", cmd_sync_orders))
-    
     app.add_handler(CommandHandler("cancel", cmd_cancel))
+    app.add_handler(CommandHandler("close_pos", cmd_close_pos))
+    app.add_handler(CommandHandler("panic_close_all", cmd_panic_close_all))
     app.add_handler(CommandHandler("adopt", cmd_adopt))
     app.add_handler(CommandHandler("release", cmd_release))
     app.add_handler(CommandHandler("unadopt", cmd_release))
-    app.add_handler(CommandHandler("close_pos", cmd_close_pos))
-    app.add_handler(CommandHandler("panic_close_all", cmd_panic_close_all))
-    app.add_handler(CommandHandler("status", cmd_status))
+
+    # --- 5. ควบคุมความปลอดภัยและการบำรุงรักษา (Safety & Maintenance) ---
     app.add_handler(CommandHandler("auto_sell", cmd_auto_sell))
     app.add_handler(CommandHandler("autosell", cmd_auto_sell))
-    app.add_handler(CommandHandler("autosells", cmd_auto_sell))
-    app.add_handler(CommandHandler("autocut", cmd_auto_sell))
-    app.add_handler(CommandHandler("notify_job", cmd_notify_job))
-    app.add_handler(CommandHandler("job_notify", cmd_notify_job))
     app.add_handler(CommandHandler("sell_monitor", cmd_sell_monitor))
     app.add_handler(CommandHandler("check_sell", cmd_sell_monitor))
-    app.add_handler(CommandHandler("monitor_sell", cmd_sell_monitor))
+    app.add_handler(CommandHandler("update_port", cmd_update_port))
     app.add_handler(CommandHandler("task_update", cmd_task_update))
     app.add_handler(CommandHandler("update_data", cmd_task_update))
-    app.add_handler(CommandHandler("run_task_update", cmd_task_update))
     app.add_handler(CommandHandler("exclude", cmd_exclude))
-    app.add_handler(CommandHandler("exclude_sym", cmd_exclude))
-    app.add_handler(CommandHandler("excluded_symbols", cmd_exclude))
     app.add_handler(CommandHandler("exclude_add", cmd_exclude_add))
     app.add_handler(CommandHandler("exclude_del", cmd_exclude_del))
+    app.add_handler(CommandHandler("notify_job", cmd_notify_job))
     app.add_handler(CallbackQueryHandler(handle_signal_callback)) # ดักฟังปุ่ม Inline Keyboard ของสัญญาณซื้อ
 
     print("🚀 Telegram Bot Service is running with Safety Controls...")

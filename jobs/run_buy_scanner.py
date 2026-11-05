@@ -74,9 +74,10 @@ def build_trade_keyboard(signal_id: int, current_shares: int, price: float, pend
     ]
     return InlineKeyboardMarkup(keyboard)
 
-async def scan_and_notify(detail_level: int = None):
+async def scan_and_notify(run_ai: bool = False, detail_level: int = None):
     start_t = time.time()
-    await notify_job_start("Run Buy Scanner", "สแกนหาจังหวะซื้อ ประเมินด้วย AI และสร้างการ์ดขออนุมัติ")
+    job_desc = "สแกนหาจังหวะซื้อและประเมินด้วย AI" if run_ai else "สแกนหาจังหวะซื้อทางเทคนิคอลและสร้างการ์ดขออนุมัติ"
+    await notify_job_start("Run Buy Scanner", job_desc)
     print("🔍 กำลังรัน Aggregator...")
     run_signal_aggregator()
 
@@ -112,9 +113,9 @@ async def scan_and_notify(detail_level: int = None):
             ai_lookup = {}
 
             # =================================================================
-            # 🤖 AI ROUTER EVALUATION LAYER
+            # 🤖 AI ROUTER EVALUATION LAYER (เฉพาะเมื่อ run_ai=True)
             # =================================================================
-            if ai_cfg.get("enabled", True):
+            if run_ai and ai_cfg.get("enabled", True):
                 chosen_level = parse_detail_level(detail_level or ai_cfg.get("default_detail_level", 1))
                 cand_symbols = [s["symbol"] for s in signals]
                 target_date = str(signals[0]["trade_date"])
@@ -242,4 +243,6 @@ async def scan_and_notify(detail_level: int = None):
 
 if __name__ == "__main__":
     level = int(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].isdigit() else None
-    asyncio.run(scan_and_notify(detail_level=level))
+    cfg = load_config()
+    should_ai = cfg.get("ai_evaluation", {}).get("enabled", False)
+    asyncio.run(scan_and_notify(run_ai=should_ai, detail_level=level))

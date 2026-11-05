@@ -192,6 +192,20 @@ async def handle_signal_callback(update: Update, context: ContextTypes.DEFAULT_T
         await query.answer("⚠️ หุ้นตัวนี้มีคำสั่งซื้อของวันนี้หรือรอคิวในตลาดแล้ว (ปิดปุ่ม Approve)", show_alert=True)
         return
 
+    if action == "ai_buy":
+        sym = data[1] if len(data) > 1 else ""
+        await query.answer()
+        context.args = [sym]
+        from bot.telegram_app import cmd_buy
+        await cmd_buy(update, context)
+        return
+
+    if action == "ai_view_scan":
+        await query.answer("🔍 กำลังสแกนกราฟเทคนิคอล...")
+        from bot.telegram_app import cmd_scan
+        await cmd_scan(update, context)
+        return
+
     if action == "toggle_auto_sell":
         from core.config_manager import (
             toggle_auto_sell_control,
