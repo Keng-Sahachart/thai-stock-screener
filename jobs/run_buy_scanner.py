@@ -14,6 +14,7 @@ DESCRIPTION : สคริปต์สแกนและยิงแจ้งเ
 """
 
 import os
+import html
 import asyncio
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -206,10 +207,10 @@ async def scan_and_notify(run_ai: bool = False, detail_level: int = None):
                 caption = (
                     f"🚨 <b>ตรวจพบสัญญาณซื้อ: {sym}</b>\n"
                     f"• ราคาปิด: <code>{p:.2f}</code> THB | SL Plan: <code>{float(sig['stop_loss_plan']):.2f}</code> THB\n"
-                    f"• แหล่งสัญญาณ: <code>{sig['signal_source']}</code>\n"
+                    f"• แหล่งสัญญาณ: <code>{html.escape(str(sig['signal_source']))}</code>\n"
                     f"• ประมาณการใช้เงิน: <code>{cost:,.2f}</code> THB\n"
                     f"• อำนาจซื้อคงเหลือ: <code>{line_avail:,.2f}</code> THB\n"
-                    f"• สัญญาณเทคนิค: {sig['reason']}"
+                    f"• สัญญาณเทคนิค: {html.escape(str(sig['reason'] or ''))}"
                     f"{ai_snippet}"
                     f"{pending_note}\n\n"
                     + ("<i>กดปุ่ม ➖ / ➕ เพื่อปรับจำนวนหุ้นก่อนกด Approve</i>" if not pending_order else "<i>หุ้นนี้มีคำสั่งซื้อในระบบแล้ว</i>")
