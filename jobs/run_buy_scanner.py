@@ -122,6 +122,32 @@ async def scan_and_notify(
                 """)
             signals = cur.fetchall()
 
+            if target_symbols:
+                found_syms = {s["symbol"] for s in signals}
+                missing_syms = [sym for sym in target_symbols if sym not in found_syms]
+                for msym in missing_syms:
+                    cur.execute("""
+                        SELECT p.symbol, p.date as trade_date, 'AI_RECOMMENDED' as signal_type,
+                               'AI_EVALUATION' as signal_source, p.close as trigger_price,
+                               round(p.close * 0.955, 2) as stop_loss_plan, 100 as recommended_shares,
+                               'ผ่านการคัดเลือกและแนะนำโดย AI' as reason, 'PENDING' as status,
+                               5 as priority, a.line_available
+                        FROM public.stock_price_history p
+                        CROSS JOIN (
+                            SELECT line_available FROM public.account_info_history 
+                            WHERE is_disabled = FALSE ORDER BY import_date DESC LIMIT 1
+                        ) a
+                        WHERE p.symbol = %s
+                        ORDER BY p.date DESC LIMIT 1;
+                    """, (msym,))
+                    fb = cur.fetchone()
+                    if fb:
+                        fb["id"] = 0
+                        signals.append(fb)
+                # จัดเรียงลำดับให้ตรงกับ target_symbols
+                order_map = {sym: idx for idx, sym in enumerate(target_symbols)}
+                signals.sort(key=lambda x: order_map.get(x["symbol"], 999))
+
             if not signals:
                 print("ไม่มีสัญญาณใหม่")
                 await bot.send_message(

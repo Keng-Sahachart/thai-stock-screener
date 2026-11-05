@@ -1005,51 +1005,9 @@ async def cmd_ai_scan(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def show_ai_candidate_charts(update: Update, context: ContextTypes.DEFAULT_TYPE, mode: str = "all"):
-    """ส่งกราฟเทคนิคอลเฉพาะหุ้นที่ AI ได้ทำการประเมินในรอบล่าสุด"""
-    query = update.callback_query
-    chat_id = update.effective_chat.id if update.effective_chat else None
-
-    res = LAST_AI_EVALUATION.get("result", {})
-    evaluations = res.get("evaluations", [])
-
-    if not evaluations:
-        if query:
-            await query.answer("⚠️ ไม่พบข้อมูลหุ้นในรอบการวิเคราะห์ล่าสุด กรุณากด /ai_scan ใหม่", show_alert=True)
-        return
-
-    if mode == "buy":
-        target_syms = [ev["symbol"] for ev in evaluations if ev.get("decision") == "BUY"]
-        label = f"เฉพาะหุ้นที่ AI แนะนำ BUY ({len(target_syms)} ตัว)"
-    else:
-        target_syms = [ev["symbol"] for ev in evaluations]
-        label = f"หุ้นทั้ง {len(target_syms)} ตัวจาก AI Scorecard"
-
-    if not target_syms:
-        if query:
-            await query.answer("ℹ️ ไม่มีหุ้นตัวใดที่ AI แนะนำ BUY ในรอบนี้", show_alert=True)
-        return
-
-    if query:
-        await query.answer(f"🔍 กำลังสร้างกราฟ ({label})...")
-
-    syms_str = ", ".join(target_syms)
-    await context.bot.send_message(
-        chat_id=chat_id,
-        text=f"🔍 <b>กำลังสร้างกราฟเทคนิคอล {label}:</b>\n<code>{syms_str}</code>\n<i>(กรุณารอสักครู่ ระบบกำลังวาดกราฟและสร้างปุ่มกด...)</i>",
-        parse_mode="HTML"
-    )
-
-    try:
-        from jobs.run_buy_scanner import scan_and_notify
-        await scan_and_notify(
-            run_ai=False,
-            target_symbols=target_syms,
-            chat_id=chat_id,
-            bot_instance=context.bot
-        )
-    except Exception as e:
-        await context.bot.send_message(chat_id=chat_id, text=f"❌ เกิดข้อผิดพลาดในการสร้างกราฟ: {e}")
-
+    """ส่งต่อให้ show_ai_candidate_charts ใน callback_handlers จัดการ"""
+    from bot.callback_handlers import show_ai_candidate_charts as _show
+    await _show(update, context, mode=mode)
 
 async def cmd_scan_port(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """/scan_port [SYM] - รายงานสัญญาณกราฟเทคนิคอลของหุ้นในพอร์ตเข้า Telegram"""

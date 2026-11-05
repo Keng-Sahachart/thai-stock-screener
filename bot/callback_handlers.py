@@ -269,7 +269,6 @@ async def handle_signal_callback(update: Update, context: ContextTypes.DEFAULT_T
 
     if action in ("ai_charts", "ai_view_scan"):
         mode = data[1] if len(data) > 1 and action == "ai_charts" else "all"
-        from bot.telegram_app import show_ai_candidate_charts
         await show_ai_candidate_charts(update, context, mode=mode)
         return
 
