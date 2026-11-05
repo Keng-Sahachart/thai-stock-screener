@@ -124,7 +124,7 @@ def evaluate_candidates(symbols: list = None, target_date: str = None, conn = No
 
 if __name__ == "__main__":
     import sys
-    test_symbols = sys.argv[1].split(",") if len(sys.argv) > 1 else ["SMPC", "CPW"]
+    test_symbols = sys.argv[1].split(",") if len(sys.argv) > 1 else None
     res = evaluate_candidates(symbols=test_symbols)
     print("\n[AI ROUTER EVALUATION RESULT]:")
     print(json.dumps(res, ensure_ascii=False, indent=2))

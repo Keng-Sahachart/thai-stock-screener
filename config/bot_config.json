@@ -16,7 +16,7 @@
         "default_detail_level": 1,
         "detail_levels_guide": "1: MINIMAL (1 บรรทัด/ตัว แวบเดียวจบ), 2: COMPACT (กระชับ ชี้ขาดขึ้นจริง/หลอก), 3: DETAILED (จัดเต็ม Pros/Risks)",
         "min_confidence_score": 80,
-        "max_candidates_to_analyze": 5,
+        "max_candidates_to_analyze": 10,
         "auto_buy_on_top_pick": false,
         "description": "active_provider: 'agy_pi5' (รัน agy บน Pi 5), 'gemini_api' (Google Cloud Free/Paid API), 'local_ollama' (Ollama REST API)",
         "providers": {
