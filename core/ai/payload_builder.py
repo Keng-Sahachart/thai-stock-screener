@@ -46,22 +46,40 @@ def build_candidate_payload(conn, symbols: list = None, target_date: str = None,
     day_limit_thb = budget_cfg.get("max_amount_per_day_thb", 4000.0)
 
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        # กำหนดวันที่ล่าสุดหากไม่ได้ระบุ
+        # กำหนดวันที่ล่าสุดหากไม่ได้ระบุ (เช็คจาก bot_trade_signals ก่อนเพื่อให้ตรงกับ /scan)
         if not target_date:
-            cur.execute("SELECT MAX(trade_date) AS max_date FROM public.v_bot_buy_opportunities;")
+            cur.execute("SELECT MAX(trade_date) AS max_date FROM public.bot_trade_signals WHERE status = 'PENDING';")
             row = cur.fetchone()
-            target_date = str(row["max_date"]) if row and row["max_date"] else date.today().isoformat()
+            if row and row["max_date"]:
+                target_date = str(row["max_date"])
+            else:
+                cur.execute("SELECT MAX(trade_date) AS max_date FROM public.v_bot_buy_opportunities;")
+                row = cur.fetchone()
+                target_date = str(row["max_date"]) if row and row["max_date"] else date.today().isoformat()
 
-        # หากไม่ได้ระบุ symbols ให้ดึงผู้สมัครตามลำดับ Priority จาก v_bot_buy_opportunities
+        # หากไม่ได้ระบุ symbols: ดึงผู้สมัครตามลำดับคิวของ /scan (bot_trade_signals) ก่อนเป็นอันดับแรก
         if not symbols:
             cur.execute("""
                 SELECT symbol
-                FROM public.v_bot_buy_opportunities
-                WHERE trade_date = %s
-                ORDER BY priority DESC, vol_surge_ratio DESC
+                FROM public.bot_trade_signals
+                WHERE status = 'PENDING'
+                  AND trade_date = %s
+                ORDER BY priority DESC, id ASC
                 LIMIT %s;
             """, (target_date, max_candidates))
-            symbols = [r["symbol"] for r in cur.fetchall()]
+            rows = cur.fetchall()
+            if rows:
+                symbols = [r["symbol"] for r in rows]
+            else:
+                # กรณี bot_trade_signals ยังไม่มี ให้ fallback ไปยัง v_bot_buy_opportunities โดยเรียงเกณฑ์เดียวกับ /scan
+                cur.execute("""
+                    SELECT symbol
+                    FROM public.v_bot_buy_opportunities
+                    WHERE trade_date = %s
+                    ORDER BY (CASE WHEN trigger_price <= 10.0 THEN 1 ELSE 2 END), priority DESC, macd_12_26_9_hist DESC
+                    LIMIT %s;
+                """, (target_date, max_candidates))
+                symbols = [r["symbol"] for r in cur.fetchall()]
 
         payload = {
             "market_date": target_date,
@@ -76,7 +94,7 @@ def build_candidate_payload(conn, symbols: list = None, target_date: str = None,
         }
 
         for sym in symbols:
-            # 1. ข้อมูล Trigger ปัจจุบัน
+            # 1. ข้อมูล Trigger ปัจจุบัน (ค้นหาจาก v_bot_buy_opportunities ก่อน)
             cur.execute("""
                 SELECT symbol, trade_date, trigger_price, volume, vol_surge_ratio, 
                        macd_12_26_9_hist_accel_pct, market_zone, dual_macd_confluence, 
@@ -85,6 +103,18 @@ def build_candidate_payload(conn, symbols: list = None, target_date: str = None,
                 WHERE symbol = %s AND trade_date = %s;
             """, (sym, target_date))
             trig = cur.fetchone()
+            if not trig:
+                # ลองค้นหาจาก bot_trade_signals (รองรับหุ้นจาก Hybrid Selection หรือ Signal อื่นๆ)
+                cur.execute("""
+                    SELECT symbol, trade_date, trigger_price, 0 as volume,
+                           1.0 as vol_surge_ratio, 0.0 as macd_12_26_9_hist_accel_pct,
+                           'BOT_SIGNAL' as market_zone, false as dual_macd_confluence,
+                           0.0 as atr14, signal_source as strategy_name, priority, reason
+                    FROM public.bot_trade_signals
+                    WHERE symbol = %s AND trade_date = %s
+                    ORDER BY priority DESC, id ASC LIMIT 1;
+                """, (sym, target_date))
+                trig = cur.fetchone()
             if not trig:
                 # ดึงข้อมูลราคาล่าสุดจาก stock_price_history หากไม่มี Trigger สดในวันนี้
                 cur.execute("""
