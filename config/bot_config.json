@@ -25,7 +25,7 @@
                 "user": "keng",
                 "plink_path": "C:\\Program Files\\PuTTY\\plink.exe",
                 "agy_binary": "/home/keng/.local/bin/agy",
-                "timeout_sec": 180
+                "timeout_sec": 240
             },
             "gemini_api": {
                 "model": "gemini-2.0-flash",

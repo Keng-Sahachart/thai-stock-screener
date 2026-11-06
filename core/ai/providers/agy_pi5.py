@@ -54,6 +54,7 @@ class AgyPi5Provider(BaseAIProvider):
                 cmd = [
                     self.agy_binary,
                     "--output-format", "json",
+                    "--effort", "low",
                     "--dangerously-skip-permissions",
                     "--disable-slash-commands"
                 ]
@@ -64,7 +65,7 @@ class AgyPi5Provider(BaseAIProvider):
                     "-batch",
                     "-pw", self.password,
                     f"{self.user}@{self.host}",
-                    f"{self.agy_binary} --output-format json --dangerously-skip-permissions --disable-slash-commands"
+                    f"{self.agy_binary} --output-format json --effort low --dangerously-skip-permissions --disable-slash-commands"
                 ]
 
             with open(temp_path, "r", encoding="utf-8") as stdin_f:
