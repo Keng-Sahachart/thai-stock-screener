@@ -80,7 +80,7 @@ def format_ai_evaluation_html(ai_result: dict, detail_level: int = 1) -> str:
             lines.append(f"{m} <b>{sym}</b> ({score}คะแนน) | {trend_badge} | {vi_badge} | {dec_badge}")
 
         lines.append(f"\n💡 <i>(พิมพ์ /ai_scan 2 เพื่อดูกระชับ หรือ /ai_scan 3 เพื่อดูจัดเต็ม)</i>")
-        return "\n".join(lines)
+        res_text = "\n".join(lines)
 
     # =========================================================================
     # LEVEL 2: COMPACT (กระชับ มีเหตุผลชี้ขาด 3 มิติ สบายตา)
@@ -116,7 +116,7 @@ def format_ai_evaluation_html(ai_result: dict, detail_level: int = 1) -> str:
             lines.append("\n".join(card) + "\n")
 
         lines.append("💡 <i>(พิมพ์ /ai_scan 1 ดูสั้น หรือ /ai_scan 3 ดูละเอียดจัดเต็ม)</i>")
-        return "\n".join(lines)
+        res_text = "\n".join(lines)
 
     # =========================================================================
     # LEVEL 3: DETAILED (ละเอียดจัดเต็ม ทั้ง Pros, Risks, ตัวเลขเทคนิค)
@@ -156,7 +156,13 @@ def format_ai_evaluation_html(ai_result: dict, detail_level: int = 1) -> str:
 
         lines.append("━━━━━━━━━━━━━━━━━━━")
         lines.append("💡 <i>(พิมพ์ /ai_scan 1 เพื่อดูสรุปย่อแบบ 1 บรรทัด หรือ /ai_scan 2 เพื่อดูกระชับ)</i>")
-        return "\n".join(lines)
+        res_text = "\n".join(lines)
+
+    if ai_result.get("fallback_used"):
+        provider_info = ai_result.get("provider_used", "gemini-2.5-flash")
+        res_text += f"\n\n🔄 <i>(หมายเหตุ: ระบบสลับใช้โมเดลสำรอง <b>{provider_info}</b> อัตโนมัติ เนื่องจากโมเดลหลักไม่ว่าง)</i>"
+
+    return res_text
 
 
 def split_telegram_html(text: str, max_length: int = 3800) -> list:

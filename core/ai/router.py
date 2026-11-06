@@ -44,13 +44,12 @@ def load_config() -> dict:
         print(f"[AI Router WARN] ไม่สามารถโหลด bot_config.json ได้: {e}")
         return {}
 
-def get_ai_provider(config: dict = None) -> BaseAIProvider:
-    """Factory Function สำหรับสร้าง Instance ของ AI Provider ตามที่กำหนดใน config"""
+def create_provider_by_name(provider_name: str, config: dict = None) -> BaseAIProvider:
+    """Factory Function สำหรับสร้าง Instance ของ AI Provider ตามชื่อที่ระบุ"""
     if config is None:
         config = load_config()
 
     ai_cfg = config.get("ai_evaluation", {})
-    provider_name = ai_cfg.get("active_provider", "agy_pi5").lower()
     providers_cfg = ai_cfg.get("providers", {})
     specific_cfg = providers_cfg.get(provider_name, {})
 
@@ -63,6 +62,22 @@ def get_ai_provider(config: dict = None) -> BaseAIProvider:
     else:
         print(f"[AI Router WARN] ไม่รู้จัก Provider '{provider_name}', สลับกลับมาใช้ agy_pi5")
         return AgyPi5Provider(config=providers_cfg.get("agy_pi5", {}))
+
+def get_ai_provider(config: dict = None) -> BaseAIProvider:
+    """Factory Function สำหรับสร้าง Instance ของ Primary AI Provider ตามที่กำหนดใน config"""
+    if config is None:
+        config = load_config()
+    provider_name = config.get("ai_evaluation", {}).get("active_provider", "agy_pi5").lower()
+    return create_provider_by_name(provider_name, config)
+
+def get_fallback_provider(config: dict = None) -> BaseAIProvider:
+    """สร้าง Instance ของ Fallback AI Provider หากกำหนดไว้ใน config"""
+    if config is None:
+        config = load_config()
+    fallback_name = config.get("ai_evaluation", {}).get("fallback_provider")
+    if not fallback_name:
+        return None
+    return create_provider_by_name(fallback_name.lower(), config)
 
 def get_active_provider_name() -> str:
     config = load_config()
@@ -95,8 +110,9 @@ def evaluate_candidates(symbols: list = None, target_date: str = None, conn = No
     """
     ฟังก์ชันหลักในการประเมินหุ้น:
     1. ดึงและจัดเตรียมข้อมูลดิบ (Payload Builder)
-    2. ส่งให้ Provider ปัจจุบันประเมิน (AI Evaluation)
-    3. ส่งคืนผลลัพธ์พร้อมข้อมูล Payload อ้างอิง
+    2. ส่งให้ Provider ปัจจุบันประเมิน (AI Routing Layer)
+    3. หากเกิด Error หรือ High Traffic จะสลับไป Fallback Provider อัตโนมัติ (Self-Healing Fallback)
+    4. ส่งคืนผลลัพธ์พร้อมข้อมูล Payload อ้างอิง
     """
     config = load_config()
     ai_cfg = config.get("ai_evaluation", {})
@@ -133,13 +149,53 @@ def evaluate_candidates(symbols: list = None, target_date: str = None, conn = No
                 "evaluations": []
             }
 
-        # ขั้นที่ 2: สั่งงานผ่าน Provider ที่เลือก (AI Routing Layer)
+        # ขั้นที่ 2: สั่งงานผ่าน Primary Provider ที่เลือก (AI Routing Layer)
         provider = get_ai_provider(config)
         print(f"🤖 [AI Router] ส่งหุ้น {len(payload['candidates'])} ตัวให้ Provider: '{provider.name}'...")
-        result = provider.evaluate(payload)
+        
+        result = None
+        try:
+            result = provider.evaluate(payload)
+        except Exception as e:
+            print(f"❌ [AI Router ERROR] Exception จาก Primary Provider '{provider.name}': {e}")
+            result = {"error": str(e), "status": "ERROR", "top_pick": "NONE", "evaluations": []}
+
+        # ตรวจสอบว่าเกิด Error หรือไม่ เพื่อสลับไป Fallback Provider อัตโนมัติ
+        has_error = (
+            not result
+            or result.get("status") == "ERROR"
+            or bool(result.get("error"))
+            or not result.get("evaluations")
+        )
+
+        fallback_provider = get_fallback_provider(config)
+        if has_error and fallback_provider and fallback_provider.name != provider.name:
+            orig_error = result.get("error") if result else "No response"
+            model_info = getattr(fallback_provider, "model", fallback_provider.name)
+            print(f"⚠️ [AI Router FALLBACK] Primary Provider '{provider.name}' ขัดข้อง ({orig_error})")
+            print(f"🔄 [AI Router FALLBACK] กำลังสลับไปใช้ Fallback Provider: '{fallback_provider.name}' (Model: {model_info})...")
+
+            try:
+                fb_result = fallback_provider.evaluate(payload)
+                if fb_result and not fb_result.get("error") and fb_result.get("evaluations"):
+                    print(f"✅ [AI Router FALLBACK] Fallback ไปยัง '{fallback_provider.name}' สำเร็จเรียบร้อย!")
+                    result = fb_result
+                    result["fallback_used"] = True
+                    result["primary_provider"] = provider.name
+                    result["primary_error"] = orig_error
+                    result["provider_used"] = f"{fallback_provider.name} ({model_info})"
+                else:
+                    fb_err = fb_result.get("error") if fb_result else "No fallback response"
+                    print(f"❌ [AI Router FALLBACK] Fallback '{fallback_provider.name}' ขัดข้องเช่นกัน: {fb_err}")
+                    result["fallback_error"] = fb_err
+            except Exception as fe:
+                print(f"❌ [AI Router FALLBACK] Exception จาก Fallback Provider: {fe}")
+                result["fallback_error"] = str(fe)
+
+        if not result.get("provider_used"):
+            result["provider_used"] = provider.name
 
         # บรรจุข้อมูล Meta เสริม
-        result["provider_used"] = provider.name
         result["market_date"] = payload.get("market_date")
         result["candidates_analyzed"] = [c["symbol"] for c in payload.get("candidates", [])]
         return result
