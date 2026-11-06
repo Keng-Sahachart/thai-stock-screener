@@ -163,32 +163,40 @@ def split_telegram_html(text: str, max_length: int = 3800) -> list:
     """
     แบ่งข้อความ HTML ออกเป็นท่อนๆ โดยไม่ให้เกินขีดจำกัด 4,096 ตัวอักษรของ Telegram API
     โดยตัดแบ่งตามย่อหน้า (\n\n หรือการ์ดแต่ละตัว) เพื่อรักษาความสมบูรณ์ของแท็ก HTML
+    รับประกันว่าไม่มีท่อนใดเกิน max_length แน่นอน แม้จะเป็นข้อความก้อนเดียวก็ตาม
     """
     if not text or len(text) <= max_length:
         return [text] if text else []
 
+    # 1. ย่อยข้อความเป็นหน่วยเล็ก (atomic units) ที่แต่ละชิ้นรับประกันว่าไม่เกิน max_length
+    units = []
+    paragraphs = text.split("\n\n")
+    for p in paragraphs:
+        if len(p) <= max_length:
+            units.append(p)
+        else:
+            # ถ้าย่อหน้าเดียวยาวเกิน max_length ให้แบ่งตามบรรทัด \n
+            lines = p.split("\n")
+            for line in lines:
+                if len(line) <= max_length:
+                    units.append(line)
+                else:
+                    # ถ้าบรรทัดเดียวยังยาวเกิน ให้ตัด slice ปลอดภัย
+                    for i in range(0, len(line), max_length):
+                        units.append(line[i:i + max_length])
+
+    # 2. นำ atomic units มารวมเป็น chunks
     chunks = []
-    blocks = text.split("\n\n")
     current_chunk = ""
 
-    for block in blocks:
-        # หากเอาบล็อกนี้มาต่อแล้วความยาวจะเกิน max_length
-        if len(current_chunk) + len(block) + 2 > max_length:
+    for u in units:
+        sep = "\n\n" if (current_chunk and not current_chunk.endswith("\n")) else ""
+        if len(current_chunk) + len(sep) + len(u) <= max_length:
+            current_chunk = current_chunk + sep + u if current_chunk else u
+        else:
             if current_chunk:
                 chunks.append(current_chunk.strip())
-                current_chunk = block
-            else:
-                # กรณีบล็อกเดียวยาวเกิน max_length ให้แบ่งย่อยตามบรรทัดเดี่ยว (\n)
-                lines = block.split("\n")
-                for line in lines:
-                    if len(current_chunk) + len(line) + 1 > max_length:
-                        if current_chunk:
-                            chunks.append(current_chunk.strip())
-                        current_chunk = line
-                    else:
-                        current_chunk = f"{current_chunk}\n{line}" if current_chunk else line
-        else:
-            current_chunk = f"{current_chunk}\n\n{block}" if current_chunk else block
+            current_chunk = u
 
     if current_chunk:
         chunks.append(current_chunk.strip())

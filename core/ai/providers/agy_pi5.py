@@ -227,7 +227,10 @@ class AgyPi5Provider(BaseAIProvider):
             "token_expiry": None,
             "token_expiry_formatted": "-",
             "today_requests": 0,
+            "weekly_requests": 0,
             "total_requests": 0,
+            "quota_exhausted": False,
+            "quota_reset_in": None,
             "last_request_time": "-",
             "last_request_title": "-",
             "last_usage": None
@@ -289,6 +292,10 @@ class AgyPi5Provider(BaseAIProvider):
                 cur.execute("SELECT COUNT(*) FROM conversation_summaries WHERE last_modified_time LIKE ?", (f"{today_prefix}%",))
                 status_info["today_requests"] = cur.fetchone()[0]
 
+                seven_days_ago = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=7)).strftime("%Y-%m-%d")
+                cur.execute("SELECT COUNT(*) FROM conversation_summaries WHERE last_modified_time >= ?", (seven_days_ago,))
+                status_info["weekly_requests"] = cur.fetchone()[0]
+
                 cur.execute("SELECT last_modified_time, title FROM conversation_summaries ORDER BY last_modified_time DESC LIMIT 1")
                 row = cur.fetchone()
                 if row:
@@ -297,6 +304,22 @@ class AgyPi5Provider(BaseAIProvider):
                 conn.close()
             except Exception as de:
                 status_info["db_error"] = str(de)
+
+        # 3.1 ตรวจสอบสถานะ RESOURCE_EXHAUSTED จาก cli.log ของ agy
+        cli_log_path = os.path.expanduser("~/.gemini/antigravity-cli/cli.log")
+        if os.path.exists(cli_log_path):
+            try:
+                import re
+                with open(cli_log_path, "r", encoding="utf-8", errors="ignore") as lf:
+                    lines = lf.readlines()[-60:]
+                log_tail = "".join(lines)
+                if "RESOURCE_EXHAUSTED" in log_tail or "quota reached" in log_tail.lower():
+                    status_info["quota_exhausted"] = True
+                    m = re.search(r"Resets in ([^\.\n\r]+)", log_tail, re.IGNORECASE)
+                    if m:
+                        status_info["quota_reset_in"] = m.group(1).strip()
+            except Exception:
+                pass
 
         # 4. ดึงสถิติ Token ของรอบล่าสุดจาก logs/last_agy_usage.json
         usage_path = ROOT_DIR / "logs" / "last_agy_usage.json"

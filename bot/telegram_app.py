@@ -947,7 +947,7 @@ async def cmd_ai_scan(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ai_res = evaluate_candidates(symbols=symbols)
 
         if ai_res and ai_res.get("error"):
-            err_text = ai_res.get("error")
+            err_text = str(ai_res.get("error"))
             if "timed out" in err_text.lower():
                 err_msg = (
                     "⚠️ <b>AI Evaluation Timeout:</b>\n"
@@ -957,6 +957,8 @@ async def cmd_ai_scan(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "• หรือพิมพ์ <code>/ai_scan 1</code> เพื่อลองใหม่อีกครั้ง"
                 )
             else:
+                if len(err_text) > 1500:
+                    err_text = err_text[:1500] + "... (truncated)"
                 err_msg = f"⚠️ <b>AI Evaluation Error:</b>\n<code>{err_text}</code>"
             await progress_msg.edit_text(err_msg, parse_mode="HTML")
             return
@@ -1021,7 +1023,16 @@ async def cmd_ai_scan(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
 
     except Exception as e:
-        await progress_msg.edit_text(f"❌ <b>AI Evaluation Error:</b>\n<code>{e}</code>", parse_mode="HTML")
+        err_str = str(e)
+        if len(err_str) > 1500:
+            err_str = err_str[:1500] + "... (truncated)"
+        try:
+            await progress_msg.edit_text(f"❌ <b>AI Evaluation Error:</b>\n<code>{err_str}</code>", parse_mode="HTML")
+        except Exception:
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text=f"❌ AI Evaluation Error:\n{err_str[:1000]}"
+            )
 
 
 
@@ -1065,18 +1076,29 @@ async def cmd_ai_credit(update: Update, context: ContextTypes.DEFAULT_TYPE):
         conn_text = "เชื่อมต่อสำเร็จ (Online)" if is_online else "การเชื่อมต่อขัดข้อง (Offline)"
         latency = status_info.get("latency_ms", 0)
 
+        weekly_reqs = status_info.get("weekly_requests", 0)
+        is_exhausted = status_info.get("quota_exhausted", False)
+        reset_in = status_info.get("quota_reset_in")
+
+        if is_exhausted:
+            quota_badge = "🔴 <b>เต็มชั่วคราว (Quota Reached)</b>"
+            reset_note = f"\n⏳ <b>กำหนดรีเซ็ตโควตา:</b> ในอีก <code>{reset_in or 'รอบสัปดาห์ถัดไป'}</code>"
+        else:
+            quota_badge = "🟢 <b>พร้อมใช้งาน (Active)</b>"
+            reset_note = ""
+
         msg = (
             "🤖 <b>สถานะ Antigravity AI (Raspberry Pi 5)</b>\n"
             "━━━━━━━━━━━━━━━━━━━━\n"
             f"🔌 <b>สถานะการเชื่อมต่อ:</b> {conn_emoji} {conn_text} ({latency} ms)\n"
             f"👤 <b>บัญชีที่เข้าสู่ระบบ:</b> <code>{status_info.get('account', 'kengnex@gmail.com')}</code>\n"
             f"💳 <b>แพ็กเกจบัญชี:</b> <b>{status_info.get('tier', 'Gemini Code Assist')}</b>\n"
-            f"🎁 <b>โควตาเครดิต:</b> ♾️ <b>ไม่จำกัด (Unlimited Quota)</b>\n"
-            f"   <i>({status_info.get('tier_desc', 'Unlimited coding assistant')})</i>\n"
+            f"🎁 <b>โควตารายสัปดาห์ (Rolling 7D):</b> {quota_badge}{reset_note}\n"
             f"🧠 <b>โมเดล AI หลัก:</b> <code>{status_info.get('model', 'Gemini 3.8 Flash (High)')}</code>\n"
             "━━━━━━━━━━━━━━━━━━━━\n"
-            "📊 <b>สถิติการใช้งานระบบ:</b>\n"
-            f"• คำขอสแกนวันนี้: <b>{status_info.get('today_requests', 0):,} ครั้ง</b>\n"
+            "📊 <b>สถิติการใช้งานคำขอ (Requests):</b>\n"
+            f"• คำขอวันนี้: <b>{status_info.get('today_requests', 0):,} ครั้ง</b>\n"
+            f"• คำขอใน 7 วันล่าสุด: <b>{weekly_reqs:,} ครั้ง</b> (~50 ครั้ง/สัปดาห์)\n"
             f"• คำขอสะสมทั้งหมด: <b>{status_info.get('total_requests', 0):,} ครั้ง</b>\n"
         )
 

@@ -214,8 +214,11 @@ async def scan_and_notify(
                                     )
                                     await bot.send_message(chat_id=target_chat, text=auto_msg, parse_mode="HTML")
                 elif ai_result and ai_result.get("error"):
-                    print(f"⚠️ [Buy Scanner] AI Evaluation Error: {ai_result['error']}")
-                    err_html = f"⚠️ <b>AI Evaluation Warning:</b>\nไม่สามารถประมวลผล AI ได้ในรอบนี้ (<code>{ai_result['error']}</code>)\nระบบจะส่งการ์ดสัญญาณเทคนิคอลให้ตามปกติ"
+                    err_raw = str(ai_result.get("error", ""))
+                    print(f"⚠️ [Buy Scanner] AI Evaluation Error: {err_raw}")
+                    if len(err_raw) > 1500:
+                        err_raw = err_raw[:1500] + "... (truncated)"
+                    err_html = f"⚠️ <b>AI Evaluation Warning:</b>\nไม่สามารถประมวลผล AI ได้ในรอบนี้ (<code>{err_raw}</code>)\nระบบจะส่งการ์ดสัญญาณเทคนิคอลให้ตามปกติ"
                     await bot.send_message(chat_id=target_chat, text=err_html, parse_mode="HTML")
 
             # =================================================================
