@@ -43,7 +43,9 @@ class AgyPi5Provider(BaseAIProvider):
         # สร้างไฟล์ Prompt ชั่วคราวเพื่อส่งผ่าน Stdin ป้องกัน Escape Character บิดเบือน
         temp_fd, temp_path = tempfile.mkstemp(suffix=".txt", prefix="agy_prompt_")
         temp_out_fd, temp_out_path = tempfile.mkstemp(suffix=".json", prefix="agy_out_")
+        temp_err_fd, temp_err_path = tempfile.mkstemp(suffix=".err", prefix="agy_err_")
         os.close(temp_out_fd)
+        os.close(temp_err_fd)
 
         try:
             with open(temp_fd, "w", encoding="utf-8") as f:
@@ -63,12 +65,12 @@ class AgyPi5Provider(BaseAIProvider):
                 ]
 
                 with open(temp_path, "r", encoding="utf-8") as stdin_f:
-                    with open(temp_out_path, "w", encoding="utf-8") as out_f:
+                    with open(temp_out_path, "w", encoding="utf-8") as out_f, open(temp_err_path, "w", encoding="utf-8") as err_f:
                         proc = subprocess.Popen(
                             cmd,
                             stdin=stdin_f,
                             stdout=out_f,
-                            stderr=subprocess.DEVNULL,
+                            stderr=err_f,
                             text=True,
                             encoding="utf-8"
                         )
@@ -112,7 +114,22 @@ class AgyPi5Provider(BaseAIProvider):
                                 proc.wait(timeout=2)
                             except Exception:
                                 proc.kill()
-                            return {"error": f"AI evaluation timed out after {self.timeout_sec}s", "top_pick": "NONE", "evaluations": []}
+
+                            # อ่านข้อความ Error จาก stderr
+                            err_msg = ""
+                            if os.path.exists(temp_err_path):
+                                try:
+                                    with open(temp_err_path, "r", encoding="utf-8") as ef:
+                                        err_msg = ef.read().strip()
+                                except Exception:
+                                    pass
+
+                            if "quota" in err_msg.lower() or "429" in err_msg or "resource_exhausted" in err_msg.lower():
+                                clean_err = "⚠️ โควตาการใช้งานของบัญชี Google Antigravity บน Pi 5 เต็มชั่วคราว (Individual quota reached)"
+                                print(f"[AgyPi5Provider QUOTA_EXHAUSTED] {err_msg}")
+                                return {"error": clean_err, "top_pick": "NONE", "evaluations": []}
+
+                            return {"error": err_msg or f"AI evaluation timed out after {self.timeout_sec}s", "top_pick": "NONE", "evaluations": []}
 
             else:
                 # รันอยู่บน Windows Dev PC: สั่งงานข้ามเครื่องไปยัง Pi 5 ผ่าน Plink
@@ -163,16 +180,12 @@ class AgyPi5Provider(BaseAIProvider):
             print(f"[AgyPi5Provider EXCEPTION] {e}")
             return {"error": str(e), "top_pick": "NONE", "evaluations": []}
         finally:
-            if os.path.exists(temp_path):
-                try:
-                    os.remove(temp_path)
-                except Exception:
-                    pass
-            if 'temp_out_path' in locals() and os.path.exists(temp_out_path):
-                try:
-                    os.remove(temp_out_path)
-                except Exception:
-                    pass
+            for p in [temp_path, temp_out_path, temp_err_path]:
+                if os.path.exists(p):
+                    try:
+                        os.remove(p)
+                    except Exception:
+                        pass
 
     def get_quota_status(self) -> dict:
         """
