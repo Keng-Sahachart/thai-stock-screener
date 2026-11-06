@@ -40,17 +40,20 @@ class AgyPi5Provider(BaseAIProvider):
     def evaluate(self, payload: dict) -> dict:
         prompt = self.build_prompt(payload)
 
-        # สร้างไฟล์ Prompt ชั่วคราวเพื่อส่งผ่าน Stdin ของ Plink ป้องกัน Escape Character บิดเบือน
+        # สร้างไฟล์ Prompt ชั่วคราวเพื่อส่งผ่าน Stdin ป้องกัน Escape Character บิดเบือน
         temp_fd, temp_path = tempfile.mkstemp(suffix=".txt", prefix="agy_prompt_")
+        temp_out_fd, temp_out_path = tempfile.mkstemp(suffix=".json", prefix="agy_out_")
+        os.close(temp_out_fd)
+
         try:
             with open(temp_fd, "w", encoding="utf-8") as f:
                 f.write(prompt)
 
-            # ตรวจสอบว่ากำลังรันอยู่บน Pi 5 (Linux) หรือรันจากเครื่อง Windows Dev
             is_running_locally_on_pi = (sys.platform != "win32") or os.path.exists(self.agy_binary)
 
             if is_running_locally_on_pi:
-                # รันอยู่บน Pi 5 โดยตรง: เรียก agy ในเครื่องได้ทันที ไม่ต้องผ่าน Plink/SSH
+                # รันอยู่บน Pi 5 โดยตรง: เรียก agy ในเครื่องพร้อมจับผลลัพธ์ผ่านไฟล์ชั่วคราว
+                # เมื่อ agy เขียน JSON ผลลัพธ์เสร็จ จะสั่งปิด background language server ทันที
                 cmd = [
                     self.agy_binary,
                     "--output-format", "json",
@@ -58,6 +61,59 @@ class AgyPi5Provider(BaseAIProvider):
                     "--dangerously-skip-permissions",
                     "--disable-slash-commands"
                 ]
+
+                with open(temp_path, "r", encoding="utf-8") as stdin_f:
+                    with open(temp_out_path, "w", encoding="utf-8") as out_f:
+                        proc = subprocess.Popen(
+                            cmd,
+                            stdin=stdin_f,
+                            stdout=out_f,
+                            stderr=subprocess.DEVNULL,
+                            text=True,
+                            encoding="utf-8"
+                        )
+
+                        agy_resp = None
+                        poll_interval = 1.0
+                        max_polls = int(self.timeout_sec / poll_interval)
+
+                        for _ in range(max_polls):
+                            time.sleep(poll_interval)
+                            if os.path.exists(temp_out_path) and os.path.getsize(temp_out_path) > 300:
+                                try:
+                                    with open(temp_out_path, "r", encoding="utf-8") as rf:
+                                        content = rf.read().strip()
+                                        if content.endswith("}"):
+                                            data = json.loads(content)
+                                            if "status" in data and "response" in data:
+                                                agy_resp = data
+                                                proc.terminate()
+                                                try:
+                                                    proc.wait(timeout=2)
+                                                except Exception:
+                                                    proc.kill()
+                                                break
+                                except Exception:
+                                    pass
+                            if proc.poll() is not None:
+                                break
+
+                        if not agy_resp:
+                            if os.path.exists(temp_out_path) and os.path.getsize(temp_out_path) > 0:
+                                try:
+                                    with open(temp_out_path, "r", encoding="utf-8") as rf:
+                                        agy_resp = json.loads(rf.read().strip())
+                                except Exception:
+                                    pass
+
+                        if not agy_resp:
+                            proc.terminate()
+                            try:
+                                proc.wait(timeout=2)
+                            except Exception:
+                                proc.kill()
+                            return {"error": f"AI evaluation timed out after {self.timeout_sec}s", "top_pick": "NONE", "evaluations": []}
+
             else:
                 # รันอยู่บน Windows Dev PC: สั่งงานข้ามเครื่องไปยัง Pi 5 ผ่าน Plink
                 cmd = [
@@ -68,23 +124,23 @@ class AgyPi5Provider(BaseAIProvider):
                     f"{self.agy_binary} --output-format json --effort low --dangerously-skip-permissions --disable-slash-commands"
                 ]
 
-            with open(temp_path, "r", encoding="utf-8") as stdin_f:
-                proc = subprocess.run(
-                    cmd,
-                    stdin=stdin_f,
-                    capture_output=True,
-                    text=True,
-                    encoding="utf-8",
-                    timeout=self.timeout_sec
-                )
+                with open(temp_path, "r", encoding="utf-8") as stdin_f:
+                    proc = subprocess.run(
+                        cmd,
+                        stdin=stdin_f,
+                        capture_output=True,
+                        text=True,
+                        encoding="utf-8",
+                        timeout=self.timeout_sec
+                    )
 
-            if proc.returncode != 0:
-                err_msg = proc.stderr.strip()
-                print(f"[AgyPi5Provider ERROR] Return code {proc.returncode}: {err_msg}")
-                return {"error": err_msg, "top_pick": "NONE", "evaluations": []}
+                if proc.returncode != 0:
+                    err_msg = proc.stderr.strip()
+                    print(f"[AgyPi5Provider ERROR] Return code {proc.returncode}: {err_msg}")
+                    return {"error": err_msg, "top_pick": "NONE", "evaluations": []}
 
-            # Parse ผลลัพธ์จาก CLI JSON wrapper
-            agy_resp = json.loads(proc.stdout)
+                # Parse ผลลัพธ์จาก CLI JSON wrapper
+                agy_resp = json.loads(proc.stdout)
             raw_ai_text = agy_resp.get("response", "")
 
             # บันทึก usage สถิติรอบวิเคราะห์ล่าสุด
@@ -108,7 +164,15 @@ class AgyPi5Provider(BaseAIProvider):
             return {"error": str(e), "top_pick": "NONE", "evaluations": []}
         finally:
             if os.path.exists(temp_path):
-                os.remove(temp_path)
+                try:
+                    os.remove(temp_path)
+                except Exception:
+                    pass
+            if 'temp_out_path' in locals() and os.path.exists(temp_out_path):
+                try:
+                    os.remove(temp_out_path)
+                except Exception:
+                    pass
 
     def get_quota_status(self) -> dict:
         """
