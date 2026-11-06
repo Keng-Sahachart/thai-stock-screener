@@ -158,6 +158,20 @@ class AgyPi5Provider(BaseAIProvider):
 
                 # Parse ผลลัพธ์จาก CLI JSON wrapper
                 agy_resp = json.loads(proc.stdout)
+            if not agy_resp:
+                return {"error": "No response received from AI", "top_pick": "NONE", "evaluations": []}
+
+            if agy_resp.get("status") == "ERROR" or agy_resp.get("error"):
+                err_str = agy_resp.get("error") or "Unknown AI error"
+                if "quota" in err_str.lower() or "429" in err_str or "individual quota" in err_str.lower():
+                    err_str = f"⚠️ โควตาการใช้งาน Antigravity บน Pi 5 เต็มชั่วคราว ({err_str})"
+                return {
+                    "error": err_str,
+                    "status": "ERROR",
+                    "top_pick": "NONE",
+                    "evaluations": []
+                }
+
             raw_ai_text = agy_resp.get("response", "")
 
             # บันทึก usage สถิติรอบวิเคราะห์ล่าสุด
