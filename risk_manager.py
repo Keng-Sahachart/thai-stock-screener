@@ -214,15 +214,18 @@ def check_portfolio_risk(df_portfolio, df_indicators, total_equity):
 def is_market_trading_time() -> tuple[bool, str]:
     """
     ตรวจสอบว่าเวลาปัจจุบันอยู่ในช่วงเวลาเปิดทำการซื้อขายของตลาดหุ้นไทย (SET) หรือไม่:
-    - วันทำการ: จันทร์ - ศุกร์ (weekday 0 ถึง 4)
+    - วันทำการ: จันทร์ - ศุกร์ (weekday 0 ถึง 4) และไม่ใช่วันหยุดตลาดหลักทรัพย์ SET
     - รอบเช้า: 09:55 - 12:35 น.
     - รอบบ่าย: 14:25 - 16:35 น.
     :return: (is_open: bool, reason: str)
     """
     from datetime import datetime, time
+    from core.market_schedule import is_trading_day_calendar
+
     now = datetime.now()
-    if now.weekday() >= 5:
-        return False, "ตลาดปิดทำการ (วันหยุดสุดสัปดาห์ เสาร์-อาทิตย์)"
+    is_trading, reason = is_trading_day_calendar(now.date())
+    if not is_trading:
+        return False, f"ตลาดปิดทำการ ({reason})"
 
     cur_time = now.time()
     m_open = time(9, 55)

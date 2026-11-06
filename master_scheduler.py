@@ -57,6 +57,8 @@ import subprocess
 import threading
 from datetime import datetime, date, time as dtime
 from pathlib import Path
+from core.market_schedule import is_weekend, is_trading_day_calendar, verify_market_open_live, is_calendar_holiday
+from core.job_notifier import send_system_alert_sync
 
 # ปรับ Standard Output Encoding สำหรับ Windows
 if sys.platform == "win32":
@@ -211,7 +213,7 @@ class TelegramBotSupervisor(threading.Thread):
 
 
 class SchedulerEngine(threading.Thread):
-    """Scheduler Engine ตรวจสอบรอบเวลาและสั่งรันงานตามกำหนดการอัตโนมัติ"""
+    """Scheduler Engine ตรวจสอบรอบเวลาและสั่งรันงานตามกำหนดการอัตโนมัติ (Hybrid + Failover)"""
     def __init__(self):
         super().__init__(daemon=True, name="SchedulerEngine")
         # บันทึก timestamp ที่แต่ละงานรันล่าสุด เพื่อไม่ให้รันซ้ำในนาทีเดียวกัน
@@ -221,23 +223,64 @@ class SchedulerEngine(threading.Thread):
             "sell_monitor": "",
             "sync_orders": "",
             "task_update": "",
-            "sync_orders_close": ""
+            "sync_orders_close": "",
+            "failover_check": ""
         }
+        self.current_date = None
+        self.is_market_day_today = True
+        self.market_holiday_reason = ""
+        self.holiday_notified = False
+        self.live_failover_checked = False
+        self.live_market_open = None  # None: ยังไม่ได้ตรวจ, True: ตลาดเปิด, False: ตลาดปิด (Failover Triggered)
 
     def run(self):
-        logger.info("⏰ Scheduler Engine เริ่มต้นระบบจับเวลา...")
+        logger.info("⏰ Scheduler Engine เริ่มต้นระบบจับเวลา (Hybrid + Real-time Failover)...")
 
         while not shutdown_event.is_set():
             now = datetime.now()
+            today = now.date()
             current_minute_str = now.strftime("%Y-%m-%d %H:%M")
             cur_time = now.time()
             cur_minute = now.minute
 
-            # ข้ามวันหยุดเสาร์-อาทิตย์ สำหรับงานตลาดหุ้น
-            if not is_weekend():
-                # -------------------------------------------------------------
+            # -------------------------------------------------------------
+            # ตรวจสอบและรีเซ็ตสถานะประจำวันเมื่อขึ้นวันใหม่
+            # -------------------------------------------------------------
+            if self.current_date != today:
+                self.current_date = today
+                self.holiday_notified = False
+                self.live_failover_checked = False
+                self.live_market_open = None
+
+                # ตรวจสอบปฏิทินวันทำการประจำวัน (เสาร์-อาทิตย์ และวันหยุดตลาดหลักทรัพย์ SET)
+                is_trading, reason = is_trading_day_calendar(today)
+                self.is_market_day_today = is_trading
+                self.market_holiday_reason = reason
+
+                if not is_trading:
+                    logger.info(f"📅 วันนี้ {today} เป็นวันหยุด: {reason} -> สั่งข้าม Job ตลาดหุ้นทั้งหมด")
+                else:
+                    logger.info(f"📅 วันนี้ {today} เป็นวันทำการตามปฏิทิน: {reason}")
+
+            # -------------------------------------------------------------
+            # แจ้งเตือนวันหยุดนักขัตฤกษ์เข้า Telegram ตอนเช้า (วันจันทร์-ศุกร์)
+            # -------------------------------------------------------------
+            if not self.is_market_day_today and not is_weekend(today) and not self.holiday_notified:
+                self.holiday_notified = True
+                alert_text = (
+                    f"📅 <b>[วันหยุดตลาดหลักทรัพย์ SET]</b>\n"
+                    f"• วันที่: <code>{today.strftime('%Y-%m-%d')}</code>\n"
+                    f"• สาเหตุ: <b>{self.market_holiday_reason}</b>\n"
+                    f"🛑 <i>ระบบสั่งพักการทำงานและข้ามการรัน Job ทั้งหมดตลอดวัน</i>"
+                )
+                threading.Thread(target=send_system_alert_sync, args=(alert_text,), daemon=True).start()
+                logger.info(f"📢 ส่งแจ้งเตือนวันหยุดนักขัตฤกษ์เข้า Telegram เรียบร้อย ({self.market_holiday_reason})")
+
+            # -------------------------------------------------------------
+            # หากเป็นวันทำการตามปฏิทิน ให้ดำเนินการตามกำหนดการ
+            # -------------------------------------------------------------
+            if self.is_market_day_today:
                 # 1. 09:00 น. -> Run Port Scanner (สรุปกราฟหุ้นในพอร์ตตอนเช้า)
-                # -------------------------------------------------------------
                 if now.hour == 9 and now.minute == 0:
                     if self.last_run_minute["port_scanner"] != current_minute_str:
                         self.last_run_minute["port_scanner"] = current_minute_str
@@ -247,9 +290,7 @@ class SchedulerEngine(threading.Thread):
                             daemon=True
                         ).start()
 
-                # -------------------------------------------------------------
-                # 2. 09:15 น. -> Run Buy Scanner (สแกนหาหุ้น & ส่งการ์ด Approve)
-                # -------------------------------------------------------------
+                # 2. 09:15 น. -> Run Buy Scanner (สแกนหาหุ้น & ส่งการ์ด Approve ก่อนตลาดเปิด 45 นาที)
                 if now.hour == 9 and now.minute == 15:
                     if self.last_run_minute["buy_scanner"] != current_minute_str:
                         self.last_run_minute["buy_scanner"] = current_minute_str
@@ -260,10 +301,41 @@ class SchedulerEngine(threading.Thread):
                         ).start()
 
                 # -------------------------------------------------------------
-                # 3. ช่วงเวลาตลาดเปิดทำการ (10:00-12:30 และ 14:30-16:30 น.)
+                # 3. 10:02 น. -> ด่านตรวจจับ Failover ตรวจสอบสถานะตลาดจริง
+                # (กรณีลืมกรอกปฏิทิน หรือมีวันหยุดพิเศษ / Circuit Breaker ตลาดปิดฉุกเฉิน)
                 # -------------------------------------------------------------
-                if is_market_hours(cur_time):
-                    # 3.1 Sync Order Status: รันทุกๆ 5 นาที (00, 05, 10, ..., 55)
+                if now.hour == 10 and now.minute == 2 and not self.live_failover_checked:
+                    if self.last_run_minute["failover_check"] != current_minute_str:
+                        self.last_run_minute["failover_check"] = current_minute_str
+                        self.live_failover_checked = True
+                        logger.info("🔍 [10:02 FAILOVER CHECK] กำลังตรวจสอบสถานะตลาดสดผ่าน Settrade API...")
+                        is_open, live_reason, _ = verify_market_open_live()
+
+                        if is_open:
+                            self.live_market_open = True
+                            logger.info(f"✅ [FAILOVER CHECK PASSED] {live_reason}")
+                        else:
+                            self.live_market_open = False
+                            self.is_market_day_today = False
+                            self.market_holiday_reason = f"Failover Triggered: {live_reason}"
+                            logger.warning(f"🛑 [FAILOVER TRIGGERED] ตรวจพบตลาดปิดทำการจริง! {live_reason}")
+
+                            failover_msg = (
+                                f"⚠️ <b>[Failover Alert - ตรวจพบตลาดปิดทำการ]</b>\n"
+                                f"• เวลาตรวจพบ: <code>10:02 น.</code>\n"
+                                f"• ผลการตรวจสถานะ: <b>{live_reason}</b>\n"
+                                f"• สาเหตุที่เป็นไปได้: <i>วันหยุดพิเศษที่ไม่อยู่ในปฏิทิน หรือตลาดปิดฉุกเฉิน</i>\n"
+                                f"🛑 <b>ระบบสั่งระงับ Job ที่เหลือทั้งหมดของวันนี้ทันที</b>\n"
+                                f"(ข้าม Sell Monitor, Sync Orders และ Task Update สิ้นวัน)"
+                            )
+                            threading.Thread(target=send_system_alert_sync, args=(failover_msg,), daemon=True).start()
+
+                # -------------------------------------------------------------
+                # 4. ช่วงเวลาตลาดเปิดทำการ (10:00-12:30 และ 14:30-16:30 น.)
+                # รันเฉพาะเมื่อตลาดเปิดทำการจริง (live_market_open ไม่เป็น False)
+                # -------------------------------------------------------------
+                if is_market_hours(cur_time) and self.is_market_day_today and (self.live_market_open is not False):
+                    # 4.1 Sync Order Status: รันทุกๆ 5 นาที (00, 05, 10, ..., 55)
                     if cur_minute % 5 == 0:
                         if self.last_run_minute["sync_orders"] != current_minute_str:
                             self.last_run_minute["sync_orders"] = current_minute_str
@@ -273,7 +345,7 @@ class SchedulerEngine(threading.Thread):
                                 daemon=True
                             ).start()
 
-                    # 3.2 Sell Monitor: เฝ้าระวัง Stop Loss ทุกๆ 10 นาที (00, 10, 20, ..., 50)
+                    # 4.2 Sell Monitor: เฝ้าระวัง Stop Loss ทุกๆ 10 นาที (00, 10, 20, ..., 50)
                     if cur_minute % 10 == 0:
                         if self.last_run_minute["sell_monitor"] != current_minute_str:
                             self.last_run_minute["sell_monitor"] = current_minute_str
@@ -284,9 +356,9 @@ class SchedulerEngine(threading.Thread):
                             ).start()
 
                 # -------------------------------------------------------------
-                # 4. 16:46 น. -> Sync Orders รอบปิดตลาด (ตรวจ Order Expired)
+                # 5. 16:46 น. -> Sync Orders รอบปิดตลาด (ตรวจ Order Expired)
                 # -------------------------------------------------------------
-                if now.hour == 16 and now.minute == 46:
+                if now.hour == 16 and now.minute == 46 and (self.live_market_open is not False):
                     if self.last_run_minute["sync_orders_close"] != current_minute_str:
                         self.last_run_minute["sync_orders_close"] = current_minute_str
                         threading.Thread(
@@ -296,9 +368,10 @@ class SchedulerEngine(threading.Thread):
                         ).start()
 
                 # -------------------------------------------------------------
-                # 5. 18:00 น. -> Task Update (ดึง EOD, คำนวณ Indicators, Trailing Stop)
+                # 6. 18:00 น. -> Task Update (ดึง EOD, คำนวณ Indicators, Trailing Stop)
+                # รันเฉพาะเมื่อตลาดเปิดเทรดในวันนี้ (live_market_open ไม่เป็น False)
                 # -------------------------------------------------------------
-                if now.hour == 18 and now.minute == 00:
+                if now.hour == 18 and now.minute == 00 and (self.live_market_open is not False):
                     if self.last_run_minute["task_update"] != current_minute_str:
                         self.last_run_minute["task_update"] = current_minute_str
                         threading.Thread(
@@ -337,13 +410,15 @@ def handle_signals(signum, frame):
 def print_status():
     """แสดงข้อมูลสถานะและการตั้งเวลาปัจจุบัน"""
     now = datetime.now()
-    weekend_tag = " (วันหยุดสุดสัปดาห์)" if is_weekend() else " (วันทำการ)"
-    market_tag = "🟢 ตลาดเปิดทำการ" if is_market_hours(now.time()) and not is_weekend() else "🔴 ตลาดปิดทำการ"
+    is_trading, cal_reason = is_trading_day_calendar(now.date())
+    weekend_tag = f" ({cal_reason})"
+    market_tag = "🟢 ตลาดเปิดทำการ" if is_market_hours(now.time()) and is_trading else f"🔴 ตลาดปิดทำการ ({cal_reason})"
 
     print("\n" + "="*70)
-    print("📊 ข้อมูลสถานะ Master Automation Scheduler")
+    print("📊 ข้อมูลสถานะ Master Automation Scheduler (Hybrid + Failover)")
     print("="*70)
     print(f"• เวลาปัจจุบัน        : {now.strftime('%Y-%m-%d %H:%M:%S')} {weekend_tag}")
+    print(f"• สถานะปฏิทิน SET    : {cal_reason}")
     print(f"• สถานะตลาดหุ้นไทย    : {market_tag}")
     print(f"• ไดเรกทอรีโปรเจกต์   : {ROOT_DIR}")
     print(f"• ไดเรกทอรี Logs      : {LOGS_DIR}")

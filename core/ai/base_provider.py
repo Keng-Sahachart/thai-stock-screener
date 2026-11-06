@@ -41,6 +41,8 @@ class BaseAIProvider(ABC):
 - ตัวที่ผ่านเกณฑ์ซื้อ (Decision = BUY) ต้องมี Confidence Score >= 80
 - จัดอันดับ และเลือก 'Top Pick' เพียง 1 ตัวที่ดีที่สุด (หากไม่มีตัวใดผ่านเกณฑ์ ให้ระบุ "NONE")
 
+คำเตือนสำคัญ: ห้ามเรียกใช้ Tool หรือฟังก์ชันภายนอกใดๆ ทั้งสิ้น ให้ใช้เฉพาะข้อมูลที่ให้มาข้างต้น และตอบกลับเป็น Raw JSON String เท่านั้น ห้ามมีข้อความเกริ่นหรือข้อความปิดท้าย
+
 ตอบกลับเป็น JSON เท่านั้น (Strict JSON) ตามโครงสร้างนี้:
 {{
   "top_pick": "ชื่อย่อหุ้น หรือ NONE",
@@ -82,7 +84,17 @@ class BaseAIProvider(ABC):
         if text.endswith("```"):
             text = text[:-3]
         text = text.strip()
-        return json.loads(text)
+        try:
+            return json.loads(text)
+        except Exception:
+            import re
+            m = re.search(r'(\{[\s\S]*\})', text)
+            if m:
+                try:
+                    return json.loads(m.group(1))
+                except Exception:
+                    pass
+            raise
 
     @abstractmethod
     def evaluate(self, payload: dict) -> dict:

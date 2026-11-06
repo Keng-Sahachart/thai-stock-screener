@@ -81,6 +81,10 @@ def build_candidate_payload(conn, symbols: list = None, target_date: str = None,
                 """, (target_date, max_candidates))
                 symbols = [r["symbol"] for r in cur.fetchall()]
 
+        # จำกัดจำนวนผู้สมัครไม่ให้เกิน max_candidates เพื่อป้องกัน Prompt บวมเกินขีดจำกัด
+        if symbols:
+            symbols = symbols[:max_candidates]
+
         payload = {
             "market_date": target_date,
             "market_context": "SET Index Trading Strategy: MACD Momentum + Breakout Scanner with ATR Risk Clamps",

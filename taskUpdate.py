@@ -21,18 +21,14 @@ def main(force: bool = False):
     todayYYYYMMDD_hhmmss = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"Task Update started at {todayYYYYMMDD_hhmmss} (force={force})")
 
-    # ข้ามการรันสคริปต์ในวันหยุดสุดสัปดาห์
-    if not force and date.today().weekday() > 4:
-        # 0 = Monday, 1=Tuesday, ...4=Friday, 5=Saturday, 6=Sunday
-        print(f"at {todayYYYYMMDD_hhmmss} => ❌ Today is weekend. Exiting...")
-        notify_job_finish_sync("Task Update", summary="ข้ามการทำงาน (วันหยุดสุดสัปดาห์)")
-        return {"status": "skipped", "reason": "วันหยุดสุดสัปดาห์ (Weekend)"}
-    
-    #เช็ควันหยุดนักขัตฤกษ์(เช็คตอนเช้า) (ถ้าอยากให้รันก็สามารถคอมเมนต์บรรทัดนี้ออกได้)
-    if not force and date.today().weekday() <= 4 and not usp.is_market_open() and  datetime.strptime("09:30:00", "%H:%M:%S").time() <= datetime.now().time() <= datetime.strptime("12:30:00", "%H:%M:%S").time() and  datetime.strptime("14:30:00", "%H:%M:%S").time() <= datetime.now().time() <= datetime.strptime("17:00:00", "%H:%M:%S").time():
-        print(f"at {todayYYYYMMDD_hhmmss} => ❌ Today is not a market day. Exiting...")
-        notify_job_finish_sync("Task Update", summary="ข้ามการทำงาน (ตลาดปิดทำการ)")
-        return {"status": "skipped", "reason": "ตลาดปิดทำการ (Holiday/Closed)"}
+    # ตรวจสอบวันทำการ (เสาร์-อาทิตย์ และวันหยุดตลาดหลักทรัพย์ SET)
+    if not force:
+        from core.market_schedule import is_trading_day_calendar
+        is_trading_day, cal_reason = is_trading_day_calendar()
+        if not is_trading_day:
+            print(f"at {todayYYYYMMDD_hhmmss} => ❌ {cal_reason}. Exiting...")
+            notify_job_finish_sync("Task Update", summary=f"ข้ามการทำงาน ({cal_reason})")
+            return {"status": "skipped", "reason": cal_reason}
 
     start_t = time.time()
     notify_job_start_sync("Task Update", "เริ่มอัพเดตข้อมูลราคา, Indicators และประมวลผลสิ้นวัน")

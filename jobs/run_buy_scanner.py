@@ -167,13 +167,16 @@ async def scan_and_notify(
             # =================================================================
             if run_ai and ai_cfg.get("enabled", True):
                 chosen_level = parse_detail_level(detail_level or ai_cfg.get("default_detail_level", 1))
-                cand_symbols = [s["symbol"] for s in signals]
+                max_ai_cands = ai_cfg.get("max_candidates_to_analyze", 10)
+                cand_symbols = [s["symbol"] for s in signals][:max_ai_cands]
                 target_date = str(signals[0]["trade_date"])
 
                 print(f"🤖 กำลังส่งหุ้น {len(cand_symbols)} ตัวให้ AI Router ประเมิน (ระดับ {chosen_level})...")
                 ai_result = evaluate_candidates(symbols=cand_symbols, target_date=target_date, conn=conn)
 
-                if ai_result and "evaluations" in ai_result:
+                if ai_result and ai_result.get("evaluations"):
+                    from core.ai.state import save_last_evaluation
+                    save_last_evaluation(ai_result)
                     for ev in ai_result.get("evaluations", []):
                         ai_lookup[ev.get("symbol")] = ev
 
@@ -210,6 +213,10 @@ async def scan_and_notify(
                                         f"• เหตุผล: <i>{top_ev.get('verdict', '')}</i>"
                                     )
                                     await bot.send_message(chat_id=target_chat, text=auto_msg, parse_mode="HTML")
+                elif ai_result and ai_result.get("error"):
+                    print(f"⚠️ [Buy Scanner] AI Evaluation Error: {ai_result['error']}")
+                    err_html = f"⚠️ <b>AI Evaluation Warning:</b>\nไม่สามารถประมวลผล AI ได้ในรอบนี้ (<code>{ai_result['error']}</code>)\nระบบจะส่งการ์ดสัญญาณเทคนิคอลให้ตามปกติ"
+                    await bot.send_message(chat_id=target_chat, text=err_html, parse_mode="HTML")
 
             # =================================================================
             # 📊 INDIVIDUAL CANDIDATE CARDS (พร้อมกราฟ)

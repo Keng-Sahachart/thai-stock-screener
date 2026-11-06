@@ -12,6 +12,7 @@ DESCRIPTION : ซิงค์ข้อมูลพอร์ตสิ้นวั
 """
 
 import os
+import json
 import asyncio
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -20,7 +21,8 @@ from telegram.request import HTTPXRequest
 import time
 import sys
 from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parent.parent))
+ROOT_DIR = Path(__file__).resolve().parent.parent
+sys.path.append(str(ROOT_DIR))
 
 from dotenv import load_dotenv
 from core.job_notifier import notify_job_start, notify_job_finish
@@ -28,6 +30,7 @@ from core.job_notifier import notify_job_start, notify_job_finish
 load_dotenv()
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+CONFIG_PATH = ROOT_DIR / "config" / "bot_config.json"
 
 def load_config():
     with open(CONFIG_PATH, "r", encoding="utf-8") as f:
@@ -37,9 +40,9 @@ def get_db_connection():
     return psycopg2.connect(
         host=os.getenv("posql_host", "localhost"),
         port=os.getenv("posql_port", "5432"),
-        dbname=os.getenv("posql_db", "stocks"),
-        user=os.getenv("posql_user", "postgres"),
-        password=os.getenv("posql_password", "postgres")
+        dbname=os.getenv("posql_db", "stockEquity"),
+        user=os.getenv("posql_user", "AdminKeng"),
+        password=os.getenv("posql_password", "P@ssw0rd@19")
     )
 
 async def sync_eod_portfolio():

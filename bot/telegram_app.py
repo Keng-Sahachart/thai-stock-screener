@@ -1772,6 +1772,68 @@ async def cmd_exclude_del(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await cmd_exclude(update, context)
 
 
+
+async def cmd_holidays(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/holidays [year] - แสดงปฏิทินวันหยุดตลาดหลักทรัพย์ SET และสถานะตลาดวันนี้"""
+    from core.market_schedule import is_trading_day_calendar, load_holidays, add_holiday, remove_holiday
+    from datetime import date
+
+    today = date.today()
+    args = [a.strip() for a in context.args if a.strip()]
+
+    # จัดการ Subcommand: add หรือ del
+    if args and args[0].lower() in ("add", "+"):
+        if len(args) < 3:
+            await update.message.reply_text("⚠️ รูปแบบการเพิ่ม: <code>/holidays add YYYY-MM-DD คำอธิบาย</code>", parse_mode="HTML")
+            return
+        d_str = args[1]
+        desc = " ".join(args[2:])
+        ok, res = add_holiday(d_str, desc)
+        await update.message.reply_text(f"📅 {res}", parse_mode="HTML")
+        return
+
+    if args and args[0].lower() in ("del", "remove", "-"):
+        if len(args) < 2:
+            await update.message.reply_text("⚠️ รูปแบบการลบ: <code>/holidays del YYYY-MM-DD</code>", parse_mode="HTML")
+            return
+        d_str = args[1]
+        ok, res = remove_holiday(d_str)
+        await update.message.reply_text(f"📅 {res}", parse_mode="HTML")
+        return
+
+    # ตรวจสอบปีที่ต้องการดู
+    target_year = str(today.year)
+    if args and args[0].isdigit() and len(args[0]) == 4:
+        target_year = args[0]
+
+    all_holidays = load_holidays()
+    year_holidays = all_holidays.get(target_year, {})
+
+    is_trading, cal_reason = is_trading_day_calendar(today)
+    cal_status = "🟢 วันทำการปกติ" if is_trading else f"🔴 {cal_reason}"
+
+    msg_lines = [
+        f"📅 <b>ปฏิทินวันหยุดตลาดหลักทรัพย์แห่งประเทศไทย (SET {target_year})</b>",
+        f"• สถานะวันนี้ ({today.strftime('%Y-%m-%d')}): <b>{cal_status}</b>",
+        f"------------------------------------",
+        f"<b>รายการวันหยุดตลอดทั้งปี ({len(year_holidays)} วัน):</b>"
+    ]
+
+    if not year_holidays:
+        msg_lines.append("<i>(ยังไม่มีข้อมูลวันหยุดของปีนี้)</i>")
+    else:
+        for h_date, h_desc in sorted(year_holidays.items()):
+            prefix = "📌" if h_date == today.strftime("%Y-%m-%d") else ("▫️" if h_date < today.strftime("%Y-%m-%d") else "🔹")
+            msg_lines.append(f"{prefix} <code>{h_date}</code> : {h_desc}")
+
+    msg_lines.append("------------------------------------")
+    msg_lines.append("💡 <i>ระบบมีด่านตรวจ Failover อัตโนมัติเวลา 10:02 น. ทุกวันทำการ</i>\n"
+                     "👉 ดูปีอื่น: <code>/holidays 2025</code>\n"
+                     "👉 เพิ่มวันหยุด: <code>/holidays add YYYY-MM-DD คำอธิบาย</code>\n"
+                     "👉 ลบวันหยุด: <code>/holidays del YYYY-MM-DD</code>")
+
+    await update.message.reply_text("\n".join(msg_lines), parse_mode="HTML")
+
 async def cmd_notify_job(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """/notify_job [on|off] - เปิดหรือปิดการแจ้งเตือนสถานะเริ่มและสิ้นสุดของ Background Jobs"""
     from core.job_notifier import is_job_notification_enabled, set_job_notification_enabled
@@ -1997,6 +2059,8 @@ def main():
     app.add_handler(CommandHandler("exclude_add", cmd_exclude_add))
     app.add_handler(CommandHandler("exclude_del", cmd_exclude_del))
     app.add_handler(CommandHandler("notify_job", cmd_notify_job))
+    app.add_handler(CommandHandler("holidays", cmd_holidays))
+    app.add_handler(CommandHandler("holiday", cmd_holidays))
     app.add_handler(CallbackQueryHandler(handle_signal_callback)) # ดักฟังปุ่ม Inline Keyboard ของสัญญาณซื้อ
 
     print("🚀 Telegram Bot Service is running with Safety Controls...")

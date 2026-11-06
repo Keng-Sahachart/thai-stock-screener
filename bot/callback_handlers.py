@@ -193,12 +193,21 @@ def build_status_text(config: dict, job_notify_on: bool) -> str:
     trail_str = "🟢 เปิด (ON)" if ctrl.get("enable_auto_trailing_stop") else "🔴 ปิด (OFF)"
     tech_str = "🟢 เปิด (ON)" if ctrl.get("enable_auto_technical_sell") else "🔴 ปิด (OFF)"
 
+    from core.market_schedule import is_trading_day_calendar
+    from risk_manager import is_market_trading_time
+    is_trading, cal_reason = is_trading_day_calendar()
+    is_open_now, mkt_reason = is_market_trading_time()
+    cal_str = "🟢 วันทำการปกติ" if is_trading else f"🔴 {cal_reason}"
+    mkt_str = "🟢 ตลาดเปิดทำการ" if is_open_now else f"🔴 {mkt_reason}"
+
     job_notify_str = "🟢 เปิด (ON)" if job_notify_on else "🔴 ปิด (OFF)"
     excluded_list = config.get("excluded_symbols", [])
 
     msg = (
         f"⚙️ <b>สถานะการทำงานของระบบบอท</b>\n"
         f"• โหมดเทรดปัจจุบัน: <b>{mode_str}</b>\n"
+        f"• ปฏิทินวันทำการ SET: <b>{cal_str}</b>\n"
+        f"• สถานะตลาดขณะนี้: <b>{mkt_str}</b>\n"
         f"• แจ้งเตือน Background Jobs: <b>{job_notify_str}</b>\n"
         f"------------------------------------\n"
         f"🛡️ <b>สถานะสวิตช์ขายอัตโนมัติ (Auto-Sell):</b>\n"
@@ -210,7 +219,8 @@ def build_status_text(config: dict, job_notify_on: bool) -> str:
         f"🔒 <b>หุ้นที่ได้รับการยกเว้น ({len(excluded_list)} ตัว):</b>\n"
         f"<code>{', '.join(excluded_list)}</code>\n\n"
         f"👉 ปรับ Auto-Sell พิมพ์: <code>/auto_sell</code> หรือแตะปุ่มด้านล่าง\n"
-        f"👉 ปรับการแจ้งเตือน Jobs พิมพ์: <code>/notify_job [on|off]</code>"
+        f"👉 ปรับการแจ้งเตือน Jobs พิมพ์: <code>/notify_job [on|off]</code>\n"
+        f"👉 ดูปฏิทินวันหยุดตลาด พิมพ์: <code>/holidays</code>"
     )
     return msg
 

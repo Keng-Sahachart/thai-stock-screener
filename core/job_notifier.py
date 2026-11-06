@@ -146,3 +146,15 @@ def notify_job_finish_sync(job_name: str, elapsed_seconds: float = None, summary
             asyncio.run(notify_job_finish(job_name, elapsed_seconds, summary, success, error))
     except Exception as e:
         print(f"[JOB NOTIFIER ERROR] notify_job_finish_sync failed: {e}")
+
+def send_system_alert_sync(text: str, parse_mode: str = "HTML"):
+    """ส่งข้อความแจ้งเตือนด่วนของระบบเข้า Telegram (Sync)"""
+    if not TOKEN or not CHAT_ID:
+        return
+    try:
+        bot = _get_bot()
+        if bot:
+            asyncio.run(bot.send_message(chat_id=CHAT_ID, text=text, parse_mode=parse_mode))
+    except Exception as e:
+        print(f"[JOB NOTIFIER ERROR] send_system_alert_sync failed: {e}")
+
