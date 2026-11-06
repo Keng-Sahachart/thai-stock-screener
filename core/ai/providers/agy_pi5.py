@@ -212,12 +212,66 @@ class AgyPi5Provider(BaseAIProvider):
         else:
             return self._fetch_remote_status()
 
+    def _resolve_account_email(self, access_token: str, id_token: str = None, token_data: dict = None) -> str:
+        """ตรวจสอบและดึง Email จริงของบัญชี Google จาก Token"""
+        if token_data and isinstance(token_data, dict):
+            for k in ("email", "user_email", "account"):
+                if token_data.get(k):
+                    return token_data[k]
+            tok = token_data.get("token", {})
+            if isinstance(tok, dict):
+                for k in ("email", "user_email", "account"):
+                    if tok.get(k):
+                        return tok[k]
+
+        # ถอดรหัสจาก id_token (JWT)
+        if id_token and isinstance(id_token, str):
+            try:
+                import base64
+                parts = id_token.split(".")
+                if len(parts) >= 2:
+                    b64 = parts[1]
+                    padded = b64 + "=" * ((4 - len(b64) % 4) % 4)
+                    payload = json.loads(base64.urlsafe_b64decode(padded.encode()).decode("utf-8"))
+                    if payload.get("email"):
+                        return payload["email"]
+            except Exception:
+                pass
+
+        # เรียก Google tokeninfo API ผ่าน access_token
+        if access_token and isinstance(access_token, str):
+            try:
+                url = f"https://oauth2.googleapis.com/tokeninfo?access_token={access_token}"
+                req = urllib.request.Request(url, headers={"User-Agent": "AntigravityBot/1.0"})
+                with urllib.request.urlopen(req, timeout=3) as resp:
+                    data = json.loads(resp.read().decode())
+                    if data.get("email"):
+                        return data["email"]
+            except Exception:
+                pass
+
+            # เรียก Google userinfo API สำรอง
+            try:
+                url = "https://www.googleapis.com/oauth2/v3/userinfo"
+                req = urllib.request.Request(url, headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "User-Agent": "AntigravityBot/1.0"
+                })
+                with urllib.request.urlopen(req, timeout=3) as resp:
+                    data = json.loads(resp.read().decode())
+                    if data.get("email"):
+                        return data["email"]
+            except Exception:
+                pass
+
+        return None
+
     def _fetch_local_status(self) -> dict:
         """ประมวลผลดึงสถานะโดยตรงจาก Local File และ CloudCode API บน Pi 5"""
         status_info = {
             "provider": "agy_pi5",
             "status": "OFFLINE",
-            "account": "kengnex@gmail.com",
+            "account": "กำลังตรวจสอบบัญชี...",
             "tier": "Gemini Code Assist (Standard Tier)",
             "tier_desc": "Unlimited coding & analysis assistant with Gemini models",
             "model": "Gemini 3.8 Flash (High)",
@@ -228,6 +282,8 @@ class AgyPi5Provider(BaseAIProvider):
             "token_expiry_formatted": "-",
             "today_requests": 0,
             "weekly_requests": 0,
+            "account_weekly_requests": 0,
+            "device_weekly_requests": 0,
             "total_requests": 0,
             "quota_exhausted": False,
             "quota_reset_in": None,
@@ -239,18 +295,57 @@ class AgyPi5Provider(BaseAIProvider):
         # 1. ตรวจสอบ OAuth Token
         token_file = os.path.expanduser("~/.gemini/antigravity-cli/antigravity-oauth-token")
         access_token = None
+        id_token = None
+        tdata = {}
         if os.path.exists(token_file):
             try:
                 with open(token_file, "r", encoding="utf-8") as tf:
                     tdata = json.load(tf)
                 tok_info = tdata.get("token", {})
-                access_token = tok_info.get("access_token")
-                expiry_str = tok_info.get("expiry")
+                access_token = tok_info.get("access_token") or tdata.get("access_token")
+                id_token = tok_info.get("id_token") or tdata.get("id_token")
+                expiry_str = tok_info.get("expiry") or tdata.get("expiry")
                 status_info["token_expiry"] = expiry_str
                 status_info["token_expiry_formatted"] = self._format_thai_time(expiry_str)
                 status_info["token_valid"] = bool(access_token)
             except Exception as e:
                 status_info["token_error"] = str(e)
+
+        # 1.1 ดึง Account Email จริงจาก Token (Dynamic Resolution)
+        resolved_email = self._resolve_account_email(access_token, id_token, tdata)
+        if resolved_email:
+            status_info["account"] = resolved_email
+        else:
+            status_info["account"] = "Google Account (Active)"
+
+        # 1.2 ติดตามการสลับบัญชีเพื่อคำนวณโควตาแยกรายบัญชี
+        tracker_path = ROOT_DIR / "logs" / "account_tracker.json"
+        tracker_data = {}
+        if tracker_path.exists():
+            try:
+                with open(tracker_path, "r", encoding="utf-8") as trf:
+                    tracker_data = json.load(trf)
+            except Exception:
+                pass
+
+        current_acc = status_info["account"]
+        last_acc = tracker_data.get("active_account")
+        account_just_switched = False
+
+        if current_acc and current_acc != last_acc and current_acc != "กำลังตรวจสอบบัญชี...":
+            account_just_switched = True
+            tracker_data = {
+                "active_account": current_acc,
+                "switched_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+            }
+            try:
+                tracker_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(tracker_path, "w", encoding="utf-8") as trw:
+                    json.dump(tracker_data, trw, indent=2)
+            except Exception:
+                pass
+
+        switched_at = tracker_data.get("switched_at")
 
         # 2. ทดสอบเชื่อมต่อ Google CloudCode loadCodeAssist
         if access_token:
@@ -294,7 +389,17 @@ class AgyPi5Provider(BaseAIProvider):
 
                 seven_days_ago = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=7)).strftime("%Y-%m-%d")
                 cur.execute("SELECT COUNT(*) FROM conversation_summaries WHERE last_modified_time >= ?", (seven_days_ago,))
-                status_info["weekly_requests"] = cur.fetchone()[0]
+                device_weekly = cur.fetchone()[0]
+                status_info["device_weekly_requests"] = device_weekly
+
+                if switched_at:
+                    cur.execute("SELECT COUNT(*) FROM conversation_summaries WHERE last_modified_time >= ?", (switched_at,))
+                    acc_weekly = cur.fetchone()[0]
+                    status_info["account_weekly_requests"] = acc_weekly
+                else:
+                    status_info["account_weekly_requests"] = device_weekly
+
+                status_info["weekly_requests"] = status_info["account_weekly_requests"]
 
                 cur.execute("SELECT last_modified_time, title FROM conversation_summaries ORDER BY last_modified_time DESC LIMIT 1")
                 row = cur.fetchone()
@@ -314,10 +419,11 @@ class AgyPi5Provider(BaseAIProvider):
                     lines = lf.readlines()[-60:]
                 log_tail = "".join(lines)
                 if "RESOURCE_EXHAUSTED" in log_tail or "quota reached" in log_tail.lower():
-                    status_info["quota_exhausted"] = True
-                    m = re.search(r"Resets in ([^\.\n\r]+)", log_tail, re.IGNORECASE)
-                    if m:
-                        status_info["quota_reset_in"] = m.group(1).strip()
+                    if not account_just_switched:
+                        status_info["quota_exhausted"] = True
+                        m = re.search(r"Resets in ([^\.\n\r]+)", log_tail, re.IGNORECASE)
+                        if m:
+                            status_info["quota_reset_in"] = m.group(1).strip()
             except Exception:
                 pass
 

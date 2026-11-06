@@ -1087,20 +1087,28 @@ async def cmd_ai_credit(update: Update, context: ContextTypes.DEFAULT_TYPE):
             quota_badge = "🟢 <b>พร้อมใช้งาน (Active)</b>"
             reset_note = ""
 
+        account_name = status_info.get("account", "Google Account")
+        acc_weekly = status_info.get("account_weekly_requests", weekly_reqs)
+        dev_weekly = status_info.get("device_weekly_requests", 0)
+
         msg = (
             "🤖 <b>สถานะ Antigravity AI (Raspberry Pi 5)</b>\n"
             "━━━━━━━━━━━━━━━━━━━━\n"
             f"🔌 <b>สถานะการเชื่อมต่อ:</b> {conn_emoji} {conn_text} ({latency} ms)\n"
-            f"👤 <b>บัญชีที่เข้าสู่ระบบ:</b> <code>{status_info.get('account', 'kengnex@gmail.com')}</code>\n"
+            f"👤 <b>บัญชีที่เข้าสู่ระบบ:</b> <code>{account_name}</code>\n"
             f"💳 <b>แพ็กเกจบัญชี:</b> <b>{status_info.get('tier', 'Gemini Code Assist')}</b>\n"
             f"🎁 <b>โควตารายสัปดาห์ (Rolling 7D):</b> {quota_badge}{reset_note}\n"
             f"🧠 <b>โมเดล AI หลัก:</b> <code>{status_info.get('model', 'Gemini 3.8 Flash (High)')}</code>\n"
             "━━━━━━━━━━━━━━━━━━━━\n"
             "📊 <b>สถิติการใช้งานคำขอ (Requests):</b>\n"
-            f"• คำขอวันนี้: <b>{status_info.get('today_requests', 0):,} ครั้ง</b>\n"
-            f"• คำขอใน 7 วันล่าสุด: <b>{weekly_reqs:,} ครั้ง</b> (~50 ครั้ง/สัปดาห์)\n"
-            f"• คำขอสะสมทั้งหมด: <b>{status_info.get('total_requests', 0):,} ครั้ง</b>\n"
+            f"• บัญชีนี้ใช้ไป: <b>{acc_weekly:,} ครั้ง</b> (~50 ครั้ง/สัปดาห์)\n"
+            f"• คำขอวันนี้ (Pi 5): <b>{status_info.get('today_requests', 0):,} ครั้ง</b>\n"
+            f"• คำขอสะสมบนเครื่อง: <b>{status_info.get('total_requests', 0):,} ครั้ง</b>"
         )
+        if dev_weekly > acc_weekly:
+            msg += f" <i>(รวมทุกบัญชีย้อนหลัง 7 วัน: {dev_weekly} ครั้ง)</i>\n"
+        else:
+            msg += "\n"
 
         last_usage = status_info.get("last_usage")
         if last_usage and last_usage.get("usage"):
