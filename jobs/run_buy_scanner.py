@@ -48,21 +48,36 @@ def get_db_connection():
         password=os.getenv("posql_password", "postgres")
     )
 
-def build_trade_keyboard(signal_id: int, current_shares: int, price: float, pending_order: dict = None):
+def get_tradingview_url(symbol: str) -> str:
+    """ดึงและสร้าง URL TradingView จาก config/bot_config.json"""
+    cfg = load_config()
+    tmpl = cfg.get("tradingview_chart_url_template", "https://th.tradingview.com/chart/sYR6pQNG/?symbol=SET%3A{symbol}")
+    return tmpl.replace("{symbol}", symbol).replace("[symbol]", symbol)
+
+def build_trade_keyboard(signal_id: int, current_shares: int, price: float, pending_order: dict = None, symbol: str = None):
+    keyboard = []
+    
+    # 📈 ปุ่มเปิดดูกราฟ TradingView
+    if symbol:
+        tv_url = get_tradingview_url(symbol)
+        keyboard.append([
+            InlineKeyboardButton(f"📈 เปิดดูกราฟ TradingView ({symbol})", url=tv_url)
+        ])
+
     if pending_order:
         order_ref = pending_order.get('broker_order_no') or f"#{pending_order.get('order_id')}"
-        keyboard = [
+        keyboard.extend([
             [
                 InlineKeyboardButton(f"🔒 มี Order #{order_ref} แล้ว ({pending_order['status']})", callback_data=f"has_pending:{signal_id}")
             ],
             [
                 InlineKeyboardButton("❌ ปิดการ์ดนี้", callback_data=f"rej:{signal_id}")
             ]
-        ]
+        ])
         return InlineKeyboardMarkup(keyboard)
 
     cost = current_shares * price * 1.0025
-    keyboard = [
+    keyboard.extend([
         [
             InlineKeyboardButton("➖ 100", callback_data=f"adj:{signal_id}:{current_shares - 100}"),
             InlineKeyboardButton(f"📦 {current_shares:,} หุ้น ({cost:,.0f} บ.)", callback_data="noop"),
@@ -72,7 +87,7 @@ def build_trade_keyboard(signal_id: int, current_shares: int, price: float, pend
             InlineKeyboardButton(f"✅ Approve ({cost:,.0f} บ.)", callback_data=f"app:{signal_id}:{current_shares}"),
             InlineKeyboardButton("❌ Reject", callback_data=f"rej:{signal_id}")
         ]
-    ]
+    ])
     return InlineKeyboardMarkup(keyboard)
 
 async def scan_and_notify(
@@ -126,12 +141,27 @@ async def scan_and_notify(
                 found_syms = {s["symbol"] for s in signals}
                 missing_syms = [sym for sym in target_symbols if sym not in found_syms]
                 for msym in missing_syms:
+                    # 1. ตรวจสอบว่ามีสัญญาณ PENDING อยู่แล้วหรือไม่ (กรณี trade_date ก่อนหน้า)
                     cur.execute("""
-                        SELECT p.symbol, p.date as trade_date, 'AI_RECOMMENDED' as signal_type,
-                               'AI_EVALUATION' as signal_source, p.close as trigger_price,
+                        SELECT s.*, a.line_available 
+                        FROM public.bot_trade_signals s
+                        CROSS JOIN (
+                            SELECT line_available FROM public.account_info_history 
+                            WHERE is_disabled = FALSE ORDER BY import_date DESC LIMIT 1
+                        ) a
+                        WHERE s.status = 'PENDING' AND s.symbol = %s
+                        ORDER BY s.id DESC LIMIT 1;
+                    """, (msym,))
+                    existing_sig = cur.fetchone()
+                    if existing_sig:
+                        signals.append(existing_sig)
+                        continue
+
+                    # 2. ถ้ายังไม่มีสัญญาณ ให้สร้างสัญญาณใหม่จากราคาปิดล่าสุดใน stock_price_history
+                    cur.execute("""
+                        SELECT p.symbol, p.date as trade_date, p.close as trigger_price,
                                round(p.close * 0.955, 2) as stop_loss_plan, 100 as recommended_shares,
-                               'ผ่านการคัดเลือกและแนะนำโดย AI' as reason, 'PENDING' as status,
-                               5 as priority, a.line_available
+                               a.line_available
                         FROM public.stock_price_history p
                         CROSS JOIN (
                             SELECT line_available FROM public.account_info_history 
@@ -142,17 +172,54 @@ async def scan_and_notify(
                     """, (msym,))
                     fb = cur.fetchone()
                     if fb:
-                        fb["id"] = 0
+                        sig_src = "AI_EVALUATION" if run_ai else "MANUAL_SCAN"
+                        sig_type = "AI_RECOMMENDED" if run_ai else "USER_REQUEST"
+                        sig_reason = "ผ่านการคัดเลือกและแนะนำโดย AI" if run_ai else "สแกนเฉพาะหุ้นตามคำสั่งผู้ใช้ (/scan)"
+                        cur.execute("""
+                            INSERT INTO public.bot_trade_signals (
+                                symbol, trade_date, signal_type, signal_source,
+                                trigger_price, stop_loss_plan, recommended_shares,
+                                reason, status, priority, expired_at
+                            ) VALUES (
+                                %s, %s, %s, %s,
+                                %s, %s, %s,
+                                %s, 'PENDING', 5, timezone('Asia/Bangkok', now()) + INTERVAL '1 day'
+                            ) RETURNING id;
+                        """, (
+                            fb["symbol"], fb["trade_date"], sig_type, sig_src,
+                            fb["trigger_price"], fb["stop_loss_plan"], fb["recommended_shares"],
+                            sig_reason
+                        ))
+                        ins = cur.fetchone()
+                        fb["id"] = ins["id"]
+                        fb["signal_type"] = sig_type
+                        fb["signal_source"] = sig_src
+                        fb["reason"] = sig_reason
+                        fb["status"] = "PENDING"
+                        fb["priority"] = 5
                         signals.append(fb)
+                        conn.commit()
+
+                # แจ้งเตือนหากมีหุ้นบางตัวที่หาไม่พบในฐานข้อมูล
+                found_all = {s["symbol"] for s in signals}
+                not_found = [sym for sym in target_symbols if sym not in found_all]
+                if not_found:
+                    await bot.send_message(
+                        chat_id=target_chat,
+                        text=f"⚠️ <b>ไม่พบข้อมูลหุ้นในระบบ:</b> <code>{', '.join(not_found)}</code>",
+                        parse_mode="HTML"
+                    )
+
                 # จัดเรียงลำดับให้ตรงกับ target_symbols
                 order_map = {sym: idx for idx, sym in enumerate(target_symbols)}
                 signals.sort(key=lambda x: order_map.get(x["symbol"], 999))
 
             if not signals:
                 print("ไม่มีสัญญาณใหม่")
+                msg_txt = "🛡️ <b>ผลการสแกนหุ้น</b>\nไม่พบข้อมูลหุ้นที่ระบุในฐานข้อมูล หรือไม่มีสัญญาณซื้อใหม่" if target_symbols else "🛡️ <b>ผลการสแกนประจำวัน</b>\nไม่พบสัญญาณซื้อใหม่ที่ผ่านเกณฑ์ในขณะนี้"
                 await bot.send_message(
                     chat_id=target_chat,
-                    text="🛡️ <b>ผลการสแกนประจำวัน</b>\nไม่พบสัญญาณซื้อใหม่ที่ผ่านเกณฑ์ในขณะนี้",
+                    text=msg_txt,
                     parse_mode="HTML"
                 )
                 await notify_job_finish("Run Buy Scanner", elapsed_seconds=time.time() - start_t, summary="ไม่พบสัญญาณซื้อใหม่ที่ผ่านเกณฑ์")
@@ -254,6 +321,21 @@ async def scan_and_notify(
                         f"🔒 <i>(ปิดปุ่ม Approve เพื่อป้องกันการส่งคำสั่งซื้อซ้ำ)</i>"
                     )
 
+                # ตรวจสอบว่ามีหุ้นนี้อยู่ในพอร์ตแล้วหรือไม่
+                cur.execute("""
+                    SELECT current_volume, entry_price 
+                    FROM public.bot_active_positions 
+                    WHERE symbol = %s AND status = 'OPEN' 
+                    LIMIT 1;
+                """, (sym,))
+                owned_pos = cur.fetchone()
+                owned_note = ""
+                if owned_pos:
+                    owned_note = (
+                        f"\n💼 <b>[หุ้นนี้มีอยู่ในพอร์ตแล้ว]:</b> "
+                        f"ถืออยู่ <code>{owned_pos['current_volume']:,}</code> หุ้น (ทุนเฉลี่ย <code>{float(owned_pos['entry_price']):.2f}</code> บ.)\n"
+                    )
+
                 ai_ev = ai_lookup.get(sym)
                 ai_snippet = ""
                 if ai_ev:
@@ -274,11 +356,12 @@ async def scan_and_notify(
                     f"• อำนาจซื้อคงเหลือ: <code>{line_avail:,.2f}</code> THB\n"
                     f"• สัญญาณเทคนิค: {html.escape(str(sig['reason'] or ''))}"
                     f"{ai_snippet}"
+                    f"{owned_note}"
                     f"{pending_note}\n\n"
                     + ("<i>กดปุ่ม ➖ / ➕ เพื่อปรับจำนวนหุ้นก่อนกด Approve</i>" if not pending_order else "<i>หุ้นนี้มีคำสั่งซื้อในระบบแล้ว</i>")
                 )
 
-                reply_markup = build_trade_keyboard(sig["id"], shares, p, pending_order=pending_order)
+                reply_markup = build_trade_keyboard(sig["id"], shares, p, pending_order=pending_order, symbol=sym)
                 chart_buf = generate_stock_chart(sym)
 
                 try:

@@ -9,7 +9,7 @@ OCCASION    : รันเป็น Service ตลอดเวลา (Background
 DESCRIPTION : และดักฟัง Event จากปุ่มกด ,รับคำสั่งและตอบกลับผู้ใช้ผ่าน Telegram:
               /port        - แสดงสถานะหุ้นในพอร์ต, เงินสด, และอำนาจซื้อ
               /update_port - ซิงค์ยอดเงินสดล่าสุดจาก Settrade หลังเติมเงิน
-              /scan        - สั่งสแกนหาจังหวะซื้อและส่งกราฟขออนุมัติใหม่
+              /scan [SYM]  - สั่งสแกนหาจังหวะซื้อและส่งกราฟขออนุมัติ (ระบุหุ้นหรือสแกนทั้งระบบ)
               /buy <SYM> [VOL] [PRICE] - คำสั่งซื้อหุ้นแบบกำหนดเองพร้อมปุ่มปรับราคา/โวลุ่ม
               /order       - แสดงรายการคำสั่งซื้อขายวันนี้ทั้งหมด
               /sync_order  - ซิงค์สถานะ Order ล่าสุดจาก Settrade ทันที
@@ -252,7 +252,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• /history [N|SYM] - 📜 ดูประวัติการขายที่ปิดสถานะแล้ว (Closed Trades)\n"
         "• /summary [day|month|year] - 🏆 สรุปผลงาน Performance รายวัน รายเดือน รายปี\n\n"
         "<b>🔍 การสแกนหาหุ้นและเข้าซื้อ:</b>\n"
-        "• /scan - 📈 สแกนหาหุ้นซื้อทางเทคนิคอลดั้งเดิม + ส่งการ์ดกราฟขออนุมัติ (รวดเร็ว)\n"
+        "• /scan [SYM ...] - 📈 สแกนหาหุ้นซื้อทางเทคนิคอล + กราฟ + ปุ่ม TradingView (ระบุหุ้นหรือสแกนทั้งตลาด)\n"
         "• /ai_scan [1|2|3] [SYM] - 🤖 ส่งให้ AI วิเคราะห์ 3 มิติ (1=สั้นกระชับ, 2=ปานกลาง, 3=ละเอียด)\n"
         "• /ai_credit - 💳 ตรวจสอบสถานะและโควตาคงเหลือของ Antigravity CLI บน Pi 5\n"
         "• /buy &lt;SYM&gt; [VOL] [PRICE] - 🛒 ส่งคำสั่งซื้อหุ้นแบบกำหนดเองพร้อมปุ่มปรับราคา\n\n"
@@ -286,7 +286,7 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• /history [N|SYM] - 📜 ดูประวัติการขายที่ปิดสถานะแล้ว กำไร/ขาดทุน กี่บาท กี่%\n"
         "• /summary [day|month|year] - 🏆 สรุปผลงาน Performance รายวัน รายเดือน รายปี\n\n"
         "🔍 <b>การสแกนหาหุ้นและเข้าซื้อ:</b>\n"
-        "• /scan - 📈 สแกนหาหุ้นซื้อทางเทคนิคอลดั้งเดิม + ส่งการ์ดกราฟขออนุมัติ (รวดเร็ว ไม่รอ AI)\n"
+        "• /scan [SYM ...] - 📈 สแกนหาหุ้นซื้อทางเทคนิคอล + กราฟ + ปุ่ม TradingView (ระบุหุ้นหรือสแกนทั้งตลาด)\n"
         "• /ai_scan [1|2|3] [SYM] - 🤖 ส่งให้ AI วิเคราะห์ 3 มิติ (1=สั้นมาก, 2=กระชับ, 3=ละเอียด)\n"
         "• /ai_credit - 💳 เช็คโควตาคงเหลือ, สถานะการเชื่อมต่อ และบัญชี Antigravity (Pi 5)\n"
         "• /buy &lt;SYM&gt; [VOL] [PRICE] - ส่งคำสั่งซื้อหุ้นแบบกำหนดเองพร้อมปุ่มปรับราคา\n\n"
@@ -898,11 +898,38 @@ async def cmd_sync_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ เกิดข้อผิดพลาดในการซิงค์สถานะ Order: {e}")
 
 async def cmd_scan(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """/scan - สแกนหาจังหวะซื้อทางเทคนิคอลดั้งเดิม และส่งการ์ดกราฟขออนุมัติ (รวดเร็ว ไม่รอ AI)"""
-    await update.message.reply_text("🔍 กำลังสแกนหาจังหวะซื้อทางเทคนิคอลและสร้างกราฟ...")
+    """/scan [SYM ...] - สแกนหาจังหวะซื้อทางเทคนิคอลดั้งเดิม และส่งการ์ดกราฟขออนุมัติพร้อมปุ่ม TradingView"""
+    target_syms = None
+    if context.args:
+        raw_syms = []
+        for a in context.args:
+            for p in a.replace(",", " ").split():
+                cleaned = p.strip().upper()
+                if cleaned:
+                    raw_syms.append(cleaned)
+        if raw_syms:
+            target_syms = list(dict.fromkeys(raw_syms))
+
+    chat_id = update.effective_chat.id if update.effective_chat else None
+
+    if target_syms:
+        sym_list_str = ", ".join(target_syms)
+        await update.message.reply_text(
+            f"🔍 กำลังสแกนหาจังหวะซื้อและสร้างกราฟเทคนิคอลสำหรับ: <b>{sym_list_str}</b>\n"
+            f"<i>(พร้อมปุ่มเปิดดูกราฟ TradingView และปุ่มขออนุมัติซื้อ)</i>",
+            parse_mode="HTML"
+        )
+    else:
+        await update.message.reply_text("🔍 กำลังสแกนหาจังหวะซื้อทางเทคนิคอลทั้งระบบและสร้างกราฟ...")
+
     try:
         from jobs.run_buy_scanner import scan_and_notify
-        await scan_and_notify(run_ai=False)
+        await scan_and_notify(
+            run_ai=False,
+            target_symbols=target_syms,
+            chat_id=chat_id,
+            bot_instance=context.bot
+        )
     except Exception as e:
         await update.message.reply_text(f"❌ เกิดข้อผิดพลาดในการสแกน: {e}")
 

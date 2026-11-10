@@ -114,11 +114,11 @@ async def show_ai_candidate_charts(update: Update, context: ContextTypes.DEFAULT
         await context.bot.send_message(chat_id=chat_id, text=f"❌ เกิดข้อผิดพลาดในการสร้างกราฟ: {e}")
 
 
-def build_trade_keyboard(signal_id: int, current_shares: int, price: float):
+def build_trade_keyboard(signal_id: int, current_shares: int, price: float, pending_order: dict = None, symbol: str = None):
     ''' สร้าง Inline Keyboard สำหรับปรับจำนวนหุ้นและอนุมัติ/ปฏิเสธสัญญาณซื้อ
     ใช้ฟังก์ชันเดียวกับ jobs/run_buy_scanner.py เพื่อให้ปรับจำนวนหุ้นและราคาตรงกันระหว่างการสแกนและการอนุมัติ '''
     from jobs.run_buy_scanner import build_trade_keyboard as b_kbd
-    return b_kbd(signal_id, current_shares, price)
+    return b_kbd(signal_id, current_shares, price, pending_order=pending_order, symbol=symbol)
 
 
 def build_auto_sell_text(ctrl: dict) -> str:
@@ -678,7 +678,11 @@ async def handle_signal_callback(update: Update, context: ContextTypes.DEFAULT_T
 
                 cur.execute("SELECT trigger_price, symbol FROM public.bot_trade_signals WHERE id = %s;", (signal_id,))
                 sig = cur.fetchone()
+                if not sig:
+                    await query.answer("⚠️ ไม่พบข้อมูลสัญญาณนี้", show_alert=True)
+                    return
                 p = float(sig["trigger_price"])
+                sym = sig["symbol"]
                 est_cost = target_shares * p * 1.0025
 
                 # กฎความปลอดภัย 3: เช็คกับ Line Available ล่าสุดสดๆ ป้องกันเงินไม่พอ
@@ -691,7 +695,7 @@ async def handle_signal_callback(update: Update, context: ContextTypes.DEFAULT_T
                     return
 
                 await query.answer()
-                new_kbd = build_trade_keyboard(signal_id, target_shares, p)
+                new_kbd = build_trade_keyboard(signal_id, target_shares, p, symbol=sym)
                 await query.edit_message_reply_markup(reply_markup=new_kbd)
 
             # 2. กดอนุมัติการซื้อ (app:signal_id:shares)
