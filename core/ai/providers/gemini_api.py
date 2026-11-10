@@ -14,6 +14,16 @@ import os
 import json
 import urllib.request
 import urllib.error
+from pathlib import Path
+from dotenv import load_dotenv
+
+ROOT_DIR = Path(__file__).resolve().parents[3]
+ENV_PATH = ROOT_DIR / ".env"
+if ENV_PATH.exists():
+    load_dotenv(dotenv_path=ENV_PATH)
+else:
+    load_dotenv()
+
 from core.ai.base_provider import BaseAIProvider
 
 class GeminiApiProvider(BaseAIProvider):
@@ -47,7 +57,10 @@ class GeminiApiProvider(BaseAIProvider):
         req = urllib.request.Request(
             url,
             data=json.dumps(request_body).encode("utf-8"),
-            headers={"Content-Type": "application/json"}
+            headers={
+                "Content-Type": "application/json",
+                "x-goog-api-key": self.api_key,
+            }
         )
 
         try:
